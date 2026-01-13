@@ -1,14 +1,16 @@
 ### DEC PDP11 (J11) CPU minimal implementation. ###############
-# sorry, I do not understang SLEIGH.                          #
+# sorry, I do not understand SLEIGH.                          #
 # (c)2026, www.vabolis.lt                                     #
 #                                        Levas                #
 # Freeware & etc. Please leave copyright note                 #
 ###############################################################
 
+# WARNING! ALL STUFF in {} is untested.
+
 define endian=little;
 define alignment=2;
 
-define space ram      type=ram_space      size=2 default;
+define space ram      type=ram_space      size=2 default; # would like to have 3, but errors...
 define space register type=register_space size=1;
 
 # R0–R7 (SP=R6, PC=R7)
@@ -18,11 +20,11 @@ define register offset=0x0004 size=2 [ R2 ];
 define register offset=0x0006 size=2 [ R3 ];
 define register offset=0x0008 size=2 [ R4 ];
 define register offset=0x000A size=2 [ R5 ];
-define register offset=0x000C size=2 [ SP ]; #R6
+define register offset=0x000C size=2 [ SP ]; #R6 , stekas mazejantis
 
 
 define register offset=0x000E size=2 [ PC ]; #R7
-define register offset=0x0020 size=2 [ FLG ];
+define register offset=0x0020 size=2 [ FLG ]; # ony one byte. Keep 2 to make SLEIGHT happy
 
 # Flag Register Contents (FLG)
 #
@@ -69,6 +71,8 @@ macro pop(val) {
 }
 
 #TOKENS
+
+# main opcode
 define token word_1 (16)
 	kodas = (6,15)
 	metod = (3,5)
@@ -87,18 +91,24 @@ define token word_1 (16)
 attach variables [ reg_s] [ R0 R1 R2 R3 R4 R5 SP PC];
 attach variables [ reg_d] [ R0 R1 R2 R3 R4 R5 SP PC];
 
+# one byte, not used here
 define token data8 (8)
    imm8		= (0,7)
    rela		= (0,7) signed
 ;
+
+# next word with data or first opcode
 define token data (16)
 	imm16 = (0,15)
 ;
+
+# THIS HACK. I do not know how to use two imm16, two words of data (4 bytes)
 define token data2 (32)
 	im32=(0,31)
 	im32h=(16,31)
 	im32l=(0,15)
 ;
+# Relative addressing. Note x2 multiplication (adressing is in words)
 REL: reloc		is rel	[ reloc = inst_next + 2 * rel; ] { export *:2 reloc; } 
 # ############# VEIKIANTYS 
 :NOP		is imm16=0x0A0 {	R0=R0;}
@@ -139,13 +149,7 @@ REL: reloc		is rel	[ reloc = inst_next + 2 * rel; ] { export *:2 reloc; }
 :BHI  REL			is op_h=0x82 & REL {goto REL;} # C or Z =0
 :BLOS REL			is op_h=0x83 & REL {goto REL;} # C or Z =1
 
-:RETURN		is imm16=0x87 #NETEISYBE
-{
-#SP = SP+2;
-#return [SP-2];
-
-PC = *SP; SP = SP+4; return [PC];
-}
+:RETURN		is imm16=0x87 {PC = *SP; SP = SP+4; return [PC];}
 # ########################
 # Jumpai (PC registras, R7)
 #          543210
@@ -159,17 +163,19 @@ PC = *SP; SP = SP+4; return [PC];
 
 ####################### VARIANTAI adresacijos #############################################
 
+# JUMPS ONLY
 OP2: "#"imm16    	is metod=2; imm16			{ export *:1 imm16; }
 OP2: "@#"imm16		is metod=3; imm16			{ tmp:2 =(imm16); export *:1 tmp; }
 OP2: ">"imm16		is metod=6; imm16			{ export *:1 imm16; }
 OP2: "@"imm16		is metod=7; imm16			{ export *:1 imm16; }
 
-OP3: "3:"@(reg_s)+		is metod_s=3 & reg_s {export reg_s;}
-OP3: "1:"(reg_s)	is metod_s=1 & reg_s {export *[const]:2 reg_s;}
-OP3: "2:"(reg_s)+	is metod_s=2 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
-OP3: "0:"reg_s		is metod_s=0 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
-OP3: "4:"-(reg_s)	is metod_s=4 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
-OP3: "5:"@-(reg_s)	is metod_s=5 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
+# Source: All possible methods.
+OP3: @(reg_s)+		is metod_s=3 & reg_s {export reg_s;}
+OP3: (reg_s)		is metod_s=1 & reg_s {export *[const]:2 reg_s;}
+OP3: (reg_s)+		is metod_s=2 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
+OP3: reg_s			is metod_s=0 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
+OP3: -(reg_s)		is metod_s=4 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
+OP3: @-(reg_s)		is metod_s=5 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
 
 #NOT TO GET HERE:
 OP3: "6??:"#[reg_s]	is metod_s=6 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
@@ -177,13 +183,13 @@ OP3: "6??:"#[reg_s]	is metod_s=6 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
 OP3: "7:"@(reg_s)	is metod_s=7 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
 #neteisingas, turi dar paimti imm16. iki cia turi neateiti
 
-
-OP4: "1:"(reg_d)		is metod_d=1 & reg_d {export *[const]:2 reg_d;}
-OP4: "3:"@(reg_d)+		is metod_d=3 & reg_d {export reg_d;}
-OP4: "2:"(reg_d)+		is metod_d=2 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
-OP4: "0:"reg_d			is metod_d=0 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
-OP4: "4:"-(reg_d)		is metod_d=4 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
-OP4: "5:"@-(reg_d)	is metod_d=5 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
+# destination. All possible methods.
+OP4: (reg_d)		is metod_d=1 & reg_d {export *[const]:2 reg_d;}
+OP4: @(reg_d)+		is metod_d=3 & reg_d {export reg_d;}
+OP4: (reg_d)+		is metod_d=2 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
+OP4: reg_d			is metod_d=0 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
+OP4: -(reg_d)		is metod_d=4 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
+OP4: @-(reg_d)		is metod_d=5 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
 
 #NOT TO GEt HERE:
 OP4: "6??:"#[reg_d]		is metod_d=6 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
@@ -191,24 +197,24 @@ OP4: "6??:"#[reg_d]		is metod_d=6 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
 OP4: "7:"@(reg_d)		is metod_d=7 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
 #neteisingas, turi dar paimti imm16. iki cia neturi ateiti
 
-OPD: "#"imm16    		is metod_d=2; imm16			{ tmp:1 = imm16; export tmp; }
-OPD: "@#"imm16    		is metod_d=3; imm16			{ tmp:1 = imm16; export tmp; }
-OPD: imm16    			is metod_d=6; imm16			{ tmp:1 = imm16; export tmp; }
-OPD: "@"imm16    		is metod_d=7; imm16			{ tmp:1 = imm16; export tmp; }
+# source and destination is "#". total 4 bytes (2 words).
+OPD: "#"imm16    	is metod_d=2; imm16			{ tmp:1 = imm16; export tmp; }
+OPD: "@#"imm16    	is metod_d=3; imm16			{ tmp:1 = imm16; export tmp; }
+OPD: imm16    		is metod_d=6; imm16			{ tmp:1 = imm16; export tmp; }
+OPD: "@"imm16    	is metod_d=7; imm16			{ tmp:1 = imm16; export tmp; }
 
-OPS: "#"imm16			is metod_s=2; imm16			{ tmp:1 = imm16; export tmp; }
-OPS: "@#"imm16    		is metod_s=3; imm16			{ tmp:1 = imm16; export tmp; }
-OPS: imm16    			is metod_s=6; imm16			{ tmp:1 = imm16; export tmp; }
-OPS: "@"imm16    		is metod_s=7; imm16			{ tmp:1 = imm16; export tmp; }
+OPS: "#"imm16		is metod_s=2; imm16			{ tmp:1 = imm16; export tmp; }
+OPS: "@#"imm16    	is metod_s=3; imm16			{ tmp:1 = imm16; export tmp; }
+OPS: imm16    		is metod_s=6; imm16			{ tmp:1 = imm16; export tmp; }
+OPS: "@"imm16    	is metod_s=7; imm16			{ tmp:1 = imm16; export tmp; }
 
+#both operands are "#" total 6 bytes (3 words).
 FUK: "#"im32l,"#"im32h			is metod_s=2; im32h	&im32l		{  tmp:1 = im32h; export tmp; }
 
+#export only register names
 RRR: reg_s is kodas_s=7 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
 
-######### XOR XOR XOR
-# 0 111 100 RRR ddd ddd <-skiriasi tik R. Kur stovi tik registrai
-# pas kitus buvo:
-# 0 101 sss sss ddd ddd
+######### XOR SOB MUL DIV ASH ASHC
 
 :XOR RRR,OP4	is kodas_s=7 &metod_s=4 & RRR & OP4 {OP4=RRR;}
 :SOB RRR,OP4	is kodas_s=7 &metod_s=7 & RRR & OP4 {OP4=RRR;}
@@ -363,10 +369,9 @@ is kodas_s=2
 :MTPS OPD		is (kodas_s=8 & metod_s=6 &reg_s=4 &reg_d=7)... &OPD {PC=PC;}
 ############################################################################################
 
-
+# JSR/JMP - need to rewrite
 :JMP OP2    is (kodas=1 & regai=7)... & OP2 {goto OP2;}
 :JSR OP2	is (kodas_s=0 & metod_s=4 & reg_s<7)... & OP2 {*SP=PC; SP = SP-4; goto OP2;}
-
 :CALL OP2	is (kodas_s=0 & metod_s=4 & reg_s=7)... & OP2 {goto OP2;}
 
 
