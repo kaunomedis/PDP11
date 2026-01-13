@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<language_definitions>
+  <language processor="PDP11"
+            endian="little"
+            size="16"
+            variant="default"
+            version="1.0"
+			slafile="PDP11.sla"			
+            processorspec="PDP11.pspec"		
+            id="PDP11:LE:16:default">
+    <description>PDP-11 Architecture (Experimental)</description>
+    <compiler name="default" spec="PDP11.cspec" id="default"/>
+  </language>
+
+</language_definitions>

@@ -1,0 +1,389 @@
+### DEC PDP11 (J11) CPU minimal implementation. ###############
+# sorry, I do not understang SLEIGH.                          #
+# (c)2026, www.vabolis.lt                                     #
+#                                        Levas                #
+# Freeware & etc. Please leave copyright note                 #
+###############################################################
+
+define endian=little;
+define alignment=2;
+
+define space ram      type=ram_space      size=2 default;
+define space register type=register_space size=1;
+
+# R0–R7 (SP=R6, PC=R7)
+define register offset=0x0000 size=2 [ R0 ];
+define register offset=0x0002 size=2 [ R1 ];
+define register offset=0x0004 size=2 [ R2 ];
+define register offset=0x0006 size=2 [ R3 ];
+define register offset=0x0008 size=2 [ R4 ];
+define register offset=0x000A size=2 [ R5 ];
+define register offset=0x000C size=2 [ SP ]; #R6
+
+
+define register offset=0x000E size=2 [ PC ]; #R7
+define register offset=0x0020 size=2 [ FLG ];
+
+# Flag Register Contents (FLG)
+#
+# b15         - Reserved area
+# b14:b12     - Processor interrupt priority level
+# b11:b8     - Reserved area
+# b7        - (U) Stack pointer select flag
+# b6         - (I) Interrupt enable flag
+# b5         - (O) Overflow flag
+# b4        - (B) Register bank select flag
+# b3         - (S) Sign flag
+# b2        - (Z) Zero flag
+# b1        - (D) Debug flag
+# b0        - (C) Carry flag
+
+@define CARRY         "FLG[0,1]"
+@define DEBUG         "FLG[1,1]"
+@define ZERO          "FLG[2,1]"
+@define SIGN          "FLG[3,1]"
+@define REG_BANK      "FLG[4,1]"
+@define OVERFLOW    "FLG[5,1]"
+@define INTERRUPT   "FLG[6,1]"
+@define STACK_SEL   "FLG[7,1]"
+@define IPL         "FLG[12,3]"
+
+
+#
+# FLAG MACROS...
+#
+# Set zero and sign flags from result
+macro setResultFlags(result) {
+    $(SIGN) = (result s< 0x0);
+    $(ZERO) = (result == 0x0);
+}
+macro push(val) {
+    SP = SP - 2;
+    ptr:3 = zext(SP);
+    *:2 ptr = val;
+}
+macro pop(val) {
+    ptr:3 = zext(SP);
+    val = *:2 ptr;
+    SP = SP + 2;
+}
+
+#TOKENS
+define token word_1 (16)
+	kodas = (6,15)
+	metod = (3,5)
+	regai =(0,2)
+	
+	op_h =(8,15)
+	rel = (0,7) signed
+	
+	kodas_s = (12,15)
+	metod_s=(9,11)
+	reg_s=(6,8)
+	metod_d=(3,5)
+	reg_d=(0,2)
+;
+
+attach variables [ reg_s] [ R0 R1 R2 R3 R4 R5 SP PC];
+attach variables [ reg_d] [ R0 R1 R2 R3 R4 R5 SP PC];
+
+define token data8 (8)
+   imm8		= (0,7)
+   rela		= (0,7) signed
+;
+define token data (16)
+	imm16 = (0,15)
+;
+define token data2 (32)
+	im32=(0,31)
+	im32h=(16,31)
+	im32l=(0,15)
+;
+REL: reloc		is rel	[ reloc = inst_next + 2 * rel; ] { export *:2 reloc; } 
+# ############# VEIKIANTYS 
+:NOP		is imm16=0x0A0 {	R0=R0;}
+:HALT		is imm16=0 { PC=123;}
+:WAIT		is imm16=1 { PC=PC-2;}
+:CLC		is imm16=0x0A1 {FLG[0,1]=0;}
+:CLV		is imm16=0x0A2 {FLG[5,1]=0;}
+:CLZ		is imm16=0x0A4 {FLG[2,1]=0;}
+:CLN		is imm16=0x0A8 {FLG[3,1]=0;}
+:CCC		is imm16=0x0AF {FLG[0,1]=0; FLG[5,1]=0; FLG[2,1]=0; FLG[3,1]=0; }
+
+:SEC		is imm16=0x0b1 {FLG[0,1]=1;}
+:SEV		is imm16=0x0b2 {FLG[5,1]=1;}
+:SEZ		is imm16=0x0b4 {FLG[2,1]=1;}
+:SEN		is imm16=0x0b8 {FLG[3,1]=1;}
+:SCC		is imm16=0x0bF {FLG[0,1]=1; FLG[5,1]=1; FLG[2,1]=1; FLG[3,1]=1; }
+:EMT		is op_h=0x88 { PC=(18);} # NETEISYBE
+:TRAP		is op_h=0x89 { PC=(36);} # NETEISYBE
+:IOT		is imm16=0x004 {PC=(20);} # NETEISYBE
+:BPT		is imm16=0x003 {PC=(14);} # NETEISYBE
+:RTI		is imm16=0x002 {SP=SP+2;} # NETEISYBE
+:RTT		is imm16=0x006 {SP=SP+2;} # NETEISYBE
+:RESET		is imm16=0x005 {SP=SP;}
+
+:BR   REL			is op_h=1 & REL {goto REL;}
+:BNE  REL			is op_h=2 & REL {if !FLG[2,1] goto REL;} # Z=0
+:BEQ  REL			is op_h=3 & REL {if FLG[2,1] goto REL;} # Z=1
+:BPL  REL			is op_h=0x80 & REL {if !FLG[3,1] goto REL;} # N=0 sign
+:BMI  REL			is op_h=0x81 & REL {if FLG[3,1] goto REL;} # N=1
+:BVC  REL			is op_h=0x84 & REL {if !FLG[5,1] goto REL;} # V=0 overflow
+:BVS  REL			is op_h=0x85 & REL {if FLG[5,1] goto REL;} # V=1
+:BCC  REL			is op_h=0x86 & REL {if !FLG[0,1] goto REL;} # C=0 carry
+:BCS  REL			is op_h=0x87 & REL {if FLG[0,1] goto REL;} # C=1
+:BGE  REL			is op_h=4 & REL {if !(FLG[3,1] ^ FLG[5,1]) goto REL;} # N xor V =0
+:BLT  REL			is op_h=5 & REL {if (FLG[3,1] ^ FLG[5,1]) goto REL;} # N xor V =1
+:BGT  REL			is op_h=6 & REL {goto REL;} # (N xor V) or Z =0
+:BLE  REL			is op_h=7 & REL {goto REL;} # (N xor V) or Z =0
+:BHI  REL			is op_h=0x82 & REL {goto REL;} # C or Z =0
+:BLOS REL			is op_h=0x83 & REL {goto REL;} # C or Z =1
+
+:RETURN		is imm16=0x87 #NETEISYBE
+{
+#SP = SP+2;
+#return [SP-2];
+
+PC = *SP; SP = SP+4; return [PC];
+}
+# ########################
+# Jumpai (PC registras, R7)
+#          543210
+# 2 - #X   010 111 = 17
+# 3 - @#X  011 111 = 1f
+# 6 - X    110 111 = 37
+# 7 - @X   111 111 = 3f
+
+# is manualo
+# file:///C:/Users/User/Downloads/ghidra_12.0_PUBLIC_20251205/ghidra_12.0_PUBLIC/docs/languages/html/sleigh_constructors.html#sleigh_sections_constructor
+
+####################### VARIANTAI adresacijos #############################################
+
+OP2: "#"imm16    	is metod=2; imm16			{ export *:1 imm16; }
+OP2: "@#"imm16		is metod=3; imm16			{ tmp:2 =(imm16); export *:1 tmp; }
+OP2: ">"imm16		is metod=6; imm16			{ export *:1 imm16; }
+OP2: "@"imm16		is metod=7; imm16			{ export *:1 imm16; }
+
+OP3: "3:"@(reg_s)+		is metod_s=3 & reg_s {export reg_s;}
+OP3: "1:"(reg_s)	is metod_s=1 & reg_s {export *[const]:2 reg_s;}
+OP3: "2:"(reg_s)+	is metod_s=2 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
+OP3: "0:"reg_s		is metod_s=0 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
+OP3: "4:"-(reg_s)	is metod_s=4 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
+OP3: "5:"@-(reg_s)	is metod_s=5 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
+
+#NOT TO GET HERE:
+OP3: "6??:"#[reg_s]	is metod_s=6 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
+#iki cia neturi ateiti.
+OP3: "7:"@(reg_s)	is metod_s=7 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
+#neteisingas, turi dar paimti imm16. iki cia turi neateiti
+
+
+OP4: "1:"(reg_d)		is metod_d=1 & reg_d {export *[const]:2 reg_d;}
+OP4: "3:"@(reg_d)+		is metod_d=3 & reg_d {export reg_d;}
+OP4: "2:"(reg_d)+		is metod_d=2 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
+OP4: "0:"reg_d			is metod_d=0 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
+OP4: "4:"-(reg_d)		is metod_d=4 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
+OP4: "5:"@-(reg_d)	is metod_d=5 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
+
+#NOT TO GEt HERE:
+OP4: "6??:"#[reg_d]		is metod_d=6 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
+#iki cia neturi ateiti.
+OP4: "7:"@(reg_d)		is metod_d=7 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
+#neteisingas, turi dar paimti imm16. iki cia neturi ateiti
+
+OPD: "#"imm16    		is metod_d=2; imm16			{ tmp:1 = imm16; export tmp; }
+OPD: "@#"imm16    		is metod_d=3; imm16			{ tmp:1 = imm16; export tmp; }
+OPD: imm16    			is metod_d=6; imm16			{ tmp:1 = imm16; export tmp; }
+OPD: "@"imm16    		is metod_d=7; imm16			{ tmp:1 = imm16; export tmp; }
+
+OPS: "#"imm16			is metod_s=2; imm16			{ tmp:1 = imm16; export tmp; }
+OPS: "@#"imm16    		is metod_s=3; imm16			{ tmp:1 = imm16; export tmp; }
+OPS: imm16    			is metod_s=6; imm16			{ tmp:1 = imm16; export tmp; }
+OPS: "@"imm16    		is metod_s=7; imm16			{ tmp:1 = imm16; export tmp; }
+
+FUK: "#"im32l,"#"im32h			is metod_s=2; im32h	&im32l		{  tmp:1 = im32h; export tmp; }
+
+RRR: reg_s is kodas_s=7 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
+
+######### XOR XOR XOR
+# 0 111 100 RRR ddd ddd <-skiriasi tik R. Kur stovi tik registrai
+# pas kitus buvo:
+# 0 101 sss sss ddd ddd
+
+:XOR RRR,OP4	is kodas_s=7 &metod_s=4 & RRR & OP4 {OP4=RRR;}
+:SOB RRR,OP4	is kodas_s=7 &metod_s=7 & RRR & OP4 {OP4=RRR;}
+:MUL RRR,OP4	is kodas_s=7 &metod_s=0 & RRR & OP4 {OP4=RRR;}
+:DIV RRR,OP4	is kodas_s=7 &metod_s=1 & RRR & OP4 {OP4=RRR;}
+:ASH RRR,OP4	is kodas_s=7 &metod_s=2 & RRR & OP4 {OP4=RRR;}
+:ASHC RRR,OP4	is kodas_s=7 &metod_s=3 & RRR & OP4 {OP4=RRR;}
+
+######### MOV MOV MOV ############################################################################
+
+# REGISTRAI IR ISKRYPIMAI
+:MOV OP3,OP4
+is kodas_s=1 
+& reg_s!=7
+& reg_d!=7
+& OP3 & OP4 & reg_s & reg_d
+{ reg_s = reg_d; }
+
+# REGISTRAS IR IMMEDIATE
+:MOV OP3,OPD		is (kodas_s=1 & reg_d=7 & reg_s !=7 &OP3)...  & OPD {PC=PC;} 
+:MOV OPS,OP4		is (kodas_s=1 & reg_s=7 & reg_d !=7 &OP4)...  & OPS {PC=PC;} 
+
+#:MPV OPS,OPD		is (kodas_s=1 & reg_s=7 & reg_d =7)... & OPS &OPD {}
+:MOV FUK		is (kodas_s=1 & reg_s=7 & reg_d =7)... & FUK {PC=PC;}
+############################################################################################
+######## CMP CMP CMP
+# REGISTRAI IR ISKRYPIMAI
+:CMP OP3,OP4
+is kodas_s=2 
+& reg_s!=7
+& reg_d!=7
+& OP3 & OP4 & reg_s & reg_d
+{ reg_s = reg_d; }
+
+# REGISTRAS IR IMMEDIATE
+:CMP OP3,OPD		is (kodas_s=2 & reg_d=7 & reg_s !=7 &OP3)...  & OPD {PC=PC;} 
+:CMP OPS,OP4		is (kodas_s=2 & reg_s=7 & reg_d !=7 &OP4)...  & OPS {PC=PC;} 
+
+#:CMP OPS,OPD		is (kodas_s=2 & reg_s=7 & reg_d =7)... & OPS &OPD {}
+:CMP FUK		is (kodas_s=2 & reg_s=7 & reg_d =7)... & FUK {PC=PC;}
+
+###### SUB SUB SUB
+
+:SUB OP3,OP4 	is kodas_s=0xE & reg_s!=7 & reg_d!=7 & OP3 & OP4 & reg_s & reg_d { reg_s = reg_d; }
+:SUB OP3,OPD	is (kodas_s=0xE & reg_d=7 & reg_s !=7 &OP3)...  & OPD {PC=PC;} 
+:SUB OPS,OP4	is (kodas_s=0xE & reg_s=7 & reg_d !=7 &OP4)...  & OPS {PC=PC;} 
+:SUB FUK		is (kodas_s=0xE & reg_s=7 & reg_d =7)... & FUK {PC=PC;}
+
+###### ADD ADD ADD
+
+:ADD OP3,OP4 	is kodas_s=0x6 & reg_s!=7 & reg_d!=7 & OP3 & OP4 & reg_s & reg_d { reg_s = reg_d; }
+:ADD OP3,OPD	is (kodas_s=0x6 & reg_d=7 & reg_s !=7 &OP3)...  & OPD {PC=PC;} 
+:ADD OPS,OP4	is (kodas_s=0x6 & reg_s=7 & reg_d !=7 &OP4)...  & OPS {PC=PC;} 
+:ADD FUK		is (kodas_s=0x6 & reg_s=7 & reg_d =7)... & FUK {PC=PC;}
+
+###### BIT
+:BIT OP3,OP4 	is kodas_s=0x3 & reg_s!=7 & reg_d!=7 & OP3 & OP4 & reg_s & reg_d { reg_s = reg_d; }
+:BIT OP3,OPD	is (kodas_s=0x3 & reg_d=7 & reg_s !=7 &OP3)...  & OPD {PC=PC;} 
+:BIT OPS,OP4	is (kodas_s=0x3 & reg_s=7 & reg_d !=7 &OP4)...  & OPS {PC=PC;} 
+:BIT FUK		is (kodas_s=0x3 & reg_s=7 & reg_d =7)... & FUK {PC=PC;}
+
+###### BITB
+:BITB OP3,OP4 	is kodas_s=0xb & reg_s!=7 & reg_d!=7 & OP3 & OP4 & reg_s & reg_d { reg_s = reg_d; }
+:BITB OP3,OPD	is (kodas_s=0xb & reg_d=7 & reg_s !=7 &OP3)...  & OPD {PC=PC;} 
+:BITB OPS,OP4	is (kodas_s=0xb & reg_s=7 & reg_d !=7 &OP4)...  & OPS {PC=PC;} 
+:BITB FUK		is (kodas_s=0xb & reg_s=7 & reg_d =7)... & FUK {PC=PC;}
+
+###### BIC
+:BIC OP3,OP4 	is kodas_s=0x4 & reg_s!=7 & reg_d!=7 & OP3 & OP4 & reg_s & reg_d { reg_s = reg_d; }
+:BIC OP3,OPD	is (kodas_s=0x4 & reg_d=7 & reg_s !=7 &OP3)...  & OPD {PC=PC;} 
+:BIC OPS,OP4	is (kodas_s=0x4 & reg_s=7 & reg_d !=7 &OP4)...  & OPS {PC=PC;} 
+:BIC FUK		is (kodas_s=0x4 & reg_s=7 & reg_d =7)... & FUK {PC=PC;}
+
+###### BICB
+:BICB OP3,OP4 	is kodas_s=12 & reg_s!=7 & reg_d!=7 & OP3 & OP4 & reg_s & reg_d { reg_s = reg_d; }
+:BICB OP3,OPD	is (kodas_s=12 & reg_d=7 & reg_s !=7 &OP3)...  & OPD {PC=PC;} 
+:BICB OPS,OP4	is (kodas_s=12 & reg_s=7 & reg_d !=7 &OP4)...  & OPS {PC=PC;} 
+:BICB FUK		is (kodas_s=12 & reg_s=7 & reg_d =7)... & FUK {PC=PC;}
+
+###### BIS
+:BIS OP3,OP4 	is kodas_s=0x5 & reg_s!=7 & reg_d!=7 & OP3 & OP4 & reg_s & reg_d { reg_s = reg_d; }
+:BIS OP3,OPD	is (kodas_s=0x5 & reg_d=7 & reg_s !=7 &OP3)...  & OPD {PC=PC;} 
+:BIS OPS,OP4	is (kodas_s=0x5 & reg_s=7 & reg_d !=7 &OP4)...  & OPS {PC=PC;} 
+:BIS FUK		is (kodas_s=0x5 & reg_s=7 & reg_d =7)... & FUK {PC=PC;}
+
+###### BISB
+:BISB OP3,OP4 	is kodas_s=13 & reg_s!=7 & reg_d!=7 & OP3 & OP4 & reg_s & reg_d { reg_s = reg_d; }
+:BISB OP3,OPD	is (kodas_s=13 & reg_d=7 & reg_s !=7 &OP3)...  & OPD {PC=PC;} 
+:BISB OPS,OP4	is (kodas_s=13 & reg_s=7 & reg_d !=7 &OP4)...  & OPS {PC=PC;} 
+:BISB FUK		is (kodas_s=13 & reg_s=7 & reg_d =7)... & FUK {PC=PC;}
+###### INC INC INC tik destination: OP4, OPD
+:INC OP4		is kodas_s=0 & metod_s=5 &reg_s=2 &reg_d<7 &OP4 {PC=PC;}
+:INC OPD		is (kodas_s=0 & metod_s=5 &reg_s=2 &reg_d=7)... &OPD {PC=PC;}
+:INCB OP4		is kodas_s=8 & metod_s=5 &reg_s=2 &reg_d<7 &OP4 {PC=PC;}
+:INCB OPD		is (kodas_s=8 & metod_s=5 &reg_s=2 &reg_d=7)... &OPD {PC=PC;}
+
+:DEC OP4		is kodas_s=0 & metod_s=5 &reg_s=3 &reg_d<7 &OP4 {PC=PC;}
+:DEC OPD		is (kodas_s=0 & metod_s=5 &reg_s=3 &reg_d=7)... &OPD {PC=PC;}
+:DECB OP4		is kodas_s=8 & metod_s=5 &reg_s=3 &reg_d<7 &OP4 {PC=PC;}
+:DECB OPD		is (kodas_s=8 & metod_s=5 &reg_s=3 &reg_d=7)... &OPD {PC=PC;}
+
+:NEG OP4		is kodas_s=0 & metod_s=5 &reg_s=4 &reg_d<7 &OP4 {PC=PC;}
+:NEG OPD		is (kodas_s=0 & metod_s=5 &reg_s=4 &reg_d=7)... &OPD {PC=PC;}
+:NEGB OP4		is kodas_s=8 & metod_s=5 &reg_s=4 &reg_d<7 &OP4 {PC=PC;}
+:NEGB OPD		is (kodas_s=8 & metod_s=5 &reg_s=4 &reg_d=7)... &OPD {PC=PC;}
+
+:ADC OP4		is kodas_s=0 & metod_s=5 &reg_s=5 &reg_d<7 &OP4 {PC=PC;}
+:ADC OPD		is (kodas_s=0 & metod_s=5 &reg_s=5 &reg_d=7)... &OPD {PC=PC;}
+:ADCB OP4		is kodas_s=8 & metod_s=5 &reg_s=5 &reg_d<7 &OP4 {PC=PC;}
+:ADCB OPD		is (kodas_s=8 & metod_s=5 &reg_s=5 &reg_d=7)... &OPD {PC=PC;}
+
+:SBC OP4		is kodas_s=0 & metod_s=5 &reg_s=6 &reg_d<7 &OP4 {PC=PC;}
+:SBC OPD		is (kodas_s=0 & metod_s=5 &reg_s=6 &reg_d=7)... &OPD {PC=PC;}
+:SBCB OP4		is kodas_s=8 & metod_s=5 &reg_s=6 &reg_d<7 &OP4 {PC=PC;}
+:SBCB OPD		is (kodas_s=8 & metod_s=5 &reg_s=6 &reg_d=7)... &OPD {PC=PC;}
+
+:ROR OP4		is kodas_s=0 & metod_s=6 &reg_s=0 &reg_d<7 &OP4 {PC=PC;}
+:ROR OPD		is (kodas_s=0 & metod_s=6 &reg_s=0 &reg_d=7)... &OPD {PC=PC;}
+:RORB OP4		is kodas_s=8 & metod_s=6 &reg_s=0 &reg_d<7 &OP4 {PC=PC;}
+:RORB OPD		is (kodas_s=8 & metod_s=6 &reg_s=0 &reg_d=7)... &OPD {PC=PC;}
+
+:ROL OP4		is kodas_s=0 & metod_s=6 &reg_s=1 &reg_d<7 &OP4 {PC=PC;}
+:ROL OPD		is (kodas_s=0 & metod_s=6 &reg_s=1 &reg_d=7)... &OPD {PC=PC;}
+:ROLB OP4		is kodas_s=8 & metod_s=6 &reg_s=1 &reg_d<7 &OP4 {PC=PC;}
+:ROLB OPD		is (kodas_s=8 & metod_s=6 &reg_s=1 &reg_d=7)... &OPD {PC=PC;}
+
+:ASR OP4		is kodas_s=0 & metod_s=6 &reg_s=2 &reg_d<7 &OP4 {PC=PC;}
+:ASR OPD		is (kodas_s=0 & metod_s=6 &reg_s=2 &reg_d=7)... &OPD {PC=PC;}
+:ASRB OP4		is kodas_s=8 & metod_s=6 &reg_s=2 &reg_d<7 &OP4 {PC=PC;}
+:ASRB OPD		is (kodas_s=8 & metod_s=6 &reg_s=2 &reg_d=7)... &OPD {PC=PC;}
+
+:ASL OP4		is kodas_s=0 & metod_s=6 &reg_s=3 &reg_d<7 &OP4 {PC=PC;}
+:ASL OPD		is (kodas_s=0 & metod_s=6 &reg_s=3 &reg_d=7)... &OPD {PC=PC;}
+:ASLB OP4		is kodas_s=8 & metod_s=6 &reg_s=3 &reg_d<7 &OP4 {PC=PC;}
+:ASLB OPD		is (kodas_s=8 & metod_s=6 &reg_s=3 &reg_d=7)... &OPD {PC=PC;}
+
+:TST OP4		is kodas_s=0 & metod_s=5 &reg_s=7 &reg_d<7 &OP4 {PC=PC;}
+:TST OPD		is (kodas_s=0 & metod_s=5 &reg_s=7 &reg_d=7)... &OPD {PC=PC;}
+:TSTB OP4		is kodas_s=8 & metod_s=5 &reg_s=7 &reg_d<7 &OP4 {PC=PC;}
+:TSTB OPD		is (kodas_s=8 & metod_s=5 &reg_s=7 &reg_d=7)... &OPD {PC=PC;}
+
+:SXT OP4		is kodas_s=0 & metod_s=6 &reg_s=7 &reg_d<7 &OP4 {PC=PC;}
+:SXT OPD		is (kodas_s=0 & metod_s=6 &reg_s=7 &reg_d=7)... &OPD {PC=PC;}
+
+:SWAB OP4		is kodas_s=0 & metod_s=0 &reg_s=3 &reg_d<7 &OP4 {PC=PC;}
+:SWAB OPD		is (kodas_s=0 & metod_s=0 &reg_s=3 &reg_d=7)... &OPD {PC=PC;}
+
+:MFPS OP4		is kodas_s=8 & metod_s=6 &reg_s=7 &reg_d<7 &OP4 {PC=PC;}
+:MFPS OPD		is (kodas_s=8 & metod_s=6 &reg_s=7 &reg_d=7)... &OPD {PC=PC;}
+
+:MTPS OP4		is kodas_s=8 & metod_s=6 &reg_s=4 &reg_d<7 &OP4 {PC=PC;}
+:MTPS OPD		is (kodas_s=8 & metod_s=6 &reg_s=4 &reg_d=7)... &OPD {PC=PC;}
+############################################################################################
+
+
+:JMP OP2    is (kodas=1 & regai=7)... & OP2 {goto OP2;}
+:JSR OP2	is (kodas_s=0 & metod_s=4 & reg_s<7)... & OP2 {*SP=PC; SP = SP-4; goto OP2;}
+
+:CALL OP2	is (kodas_s=0 & metod_s=4 & reg_s=7)... & OP2 {goto OP2;}
+
+
+# adresacijos metodai (mode)? arba
+# 0 - registras Rn
+# 1 - netiesioginis registras @Rn arba (Rn) - viduje registro reiksme
+# 2 - autoinkrementinis (Rn)+
+# 3 - @(Rn)+
+# 4 - -(Rn)
+# 5 - @-(Rn)
+# 6 - indeksinis X(Rn)
+# 7 - @X(Rn)
+
+# Jumpai (PC registras, R7)
+#          543210
+# 2 - #X   010 111 = 17
+# 3 - @#X  011 111 = 1f
+# 6 - X    110 111 = 37
+# 7 - @X   111 111 = 3f
+
