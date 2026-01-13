@@ -7,6 +7,34 @@
 
 # WARNING! ALL STUFF in {} is untested.
 
+
+#NEVEIKIA:
+#f717 RTS R0
+#4000 JMP R0
+#f714
+#4200 JMP R2
+
+#f709
+#830a
+#f72d
+#df1d
+#d095
+#2000 
+#a090
+#4094
+#3f90 
+#74ff
+#76ff
+#0a0d
+#200f
+#720f
+#0f00
+#0a0d
+#0a0e
+
+
+
+
 define endian=little;
 define alignment=2;
 
@@ -80,6 +108,7 @@ define token word_1 (16)
 	
 	op_h =(8,15)
 	rel = (0,7) signed
+	baitas = (0,7)
 	
 	kodas_s = (12,15)
 	metod_s=(9,11)
@@ -125,7 +154,7 @@ REL: reloc		is rel	[ reloc = inst_next + 2 * rel; ] { export *:2 reloc; }
 :SEZ		is imm16=0x0b4 {FLG[2,1]=1;}
 :SEN		is imm16=0x0b8 {FLG[3,1]=1;}
 :SCC		is imm16=0x0bF {FLG[0,1]=1; FLG[5,1]=1; FLG[2,1]=1; FLG[3,1]=1; }
-:EMT		is op_h=0x88 { PC=(18);} # NETEISYBE
+:EMT "'"baitas"'"		is op_h=0x88 & baitas { PC=(18);} # NETEISYBE
 :TRAP		is op_h=0x89 { PC=(36);} # NETEISYBE
 :IOT		is imm16=0x004 {PC=(20);} # NETEISYBE
 :BPT		is imm16=0x003 {PC=(14);} # NETEISYBE
@@ -169,6 +198,12 @@ OP2: "@#"imm16		is metod=3; imm16			{ tmp:2 =(imm16); export *:1 tmp; }
 OP2: ">"imm16		is metod=6; imm16			{ export *:1 imm16; }
 OP2: "@"imm16		is metod=7; imm16			{ export *:1 imm16; }
 
+#spetini rezimai
+OP2: "0?"imm16		is metod=0; imm16			{ export *:1 imm16; }
+OP2: "1?"imm16		is metod=1; imm16			{ export *:1 imm16; }
+OP2: "4?"imm16		is metod=4; imm16			{ export *:1 imm16; }
+OP2: "5?"imm16		is metod=5; imm16			{ export *:1 imm16; }
+
 # Source: All possible methods.
 OP3: @(reg_s)+		is metod_s=3 & reg_s {export reg_s;}
 OP3: (reg_s)		is metod_s=1 & reg_s {export *[const]:2 reg_s;}
@@ -202,11 +237,19 @@ OPD: "#"imm16    	is metod_d=2; imm16			{ tmp:1 = imm16; export tmp; }
 OPD: "@#"imm16    	is metod_d=3; imm16			{ tmp:1 = imm16; export tmp; }
 OPD: imm16    		is metod_d=6; imm16			{ tmp:1 = imm16; export tmp; }
 OPD: "@"imm16    	is metod_d=7; imm16			{ tmp:1 = imm16; export tmp; }
+OPD: reg_d			is metod_d=0 & reg_d	{tmp:1 = *:2 reg_d; export tmp;}
+OPD: 1?(reg_d)		is metod_d=1 & reg_d	{tmp:1 = *:2 reg_d; export tmp;}
+OPD: 4?(reg_d)		is metod_d=4 & reg_d	{tmp:1 = *:2 reg_d; export tmp;}
+OPD: 5?(reg_d)		is metod_d=5 & reg_d	{tmp:1 = *:2 reg_d; export tmp;}
 
 OPS: "#"imm16		is metod_s=2; imm16			{ tmp:1 = imm16; export tmp; }
 OPS: "@#"imm16    	is metod_s=3; imm16			{ tmp:1 = imm16; export tmp; }
 OPS: imm16    		is metod_s=6; imm16			{ tmp:1 = imm16; export tmp; }
 OPS: "@"imm16    	is metod_s=7; imm16			{ tmp:1 = imm16; export tmp; }
+OPS: reg_s			is metod_s=0 & reg_s	{tmp:1 = *:2 reg_s; export tmp;}
+OPS: 1?(reg_s)		is metod_s=1 & reg_s	{tmp:1 = *:2 reg_s; export tmp;}
+OPS: 4?(reg_s)		is metod_s=4 & reg_s	{tmp:1 = *:2 reg_s; export tmp;}
+OPS: 5?(reg_s)		is metod_s=5 & reg_s	{tmp:1 = *:2 reg_s; export tmp;}
 
 #both operands are "#" total 6 bytes (3 words).
 FUK: "#"im32l,"#"im32h			is metod_s=2; im32h	&im32l		{  tmp:1 = im32h; export tmp; }
@@ -311,6 +354,18 @@ is kodas_s=2
 :INCB OP4		is kodas_s=8 & metod_s=5 &reg_s=2 &reg_d<7 &OP4 {PC=PC;}
 :INCB OPD		is (kodas_s=8 & metod_s=5 &reg_s=2 &reg_d=7)... &OPD {PC=PC;}
 
+:CLR OP4		is kodas_s=0 & metod_s=5 &reg_s=0 &reg_d<7 &OP4 {PC=PC;}
+:CLR OPD		is (kodas_s=0 & metod_s=5 &reg_s=0 &reg_d=7)... &OPD {PC=PC;}
+:CLRB OP4		is kodas_s=8 & metod_s=5 &reg_s=0 &reg_d<7 &OP4 {PC=PC;}
+:CLRB OPD		is (kodas_s=8 & metod_s=5 &reg_s=0 &reg_d=7)... &OPD {PC=PC;}
+
+:COM OP4		is kodas_s=0 & metod_s=5 &reg_s=1 &reg_d<7 &OP4 {PC=PC;}
+:COM OPD		is (kodas_s=0 & metod_s=5 &reg_s=1 &reg_d=7)... &OPD {PC=PC;}
+:COMB OP4		is kodas_s=8 & metod_s=5 &reg_s=1 &reg_d<7 &OP4 {PC=PC;}
+:COMB OPD		is (kodas_s=8 & metod_s=5 &reg_s=1 &reg_d=7)... &OPD {PC=PC;}
+
+
+
 :DEC OP4		is kodas_s=0 & metod_s=5 &reg_s=3 &reg_d<7 &OP4 {PC=PC;}
 :DEC OPD		is (kodas_s=0 & metod_s=5 &reg_s=3 &reg_d=7)... &OPD {PC=PC;}
 :DECB OP4		is kodas_s=8 & metod_s=5 &reg_s=3 &reg_d<7 &OP4 {PC=PC;}
@@ -370,7 +425,8 @@ is kodas_s=2
 ############################################################################################
 
 # JSR/JMP - need to rewrite
-:JMP OP2    is (kodas=1 & regai=7)... & OP2 {goto OP2;}
+:JMP OP2    is (kodas=1 & regai=7)... & OP2 {goto OP2;} #???
+:JMP OP4	is (kodas=1) & OP4 {} # JMP R0 ir pan
 :JSR OP2	is (kodas_s=0 & metod_s=4 & reg_s<7)... & OP2 {*SP=PC; SP = SP-4; goto OP2;}
 :CALL OP2	is (kodas_s=0 & metod_s=4 & reg_s=7)... & OP2 {goto OP2;}
 
