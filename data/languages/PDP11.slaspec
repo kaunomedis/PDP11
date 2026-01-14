@@ -129,6 +129,7 @@ define token data8 (8)
 # next word with data or first opcode
 define token data (16)
 	imm16 = (0,15)
+	rell	=(0,15) signed
 ;
 
 # THIS HACK. I do not know how to use two imm16, two words of data (4 bytes)
@@ -139,6 +140,7 @@ define token data2 (32)
 ;
 # Relative addressing. Note x2 multiplication (adressing is in words)
 REL: reloc		is rel	[ reloc = inst_next + 2 * rel; ] { export *:2 reloc; } 
+RELL: reloc 	is rell  [ reloc = inst_next + rell; ] { export *:2 reloc; } 
 # ############# VEIKIANTYS 
 :NOP		is imm16=0x0A0 {	R0=R0;}
 :HALT		is imm16=0 { PC=123;}
@@ -178,7 +180,7 @@ REL: reloc		is rel	[ reloc = inst_next + 2 * rel; ] { export *:2 reloc; }
 :BHI  REL			is op_h=0x82 & REL {goto REL;} # C or Z =0
 :BLOS REL			is op_h=0x83 & REL {goto REL;} # C or Z =1
 
-:RETURN		is imm16=0x87 {PC = *SP; SP = SP+4; return [PC];}
+
 # ########################
 # Jumpai (PC registras, R7)
 #          543210
@@ -193,16 +195,16 @@ REL: reloc		is rel	[ reloc = inst_next + 2 * rel; ] { export *:2 reloc; }
 ####################### VARIANTAI adresacijos #############################################
 
 # JUMPS ONLY
-OP2: "#"imm16    	is metod=2; imm16			{ export *:1 imm16; }
-OP2: "@#"imm16		is metod=3; imm16			{ tmp:2 =(imm16); export *:1 tmp; }
-OP2: ">"imm16		is metod=6; imm16			{ export *:1 imm16; }
-OP2: "@"imm16		is metod=7; imm16			{ export *:1 imm16; }
+OP2: "#"imm16    	is metod=2; imm16			{ export *:2 imm16; }
+OP2: "@#"imm16		is metod=3; imm16			{ tmp:2 =(imm16); export *:2 tmp; }
+OP2: ">"imm16		is metod=6; imm16			{ export *:2 imm16; }
+OP2: "@"imm16		is metod=7; imm16			{ export *:2 imm16; }
 
 #spetini rezimai
-OP2: "0?"imm16		is metod=0; imm16			{ export *:1 imm16; }
-OP2: "1?"imm16		is metod=1; imm16			{ export *:1 imm16; }
-OP2: "4?"imm16		is metod=4; imm16			{ export *:1 imm16; }
-OP2: "5?"imm16		is metod=5; imm16			{ export *:1 imm16; }
+OP2: "0?"imm16		is metod=0; imm16			{ export *:2 imm16; }
+OP2: "1?"imm16		is metod=1; imm16			{ export *:2 imm16; }
+OP2: "4?"imm16		is metod=4; imm16			{ export *:2 imm16; }
+OP2: "5?"imm16		is metod=5; imm16			{ export *:2 imm16; }
 
 # Source: All possible methods.
 OP3: @(reg_s)+		is metod_s=3 & reg_s {export reg_s;}
@@ -256,6 +258,9 @@ FUK: "#"im32l,"#"im32h			is metod_s=2; im32h	&im32l		{  tmp:1 = im32h; export tm
 
 #export only register names
 RRR: reg_s is kodas_s=7 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
+RRD: reg_d is kodas=2 &reg_d  {tmp:2 = *:2 reg_d; export tmp;}
+
+
 
 ######### XOR SOB MUL DIV ASH ASHC
 
@@ -386,13 +391,13 @@ is kodas_s=2
 :SBCB OP4		is kodas_s=8 & metod_s=5 &reg_s=6 &reg_d<7 &OP4 {PC=PC;}
 :SBCB OPD		is (kodas_s=8 & metod_s=5 &reg_s=6 &reg_d=7)... &OPD {PC=PC;}
 
-:ROR OP4		is kodas_s=0 & metod_s=6 &reg_s=0 &reg_d<7 &OP4 {PC=PC;}
+:ROR OP4		is kodas_s=0 & metod_s=6 &reg_s=0 &reg_d<7 &OP4 {OP4=OP4>>1;}
 :ROR OPD		is (kodas_s=0 & metod_s=6 &reg_s=0 &reg_d=7)... &OPD {PC=PC;}
 :RORB OP4		is kodas_s=8 & metod_s=6 &reg_s=0 &reg_d<7 &OP4 {PC=PC;}
 :RORB OPD		is (kodas_s=8 & metod_s=6 &reg_s=0 &reg_d=7)... &OPD {PC=PC;}
 
-:ROL OP4		is kodas_s=0 & metod_s=6 &reg_s=1 &reg_d<7 &OP4 {PC=PC;}
-:ROL OPD		is (kodas_s=0 & metod_s=6 &reg_s=1 &reg_d=7)... &OPD {PC=PC;}
+:ROL OP4		is kodas_s=0 & metod_s=6 &reg_s=1 &reg_d<7 &OP4 {OP4=OP4<<1;}
+:ROL OPD		is (kodas_s=0 & metod_s=6 &reg_s=1 &reg_d=7)... &OPD {OPD=OPD<<1;}
 :ROLB OP4		is kodas_s=8 & metod_s=6 &reg_s=1 &reg_d<7 &OP4 {PC=PC;}
 :ROLB OPD		is (kodas_s=8 & metod_s=6 &reg_s=1 &reg_d=7)... &OPD {PC=PC;}
 
@@ -425,11 +430,16 @@ is kodas_s=2
 ############################################################################################
 
 # JSR/JMP - need to rewrite
-:JMP OP2    is (kodas=1 & regai=7)... & OP2 {goto OP2;} #???
-:JMP OP4	is (kodas=1) & OP4 {} # JMP R0 ir pan
-:JSR OP2	is (kodas_s=0 & metod_s=4 & reg_s<7)... & OP2 {*SP=PC; SP = SP-4; goto OP2;}
-:CALL OP2	is (kodas_s=0 & metod_s=4 & reg_s=7)... & OP2 {goto OP2;}
+:JMP OP2    is (kodas=1 & regai=7)... & OP2 { goto OP2;} #???
+:JMP OP4	is (kodas=1) & OP4 {PC=OP4; goto [PC];} # JMP R0 ir pan
 
+:JSR OP2	is (kodas_s=0 & metod_s=4 & reg_s<7)... & OP2 {tmp=OP2+PC+4; *SP=OP2; SP=SP-1; call [tmp];}
+:CALL RELL	is (kodas_s=0 & metod_s=4 & reg_s=7) ; RELL { *SP=PC; SP=SP-1; call RELL; }
+ 
+##BR   REL			is op_h=1 & REL {goto REL;}
+###### RETURN
+:RETURN		is imm16=0x87 {PC = *SP; SP = SP+1; return [PC];}
+:RTS RRD	is kodas=2 & metod=0 & regai<7 &RRD {PC=RRD; RRD=*SP; SP=SP+1; return [PC];}
 
 # adresacijos metodai (mode)? arba
 # 0 - registras Rn
