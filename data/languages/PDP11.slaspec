@@ -217,37 +217,37 @@ OP4: "7:"@(reg_d)		is metod_d=7 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
 #neteisingas, turi dar paimti imm16. iki cia neturi ateiti
 
 # source and destination is "#". total 4 bytes (2 words).
-OPD: reg_d			is metod_d=0 & reg_d		{tmp:1 = *:2 reg_d; export tmp;}
-OPD: 1?(reg_d)		is metod_d=1 & reg_d		{tmp:1 = *:2 reg_d; export tmp;}
-OPD: "#"imm16    	is metod_d=2; imm16			{ tmp:1 = imm16; export tmp; }
-OPD: "@#"imm16    	is metod_d=3; imm16			{ tmp:1 = imm16; export tmp; }
-OPD: 4?-(reg_d)		is metod_d=4 & reg_d		{tmp:1 = *:2 reg_d; export tmp;}
-OPD: 5?@-(reg_d)		is metod_d=5 & reg_d	{tmp:1 = *:2 reg_d; export tmp;}
-OPD: imm16    		is metod_d=6; imm16			{ tmp:1 = imm16; export tmp; }
-OPD: "@"imm16    	is metod_d=7; imm16			{ tmp:1 = imm16; export tmp; }
+OPD: reg_d			is metod_d=0 & reg_d		{ tmp:2 = *:2 reg_d; export tmp;}
+OPD: 1?(reg_d)		is metod_d=1 & reg_d		{ tmp:2 = *:2 reg_d; export tmp;}
+OPD: "#"imm16    	is metod_d=2; imm16			{ tmp:2 = imm16; export tmp; }
+OPD: "@#"imm16    	is metod_d=3; imm16			{ tmp:2 = imm16; export tmp; }
+OPD: 4?-(reg_d)		is metod_d=4 & reg_d		{ tmp:2 = *:2 reg_d; export tmp;}
+OPD: 5?@-(reg_d)		is metod_d=5 & reg_d	{ tmp:2 = *:2 reg_d; export tmp;}
+OPD: imm16    		is metod_d=6; imm16			{ tmp:2 = imm16; export tmp; }
+OPD: "@"imm16    	is metod_d=7; imm16			{ tmp:2 = imm16; export tmp; }
 
 
-OPS: reg_s			is metod_s=0 & reg_s		{tmp:1 = *:2 reg_s; export tmp;}
-OPS: 1?(reg_s)		is metod_s=1 & reg_s		{tmp:1 = *:2 reg_s; export tmp;}
-OPS: "#"imm16		is metod_s=2; imm16			{ tmp:1 = imm16; export tmp; }
-OPS: "@#"imm16    	is metod_s=3; imm16			{ tmp:1 = imm16; export tmp; }
-OPS: 4?(reg_s)		is metod_s=4 & reg_s		{tmp:1 = *:2 reg_s; export tmp;}
-OPS: 5?(reg_s)		is metod_s=5 & reg_s		{tmp:1 = *:2 reg_s; export tmp;}
-OPS: imm16    		is metod_s=6; imm16			{ tmp:1 = imm16; export tmp; }
-OPS: "@"imm16    	is metod_s=7; imm16			{ tmp:1 = imm16; export tmp; }
+OPS: reg_s			is metod_s=0 & reg_s		{ tmp:2 = *:2 reg_s; export tmp;}
+OPS: 1?(reg_s)		is metod_s=1 & reg_s		{ tmp:2 = *:2 reg_s; export tmp;}
+OPS: "#"imm16		is metod_s=2; imm16			{ tmp:2 = imm16; export tmp; }
+OPS: "@#"imm16    	is metod_s=3; imm16			{ tmp:2 = imm16; export tmp; }
+OPS: 4?(reg_s)		is metod_s=4 & reg_s		{ tmp:2 = *:2 reg_s; export tmp;}
+OPS: 5?(reg_s)		is metod_s=5 & reg_s		{ tmp:2 = *:2 reg_s; export tmp;}
+OPS: imm16    		is metod_s=6; imm16			{ tmp:2 = imm16; export tmp; }
+OPS: "@"imm16    	is metod_s=7; imm16			{ tmp:2 = imm16; export tmp; }
 
 
 
 #both operands are "#" total 6 bytes (3 words).
-FUKD: "#"im32l,"#"im32h		is metod_d=2; im32h	&im32l		{  tmp:1 = im32h; export tmp; }
-FUKD: "@#"im32l,"#"im32h	is metod_d=3; im32h	&im32l		{  tmp:1 = im32h; export tmp; }
-FUKD: "@"im32l,"#"im32h		is metod_d=7; im32h	&im32l		{  tmp:1 = im32h; export tmp; }
-FUKD: ""im32l,""im32h		is metod_d=6; im32h	&im32l		{  tmp:1 = im32h; export tmp; } #cia turi buti REL
+FUKD: "#"im32l,"#"im32h		is metod_d=2; im32h	&im32l		{  tmp:2 = im32h; export tmp; }
+FUKD: "@#"im32l,"#"im32h	is metod_d=3; im32h	&im32l		{  tmp:2 = im32h; export tmp; }
+FUKD: "@"im32l,"#"im32h		is metod_d=7; im32h	&im32l		{  tmp:2 = im32h; export tmp; }
+FUKD: ""im32l,""im32h		is metod_d=6; im32h	&im32l		{  tmp:2 = im32h; export tmp; } #cia turi buti REL
 
-FUKS: "#"im32l,"#"im32h		is metod_s=2; im32h	&im32l		{  tmp:1 = im32h; export tmp; }
-FUKS: "@#"im32l,"#"im32h	is metod_s=3; im32h	&im32l		{  tmp:1 = im32h; export tmp; }
-FUKS: "@"im32l,"#"im32h		is metod_s=7; im32h	&im32l		{  tmp:1 = im32h; export tmp; }
-FUKS: ""im32l,""im32h		is metod_s=6; im32h	&im32l		{  tmp:1 = im32h; export tmp; } #cia turi buti REL
+FUKS: "#"im32l,"#"im32h		is metod_s=2; im32h	&im32l		{  tmp:2 = im32h; export tmp; }
+FUKS: "@#"im32l,"#"im32h	is metod_s=3; im32h	&im32l		{  tmp:2 = im32h; export tmp; }
+FUKS: "@"im32l,"#"im32h		is metod_s=7; im32h	&im32l		{  tmp:2 = im32h; export tmp; }
+FUKS: ""im32l,""im32h		is metod_s=6; im32h	&im32l		{  tmp:2 = im32h; export tmp; } #cia turi buti REL
 
 
 
@@ -421,8 +421,8 @@ is kodas_s=2
 :MFPS OP4		is kodas_s=8 & metod_s=6 &reg_s=7 &reg_d<7 &OP4 {PC=PC;}
 :MFPS OPD		is (kodas_s=8 & metod_s=6 &reg_s=7 &reg_d=7)... &OPD {PC=PC;}
 
-:MTPS OP4		is kodas_s=8 & metod_s=6 &reg_s=4 &reg_d<7 &OP4 {PC=PC;}
-:MTPS OPD		is (kodas_s=8 & metod_s=6 &reg_s=4 &reg_d=7)... &OPD {PC=PC;}
+:MTPS OP4		is kodas_s=8 & metod_s=6 &reg_s=4 &OP4 {FLG=OP4;}
+:MTPS OPD		is (kodas_s=8 & metod_s=6 &reg_s=4 &reg_d=7)... &OPD {FLG=OPD;}
 ############################################################################################
 RELL: reloc 	is rell  [ reloc = inst_next + rell; ] { export *:2 reloc; } 
 J16: imm16    	is  imm16			{ export *:2 imm16; }
@@ -444,7 +444,7 @@ MMM: "@"	is metod_d=7 & reg_s {tmp:2 = *:2 reg_s; export tmp;} #reliatyvi adresa
 :JMP OP2    is (kodas=1 & regai=7)... & OP2 { goto OP2;} #???
 :JMP OP4	is (kodas=1) & OP4 {PC=OP4; goto [PC];} # JMP R0 ir pan
 
-:JSR JPS,MMM^RELL	is (kodas_s=0 & metod_s=4 & reg_s<7 & reg_d=7 & metod_d>4)& JPS &MMM;RELL {tmp=JPS+RELL; call RELL;}
+:JSR JPS,MMM^RELL	is (kodas_s=0 & metod_s=4 & reg_s<7 & reg_d=7 & metod_d>4)& JPS &MMM;RELL {tmp=JPS+RELL; call [*:2 tmp];}
 :JSR JPS,MMM^J16	is (kodas_s=0 & metod_s=4 & reg_s<7 & reg_d=7 & metod_d<5)& JPS &MMM;J16 {call J16;}
 
 
