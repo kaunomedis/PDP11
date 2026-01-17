@@ -100,10 +100,16 @@ define token data8 (8)
 ;
 
 # next word with data or first opcode
-define token data (16)
+define token data_a (16)
 	imm16 = (0,15)
 	rell	=(0,15) signed
 ;
+
+define token data_b (16)
+	imm16b = (0,15)
+	rellb	=(0,15) signed
+;
+
 
 # THIS HACK. I do not know how to use two imm16, two words of data (4 bytes)
 define token data2 (32)
@@ -158,18 +164,6 @@ REL: reloc		is rel	[ reloc = inst_next + 2 * rel; ] { export *:2 reloc; }
 
 ####################### VARIANTAI adresacijos #############################################
 
-# JUMPS ONLY
-#OP2: "#"imm16    	is metod=2; imm16			{ export *:2 imm16; }
-#OP2: "@#"imm16		is metod=3; imm16			{ tmp:2 =(imm16); export *:2 tmp; }
-#OP2: ">"imm16		is metod=6; imm16			{ export *:2 imm16; }
-#OP2: "@"imm16		is metod=7; imm16			{ export *:2 imm16; }
-
-#spetini rezimai
-#OP2: "0?"imm16		is metod=0; imm16			{ export *:2 imm16; }
-#OP2: "1?"imm16		is metod=1; imm16			{ export *:2 imm16; }
-#OP2: "4?"imm16		is metod=4; imm16			{ export *:2 imm16; }
-#OP2: "5?"imm16		is metod=5; imm16			{ export *:2 imm16; }
-
 # Source: All possible methods.
 OP3: @(reg_s)+		is metod_s=3 & reg_s {export reg_s;}
 OP3: (reg_s)		is metod_s=1 & reg_s {export *[const]:2 reg_s;}
@@ -177,11 +171,17 @@ OP3: (reg_s)+		is metod_s=2 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
 OP3: reg_s			is metod_s=0 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
 OP3: -(reg_s)		is metod_s=4 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
 OP3: @-(reg_s)		is metod_s=5 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
+OP3: "7>>>"#imm16	is metod_s=7 ; imm16 {tmp:2 = imm16; export tmp;}
+OP3: "6>>>"#imm16	is metod_s=6 ; imm16 {tmp:2 = imm16; export tmp;}
 
 #NOT TO GET HERE:
-OP3: "6??:"#[reg_s]	is metod_s=6 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
-OP3: "7:"@(reg_s)	is metod_s=7 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
+#OP3: "6??:"#[reg_s]	is metod_s=6 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
+#OP3: "7:"@(reg_s)	is metod_s=7 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
 #neteisingas, turi dar paimti imm16. iki cia turi neateiti
+
+#addrmode: reg_s is reg_s & metod=0    {tmp:2 = *:2 reg_s; export tmp;}
+#addrmode: #imm16 is metod=1; imm16    { export imm16;}
+#:xor "A",addrmode is kodas=0x1FF ... & addrmode {PC=PC;	}
 
 # destination. All possible methods.
 OP4: (reg_d)		is metod_d=1 & reg_d {export *[const]:2 reg_d;}
@@ -190,11 +190,29 @@ OP4: (reg_d)+		is metod_d=2 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
 OP4: reg_d			is metod_d=0 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
 OP4: -(reg_d)		is metod_d=4 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
 OP4: @-(reg_d)		is metod_d=5 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
+OP4: "6>>>"#imm16b	is metod_d=6 ; imm16b {tmp:2 = imm16b; export tmp;}
+OP4: "7>>>"#imm16b	is metod_d=7 ; imm16b {tmp:2 = imm16b; export tmp;}
 
 #NOT TO GEt HERE:
-OP4: "6??:"#[reg_d]		is metod_d=6 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
-OP4: "7:"@(reg_d)		is metod_d=7 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
+#OP4: "6??:"#[reg_d]		is metod_d=6 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
+#OP4: "7:"@(reg_d)		is metod_d=7 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
 #neteisingas, turi dar paimti imm16. iki cia neturi ateiti
+
+#both operands are "#" total 6 bytes (3 words).
+FUKD: "7>>>@"im32h	is metod_d=7; im32h		{  tmp:2 = im32h; export tmp; }
+FUKD: "6>>>"im32h		is metod_d=6; im32h		{  tmp:2 = im32h; export tmp; } #cia turi buti REL
+
+FUKS: "7>>>@"im32l		is metod_s=7; im32l		{  tmp:2 = im32l; export tmp; }
+FUKS: "6>>>"im32l		is metod_s=6; im32l		{  tmp:2 = im32l; export tmp; } #cia turi buti REL
+
+
+OP: FUKS,FUKD is ((metod_d=6 | metod_d=7) & (metod_s=6 | metod_s=7))... & FUKS & FUKD {FUKD=FUKS;}
+OP: OP3,OP4 is ((metod_d != 6 & metod_d != 7) | (metod_s != 6 & metod_s != 7))... & OP3 & OP4 {OP4=OP3;}
+
+OP: OP3,FUKD is ((metod_d = 6 | metod_d = 7) & (metod_s<6))... & OP3 & FUKD {FUKD=OP3;}
+OP: FUKS,OP4 is ((metod_s = 6 | metod_s = 7) & (metod_d<6))... & FUKS & OP4 {OP4=FUKS;}
+
+
 
 # source and destination is "#". total 4 bytes (2 words).
 OPD: reg_d			is metod_d=0 & reg_d		{ tmp:2 = *:2 reg_d; export tmp;}
@@ -218,152 +236,68 @@ OPS: "@"imm16    	is metod_s=7; imm16			{ tmp:2 = imm16; export tmp; }
 
 
 
-#both operands are "#" total 6 bytes (3 words).
-FUKD: "#"im32l,"#"im32h		is metod_d=2; im32h	&im32l		{  tmp:2 = im32h; export tmp; }
-FUKD: "@#"im32l,"#"im32h	is metod_d=3; im32h	&im32l		{  tmp:2 = im32h; export tmp; }
-FUKD: "@"im32l,"#"im32h		is metod_d=7; im32h	&im32l		{  tmp:2 = im32h; export tmp; }
-FUKD: ""im32l,""im32h		is metod_d=6; im32h	&im32l		{  tmp:2 = im32h; export tmp; } #cia turi buti REL
-
-FUKS: "#"im32l,"#"im32h		is metod_s=2; im32h	&im32l		{  tmp:2 = im32h; export tmp; }
-FUKS: "@#"im32l,"#"im32h	is metod_s=3; im32h	&im32l		{  tmp:2 = im32h; export tmp; }
-FUKS: "@"im32l,"#"im32h		is metod_s=7; im32h	&im32l		{  tmp:2 = im32h; export tmp; }
-FUKS: ""im32l,""im32h		is metod_s=6; im32h	&im32l		{  tmp:2 = im32h; export tmp; } #cia turi buti REL
 
 #export only register names
 RRR: reg_s is kodas_s=7 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
 RRD: reg_d is kodas=2 &reg_d  {tmp:2 = *:2 reg_d; export tmp;}
 
+#:xor "A",addrmode is kodas=0x1FF ... & addrmode {PC=PC;	}
 ######### XOR SOB MUL DIV ASH ASHC
-:XOR RRR,OP4	is kodas_s=7 &metod_s=4 & RRR & OP4 {OP4=RRR;}
-:SOB RRR,OP4	is kodas_s=7 &metod_s=7 & RRR & OP4 {OP4=RRR;}
-:MUL RRR,OP4	is kodas_s=7 &metod_s=0 & RRR & OP4 {OP4=RRR;}
-:DIV RRR,OP4	is kodas_s=7 &metod_s=1 & RRR & OP4 {OP4=RRR;}
-:ASH RRR,OP4	is kodas_s=7 &metod_s=2 & RRR & OP4 {OP4=RRR;}
-:ASHC RRR,OP4	is kodas_s=7 &metod_s=3 & RRR & OP4 {OP4=RRR;}
+:XOR RRR,OP4	is (kodas_s=7 &metod_s=4 & RRR) ...& OP4 {PC=PC;}
+:SOB RRR,OP4	is (kodas_s=7 &metod_s=7 & RRR) ...& OP4 {OP4=RRR;}
+:MUL RRR,OP4	is (kodas_s=7 &metod_s=0 & RRR) ...& OP4 {OP4=RRR;}
+:DIV RRR,OP4	is (kodas_s=7 &metod_s=1 & RRR) ...& OP4 {OP4=RRR;}
+:ASH RRR,OP4	is (kodas_s=7 &metod_s=2 & RRR) ...& OP4 {OP4=RRR;}
+:ASHC RRR,OP4	is (kodas_s=7 &metod_s=3 & RRR) ...& OP4 {OP4=RRR;}
 
 ##################################################################################
 
-:MOV OP3,OP4 is (kodas_s=1 & reg_s!=7 & reg_d!=7 & OP3 & OP4 & reg_s & reg_d) { reg_s = reg_d; }
-:MOV OP3,OPD		is (kodas_s=1 & reg_d=7 & reg_s !=7 &OP3)...  & OPD {PC=PC;} 
-:MOV OPS,OP4		is (kodas_s=1 & reg_s=7 & reg_d !=7 &OP4)...  & OPS {PC=PC;} 
-:MOV FUKS			is (kodas_s=1 & reg_s=7 & reg_d =7)... & FUKS {PC=PC;}
+#:MOV OP3,OP4 	is (kodas_s=1 & reg_s & reg_d)...& OP4& OP3 { reg_s = reg_d; }
+:MOV OP 	is (kodas_s=1 & reg_s & reg_d)...& OP { reg_s = reg_d; }
+:CMP OP3,OP4	is (kodas_s=2 & reg_s!=7 & reg_d!=7   & reg_s & reg_d)...& OP3& OP4 { reg_s = reg_d; }
+:CMP OPS,OP4	is (kodas_s=2 & reg_s=7 & reg_d !=7)... &OP4  & OPS {PC=PC;} 
+:CMP FUKS		is (kodas_s=2 & reg_s=7 & reg_d =7)... & FUKS {PC=PC;}
 
-:CMP OP3,OP4	is kodas_s=2 & reg_s!=7 & reg_d!=7 & OP3 & OP4 & reg_s & reg_d { reg_s = reg_d; }
-:CMP OP3,OPD		is (kodas_s=2 & reg_d=7 & reg_s !=7 &OP3)...  & OPD {PC=PC;} 
-:CMP OPS,OP4		is (kodas_s=2 & reg_s=7 & reg_d !=7 &OP4)...  & OPS {PC=PC;} 
-:CMP FUKS			is (kodas_s=2 & reg_s=7 & reg_d =7)... & FUKS {PC=PC;}
 
-:SUB OP3,OP4 	is kodas_s=0xE & reg_s!=7 & reg_d!=7 & OP3 & OP4 & reg_s & reg_d { reg_s = reg_d; }
-:SUB OP3,OPD	is (kodas_s=0xE & reg_d=7 & reg_s !=7 &OP3)...  & OPD {PC=PC;} 
-:SUB OPS,OP4	is (kodas_s=0xE & reg_s=7 & reg_d !=7 &OP4)...  & OPS {PC=PC;} 
-:SUB FUKS		is (kodas_s=0xE & reg_s=7 & reg_d =7)... & FUKS {PC=PC;}
+:SUB OP3,OP4 	is (kodas_s=0xE & reg_s!=7 & reg_d!=7 & reg_s & reg_d)... & OP3& OP4 { reg_s = reg_d; }
+:ADD OP3,OP4 	is (kodas_s=0x6 & reg_s!=7 & reg_d!=7  & reg_s & reg_d)... &OP3 & OP4 { reg_s = reg_d; }
+:BIT OP3,OP4 	is (kodas_s=0x3 & reg_s!=7 & reg_d!=7 & reg_s & reg_d)... & OP3 & OP4 { reg_s = reg_d; }
+:BITB OP3,OP4 	is (kodas_s=0xb & reg_s!=7 & reg_d!=7  & reg_s & reg_d)...& OP3 & OP4 { reg_s = reg_d; }
+:BIC OP3,OP4 	is (kodas_s=0x4 & reg_s!=7 & reg_d!=7  & reg_s & reg_d)...& OP3 & OP4 { reg_s = reg_d; }
+:BICB OP3,OP4 	is (kodas_s=12 & reg_s!=7 & reg_d!=7  & reg_s & reg_d)...& OP3 & OP4 { reg_s = reg_d; }
+:BIS OP3,OP4 	is (kodas_s=0x5 & reg_s!=7 & reg_d!=7  & reg_s & reg_d)...& OP3 & OP4 { reg_s = reg_d; }
+:BISB OP3,OP4 	is (kodas_s=13 & reg_s!=7 & reg_d!=7 & reg_s & reg_d)...& OP3 & OP4  { reg_s = reg_d; }
+:INC OP4		is (kodas_s=0 & metod_s=5 &reg_s=2 &reg_d<7)... &OP4 {PC=PC;}
+:INCB OP4		is (kodas_s=8 & metod_s=5 &reg_s=2 &reg_d<7)... &OP4 {PC=PC;}
+:CLR OP4		is (kodas_s=0 & metod_s=5 &reg_s=0 &reg_d<7)... &OP4 {PC=PC;}
+:CLRB OP4		is (kodas_s=8 & metod_s=5 &reg_s=0 &reg_d<7)... &OP4 {PC=PC;}
 
-:ADD OP3,OP4 	is kodas_s=0x6 & reg_s!=7 & reg_d!=7 & OP3 & OP4 & reg_s & reg_d { reg_s = reg_d; }
-:ADD OP3,OPD	is (kodas_s=0x6 & reg_d=7 & reg_s !=7 &OP3)...  & OPD {PC=PC;} 
-:ADD OPS,OP4	is (kodas_s=0x6 & reg_s=7 & reg_d !=7 &OP4)...  & OPS {PC=PC;} 
-:ADD FUKS		is (kodas_s=0x6 & reg_s=7 & reg_d =7)... & FUKS {PC=PC;}
+:COM OP4		is (kodas_s=0 & metod_s=5 &reg_s=1 &reg_d<7)... &OP4 {PC=PC;}
+:COMB OP4		is (kodas_s=8 & metod_s=5 &reg_s=1 &reg_d<7)... &OP4 {PC=PC;}
+:DEC OP4		is (kodas_s=0 & metod_s=5 &reg_s=3 &reg_d<7)... &OP4 {PC=PC;}
+:DECB OP4		is (kodas_s=8 & metod_s=5 &reg_s=3 &reg_d<7)... &OP4 {PC=PC;}
+:NEG OP4		is (kodas_s=0 & metod_s=5 &reg_s=4 &reg_d<7)... &OP4 {PC=PC;}
+:NEGB OP4		is (kodas_s=8 & metod_s=5 &reg_s=4 &reg_d<7)... &OP4 {PC=PC;}
+:ADC OP4		is (kodas_s=0 & metod_s=5 &reg_s=5 &reg_d<7)... &OP4 {PC=PC;}
+:ADCB OP4		is (kodas_s=8 & metod_s=5 &reg_s=5 &reg_d<7)... &OP4 {PC=PC;}
 
-:BIT OP3,OP4 	is kodas_s=0x3 & reg_s!=7 & reg_d!=7 & OP3 & OP4 & reg_s & reg_d { reg_s = reg_d; }
-:BIT OP3,OPD	is (kodas_s=0x3 & reg_d=7 & reg_s !=7 &OP3)...  & OPD {PC=PC;} 
-:BIT OPS,OP4	is (kodas_s=0x3 & reg_s=7 & reg_d !=7 &OP4)...  & OPS {PC=PC;} 
-:BIT FUKS		is (kodas_s=0x3 & reg_s=7 & reg_d =7)... & FUKS {PC=PC;}
+:SBC OP4		is (kodas_s=0 & metod_s=5 &reg_s=6 &reg_d<7)... &OP4 {PC=PC;}
+:SBCB OP4		is (kodas_s=8 & metod_s=5 &reg_s=6 &reg_d<7)... &OP4 {PC=PC;}
 
-:BITB OP3,OP4 	is kodas_s=0xb & reg_s!=7 & reg_d!=7 & OP3 & OP4 & reg_s & reg_d { reg_s = reg_d; }
-:BITB OP3,OPD	is (kodas_s=0xb & reg_d=7 & reg_s !=7 &OP3)...  & OPD {PC=PC;} 
-:BITB OPS,OP4	is (kodas_s=0xb & reg_s=7 & reg_d !=7 &OP4)...  & OPS {PC=PC;} 
-:BITB FUKS		is (kodas_s=0xb & reg_s=7 & reg_d =7)... & FUKS {PC=PC;}
-
-:BIC OP3,OP4 	is kodas_s=0x4 & reg_s!=7 & reg_d!=7 & OP3 & OP4 & reg_s & reg_d { reg_s = reg_d; }
-:BIC OP3,OPD	is (kodas_s=0x4 & reg_d=7 & reg_s !=7 &OP3)...  & OPD {PC=PC;} 
-:BIC OPS,OP4	is (kodas_s=0x4 & reg_s=7 & reg_d !=7 &OP4)...  & OPS {PC=PC;} 
-:BIC FUKS		is (kodas_s=0x4 & reg_s=7 & reg_d =7)... & FUKS {PC=PC;}
-
-:BICB OP3,OP4 	is kodas_s=12 & reg_s!=7 & reg_d!=7 & OP3 & OP4 & reg_s & reg_d { reg_s = reg_d; }
-:BICB OP3,OPD	is (kodas_s=12 & reg_d=7 & reg_s !=7 &OP3)...  & OPD {PC=PC;} 
-:BICB OPS,OP4	is (kodas_s=12 & reg_s=7 & reg_d !=7 &OP4)...  & OPS {PC=PC;} 
-:BICB FUKS		is (kodas_s=12 & reg_s=7 & reg_d =7)... & FUKS {PC=PC;}
-
-:BIS OP3,OP4 	is kodas_s=0x5 & reg_s!=7 & reg_d!=7 & OP3 & OP4 & reg_s & reg_d { reg_s = reg_d; }
-:BIS OP3,OPD	is (kodas_s=0x5 & reg_d=7 & reg_s !=7 &OP3)...  & OPD {PC=PC;} 
-:BIS OPS,OP4	is (kodas_s=0x5 & reg_s=7 & reg_d !=7 &OP4)...  & OPS {PC=PC;} 
-:BIS FUKS		is (kodas_s=0x5 & reg_s=7 & reg_d =7)... & FUKS {PC=PC;}
-
-:BISB OP3,OP4 	is kodas_s=13 & reg_s!=7 & reg_d!=7 & OP3 & OP4 & reg_s & reg_d { reg_s = reg_d; }
-:BISB OP3,OPD	is (kodas_s=13 & reg_d=7 & reg_s !=7 &OP3)...  & OPD {PC=PC;} 
-:BISB OPS,OP4	is (kodas_s=13 & reg_s=7 & reg_d !=7 &OP4)...  & OPS {PC=PC;} 
-:BISB FUKS		is (kodas_s=13 & reg_s=7 & reg_d =7)... & FUKS {PC=PC;}
-
-:INC OP4		is kodas_s=0 & metod_s=5 &reg_s=2 &reg_d<7 &OP4 {PC=PC;}
-:INC OPD		is (kodas_s=0 & metod_s=5 &reg_s=2 &reg_d=7)... &OPD {PC=PC;}
-:INCB OP4		is kodas_s=8 & metod_s=5 &reg_s=2 &reg_d<7 &OP4 {PC=PC;}
-:INCB OPD		is (kodas_s=8 & metod_s=5 &reg_s=2 &reg_d=7)... &OPD {PC=PC;}
-
-:CLR OP4		is kodas_s=0 & metod_s=5 &reg_s=0 &reg_d<7 &OP4 {PC=PC;}
-:CLR OPD		is (kodas_s=0 & metod_s=5 &reg_s=0 &reg_d=7)... &OPD {PC=PC;}
-:CLRB OP4		is kodas_s=8 & metod_s=5 &reg_s=0 &reg_d<7 &OP4 {PC=PC;}
-:CLRB OPD		is (kodas_s=8 & metod_s=5 &reg_s=0 &reg_d=7)... &OPD {PC=PC;}
-
-:COM OP4		is kodas_s=0 & metod_s=5 &reg_s=1 &reg_d<7 &OP4 {PC=PC;}
-:COM OPD		is (kodas_s=0 & metod_s=5 &reg_s=1 &reg_d=7)... &OPD {PC=PC;}
-:COMB OP4		is kodas_s=8 & metod_s=5 &reg_s=1 &reg_d<7 &OP4 {PC=PC;}
-:COMB OPD		is (kodas_s=8 & metod_s=5 &reg_s=1 &reg_d=7)... &OPD {PC=PC;}
-
-:DEC OP4		is kodas_s=0 & metod_s=5 &reg_s=3 &reg_d<7 &OP4 {PC=PC;}
-:DEC OPD		is (kodas_s=0 & metod_s=5 &reg_s=3 &reg_d=7)... &OPD {PC=PC;}
-:DECB OP4		is kodas_s=8 & metod_s=5 &reg_s=3 &reg_d<7 &OP4 {PC=PC;}
-:DECB OPD		is (kodas_s=8 & metod_s=5 &reg_s=3 &reg_d=7)... &OPD {PC=PC;}
-
-:NEG OP4		is kodas_s=0 & metod_s=5 &reg_s=4 &reg_d<7 &OP4 {PC=PC;}
-:NEG OPD		is (kodas_s=0 & metod_s=5 &reg_s=4 &reg_d=7)... &OPD {PC=PC;}
-:NEGB OP4		is kodas_s=8 & metod_s=5 &reg_s=4 &reg_d<7 &OP4 {PC=PC;}
-:NEGB OPD		is (kodas_s=8 & metod_s=5 &reg_s=4 &reg_d=7)... &OPD {PC=PC;}
-
-:ADC OP4		is kodas_s=0 & metod_s=5 &reg_s=5 &reg_d<7 &OP4 {PC=PC;}
-:ADC OPD		is (kodas_s=0 & metod_s=5 &reg_s=5 &reg_d=7)... &OPD {PC=PC;}
-:ADCB OP4		is kodas_s=8 & metod_s=5 &reg_s=5 &reg_d<7 &OP4 {PC=PC;}
-:ADCB OPD		is (kodas_s=8 & metod_s=5 &reg_s=5 &reg_d=7)... &OPD {PC=PC;}
-
-:SBC OP4		is kodas_s=0 & metod_s=5 &reg_s=6 &reg_d<7 &OP4 {PC=PC;}
-:SBC OPD		is (kodas_s=0 & metod_s=5 &reg_s=6 &reg_d=7)... &OPD {PC=PC;}
-:SBCB OP4		is kodas_s=8 & metod_s=5 &reg_s=6 &reg_d<7 &OP4 {PC=PC;}
-:SBCB OPD		is (kodas_s=8 & metod_s=5 &reg_s=6 &reg_d=7)... &OPD {PC=PC;}
-
-:ROR OP4		is kodas_s=0 & metod_s=6 &reg_s=0 &reg_d<7 &OP4 {OP4=OP4>>1;}
-:ROR OPD		is (kodas_s=0 & metod_s=6 &reg_s=0 &reg_d=7)... &OPD {PC=PC;}
-:RORB OP4		is kodas_s=8 & metod_s=6 &reg_s=0 &reg_d<7 &OP4 {PC=PC;}
-:RORB OPD		is (kodas_s=8 & metod_s=6 &reg_s=0 &reg_d=7)... &OPD {PC=PC;}
-
-:ROL OP4		is kodas_s=0 & metod_s=6 &reg_s=1 &reg_d<7 &OP4 {OP4=OP4<<1;}
-:ROL OPD		is (kodas_s=0 & metod_s=6 &reg_s=1 &reg_d=7)... &OPD {OPD=OPD<<1;}
-:ROLB OP4		is kodas_s=8 & metod_s=6 &reg_s=1 &reg_d<7 &OP4 {PC=PC;}
-:ROLB OPD		is (kodas_s=8 & metod_s=6 &reg_s=1 &reg_d=7)... &OPD {PC=PC;}
-
-:ASR OP4		is kodas_s=0 & metod_s=6 &reg_s=2 &reg_d<7 &OP4 {PC=PC;}
-:ASR OPD		is (kodas_s=0 & metod_s=6 &reg_s=2 &reg_d=7)... &OPD {PC=PC;}
-:ASRB OP4		is kodas_s=8 & metod_s=6 &reg_s=2 &reg_d<7 &OP4 {PC=PC;}
-:ASRB OPD		is (kodas_s=8 & metod_s=6 &reg_s=2 &reg_d=7)... &OPD {PC=PC;}
-
-:ASL OP4		is kodas_s=0 & metod_s=6 &reg_s=3 &reg_d<7 &OP4 {PC=PC;}
-:ASL OPD		is (kodas_s=0 & metod_s=6 &reg_s=3 &reg_d=7)... &OPD {PC=PC;}
-:ASLB OP4		is kodas_s=8 & metod_s=6 &reg_s=3 &reg_d<7 &OP4 {PC=PC;}
-:ASLB OPD		is (kodas_s=8 & metod_s=6 &reg_s=3 &reg_d=7)... &OPD {PC=PC;}
-
-:TST OP4		is kodas_s=0 & metod_s=5 &reg_s=7 &reg_d<7 &OP4 {PC=PC;}
-:TST OPD		is (kodas_s=0 & metod_s=5 &reg_s=7 &reg_d=7)... &OPD {PC=PC;}
-:TSTB OP4		is kodas_s=8 & metod_s=5 &reg_s=7 &reg_d<7 &OP4 {PC=PC;}
-:TSTB OPD		is (kodas_s=8 & metod_s=5 &reg_s=7 &reg_d=7)... &OPD {PC=PC;}
-
-:SXT OP4		is kodas_s=0 & metod_s=6 &reg_s=7 &reg_d<7 &OP4 {PC=PC;}
-:SXT OPD		is (kodas_s=0 & metod_s=6 &reg_s=7 &reg_d=7)... &OPD {PC=PC;}
-
-:SWAB OP4		is kodas_s=0 & metod_s=0 &reg_s=3 &reg_d<7 &OP4 {PC=PC;}
-:SWAB OPD		is (kodas_s=0 & metod_s=0 &reg_s=3 &reg_d=7)... &OPD {PC=PC;}
-
-:MFPS OP4		is kodas_s=8 & metod_s=6 &reg_s=7 &reg_d<7 &OP4 {PC=PC;}
-:MFPS OPD		is (kodas_s=8 & metod_s=6 &reg_s=7 &reg_d=7)... &OPD {PC=PC;}
-
-:MTPS OP4		is kodas_s=8 & metod_s=6 &reg_s=4 &OP4 {FLG=OP4;}
-:MTPS OPD		is (kodas_s=8 & metod_s=6 &reg_s=4 &reg_d=7)... &OPD {FLG=OPD;}
+:ROR OP4		is (kodas_s=0 & metod_s=6 &reg_s=0 &reg_d<7)... &OP4 {OP4=OP4>>1;}
+:RORB OP4		is (kodas_s=8 & metod_s=6 &reg_s=0 &reg_d<7)... &OP4 {PC=PC;}
+:ROL OP4		is (kodas_s=0 & metod_s=6 &reg_s=1 &reg_d<7)... &OP4 {OP4=OP4<<1;}
+:ROLB OP4		is (kodas_s=8 & metod_s=6 &reg_s=1 &reg_d<7)... &OP4 {PC=PC;}
+:ASR OP4		is (kodas_s=0 & metod_s=6 &reg_s=2 &reg_d<7)... &OP4 {PC=PC;}
+:ASRB OP4		is (kodas_s=8 & metod_s=6 &reg_s=2 &reg_d<7)... &OP4 {PC=PC;}
+:ASL OP4		is (kodas_s=0 & metod_s=6 &reg_s=3 &reg_d<7)... &OP4 {PC=PC;}
+:ASLB OP4		is (kodas_s=8 & metod_s=6 &reg_s=3 &reg_d<7)... &OP4 {PC=PC;}
+:TST OP4		is (kodas_s=0 & metod_s=5 &reg_s=7 &reg_d<7)... &OP4 {PC=PC;}
+:TSTB OP4		is (kodas_s=8 & metod_s=5 &reg_s=7 &reg_d<7)... &OP4 {PC=PC;}
+:SXT OP4		is (kodas_s=0 & metod_s=6 &reg_s=7 &reg_d<7)... &OP4 {PC=PC;}
+:SWAB OP4		is (kodas_s=0 & metod_s=0 &reg_s=3 &reg_d<7)... &OP4 {PC=PC;}
+:MFPS OP4		is (kodas_s=8 & metod_s=6 &reg_s=7 &reg_d<7)... &OP4 {PC=PC;}
+:MTPS OP4		is (kodas_s=8 & metod_s=6 &reg_s=4)... &OP4 {FLG=OP4;}
 ############################################################################################
 RELL: reloc 	is rell  [ reloc = inst_next + rell; ] { export *:2 reloc; } 
 J16: imm16    	is  imm16			{ export *:2 imm16; }
@@ -371,7 +305,7 @@ J16: imm16    	is  imm16			{ export *:2 imm16; }
 # JSR/JMP - need to rewrite
 :JMP RELL   is (kodas=1 &metod=6 & regai=7) ; RELL { goto RELL;} #OK
 :JMP @RELL	is (kodas=1 &metod=7 & regai=7) ; RELL {goto [RELL];} #JUMP @XXXXX
-:JMP OP4	is (kodas=1 & metod<6) & OP4 {PC=OP4; goto [PC];} # JMP R0 ir pan metod:2,3. kiti negalimi
+:JMP OP4	is (kodas=1 & metod<6)... & OP4 {PC=OP4; goto [PC];} # JMP R0 ir pan metod:2,3. kiti negalimi
 
 # JSR methods.
 JPS: reg_s			is  reg_s {tmp:2 = *:2 reg_s; export tmp;}
