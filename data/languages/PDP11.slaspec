@@ -236,7 +236,14 @@ RELN: reloc		is rel &nnn	[ reloc = inst_next-nnn*2; ] { export *:2 reloc; }
 
 ######### XOR SOB MUL DIV ASH ASHC
 :XOR RRR,OPD	is (kodas_s=7 &metod_s=4 & RRR) ...& OPD {PC=PC;}
-:SOB RRR,RELN	is (kodas_s=7 &metod_s=7 & RRR & RELN &nnn)  {goto [RELN];} # SOB RRR,NNN NNN : R := R – 1; IF (R != 0) THEN PC := PC – 2 * NN
+:SOB RRR,RELN	is (kodas_s=7 &metod_s=7 & RRR & RELN &nnn)  {
+RRR=RRR-1;
+
+if (RRR==0) goto inst_next;
+goto [RELN];
+
+} # SOB RRR,NNN NNN : R := R – 1; IF (R != 0) THEN PC := PC – 2 * NN
+
 :MUL RRR,OPD	is (kodas_s=7 &metod_s=0 & RRR) ...& OPD {OPD=RRR;}
 :DIV RRR,OPD	is (kodas_s=7 &metod_s=1 & RRR) ...& OPD {OPD=RRR;}
 :ASH RRR,OPD	is (kodas_s=7 &metod_s=2 & RRR) ...& OPD {OPD=RRR;}
@@ -244,19 +251,19 @@ RELN: reloc		is rel &nnn	[ reloc = inst_next-nnn*2; ] { export *:2 reloc; }
 
 ##################################################################################
 
-:MOV OPS,OPD 	is (kodas_s=1)...& OPD& OPS { OPD = OPS; }
-:MOVB OPS,OPD 	is (kodas_s=9)...& OPD& OPS { OPD = OPS; }
-:CMP OPS,OPD 	is (kodas_s=2)...& OPD& OPS { OPD = OPS; }
-:CMPB OPS,OPD 	is (kodas_s=10)...& OPD& OPS { OPD = OPS; }
+:MOV OPS,OPD 	is (kodas_s=0x1)...& OPD & OPS { OPD = OPS; }
+:MOVB OPS,OPD 	is (kodas_s=0x9)...& OPD & OPS { OPD = OPS; }
+:CMP OPS,OPD 	is (kodas_s=0x2)...& OPD & OPS { OPD = OPS; }
+:CMPB OPS,OPD 	is (kodas_s=0xA)...& OPD & OPS { OPD = OPS; }
 
 :SUB OPS,OPD 	is (kodas_s=0xE)... & OPS & OPD { tmp=OPD-OPS; OPD=tmp;}
-:ADD OPS,OPD 	is (kodas_s=0x6)... & OPS & OPD { tmp= OPD+OPS; OPD=tmp;}
+:ADD OPS,OPD 	is (kodas_s=0x6)... & OPS & OPD { tmp=OPD+OPS; OPD=tmp;}
 :BIT OPS,OPD 	is (kodas_s=0x3)... & OPS & OPD { OPD=OPS; }
-:BITB OPS,OPD 	is (kodas_s=0xb)...& OPS & OPD { OPD=OPS; }
-:BIC OPS,OPD 	is (kodas_s=0x4)...& OPS & OPD { OPD=OPS; }
-:BICB OPS,OPD 	is (kodas_s=12)...& OPS & OPD { OPD=OPS; }
-:BIS OPS,OPD 	is (kodas_s=0x5)...& OPS & OPD { OPD=OPS; }
-:BISB OPS,OPD 	is (kodas_s=13)...& OPS & OPD  { OPD=OPS; }
+:BITB OPS,OPD 	is (kodas_s=0xB)... & OPS & OPD { OPD=OPS; }
+:BIC OPS,OPD 	is (kodas_s=0x4)... & OPS & OPD { OPD=OPS; }
+:BICB OPS,OPD 	is (kodas_s=0xC)... & OPS & OPD { OPD=OPS; }
+:BIS OPS,OPD 	is (kodas_s=0x5)... & OPS & OPD { OPD=OPS; }
+:BISB OPS,OPD 	is (kodas_s=0xD)... & OPS & OPD { OPD=OPS; }
 :INC OPD		is (kodas_s=0 & metod_s=5 &reg_s=2)... &OPD {PC=PC;}
 :INCB OPD		is (kodas_s=8 & metod_s=5 &reg_s=2)... &OPD {PC=PC;}
 :CLR OPD		is (kodas_s=0 & metod_s=5 &reg_s=0)... &OPD {PC=PC;}
