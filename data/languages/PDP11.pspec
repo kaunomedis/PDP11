@@ -5,27 +5,36 @@
     <symbol name="Bus_timeout" address="ram:0x0004"/>
     <symbol name="Illegal_instruction" address="ram:0x0008"/>
     <symbol name="bpt_trace" address="ram:0x000C"/>
-	<symbol name="iot" address="ram:0x0010"/>
+	<symbol name="IOT" address="ram:0x0010"/>
 	<symbol name="power_failure" address="ram:0x0014"/>
-	<symbol name="emu_trap" address="ram:0x0018"/>
-	<symbol name="trap_int" address="ram:0x001C" />
+	<symbol name="EMT" address="ram:0x0018"/>
+	<symbol name="TRAP_int" address="ram:0x001C" />
+	
+	<symbol name="???_int" address="ram:0x0020" />
+	
+	<symbol name="ODT_IN" address="ram:0x0030" />
+	<symbol name="ODT_OUT" address="ram:0x0034" />
 	<symbol name="EVENT_int" address="ram:0x0040" />
+
+	
 	<symbol name="parity_int" address="ram:0x004C"/>
 	<symbol name="programmed_int" address="ram:0x00A0"/>
 	<symbol name="FP_error" address="ram:0x00A4"/>
 	<symbol name="segmentation_violation" address="ram:0x00A8"/>
+	<symbol name="RXV11" address="ram:0x00B4" />
 	
-	<symbol name="PS" address="ram:0xFFFE"/>
-	<symbol name="PIRQ" address="ram:0xFFFA"/>
-	<symbol name="CPU_ERR" address="ram:0xFFF6"/>
+	<symbol name="PS" address="ram:0xFFFE" entry="true"/>
+	<symbol name="PIRQ" address="ram:0xFFFA" entry="true"/>
+	<symbol name="CPU_ERR" address="ram:0xFFF6" entry="true"/>
 	
-	<symbol name="ODT_RCSR" address="ram:0xFF70"/>
-	<symbol name="ODT_RBUF" address="ram:0xFF72"/>
-	<symbol name="ODT_XCSR" address="ram:0xFF74"/>
-	<symbol name="ODT_XBUF" address="ram:0xFF76"/>
+	<symbol name="ODT_RCSR" address="ram:0xFF70" entry="true"/>
+	<symbol name="ODT_RBUF" address="ram:0xFF72" entry="true"/>
+	<symbol name="ODT_XCSR" address="ram:0xFF74" entry="true"/>
+	<symbol name="ODT_XBUF" address="ram:0xFF76" entry="true"/>
 
+	<symbol name="CPU_DEBUG" address="ram:0xFFD4" entry="true"/>
 	  </default_symbols>
   <default_memory_blocks>
-    <memory_block name="IOSPACE" start_address="ram:0x30000" mode="rw" length="0xFFFF" initialized="false"/>
+    <memory_block name="IOSPACE" start_address="ram:0xE000" mode="rw" length="0x1FFF" initialized="false"/>
   </default_memory_blocks>
 </processor_spec>

@@ -5,6 +5,7 @@
 # Freeware & etc. Please leave copyright note                 #
 ###############################################################
 
+
 # WARNING! ALL STUFF in {} is untested.
 
 define endian=little;
@@ -24,9 +25,9 @@ define register offset=0x000C size=2 [ SP ]; #R6 , stekas mazejantis
 
 
 define register offset=0x000E size=2 [ PC ]; #R7
-define register offset=0x0020 size=2 [ FLG ]; # ony one byte. Keep 2 to make SLEIGHT happy
+define register offset=0x0020 size=2 [ PS ]; # ony one byte. Keep 2 to make SLEIGHT happy
 
-# Flag Register Contents (FLG)
+# Flag Register Contents (PS)
 #
 # b15         - Reserved area
 # b14:b12     - Processor interrupt priority level
@@ -40,16 +41,24 @@ define register offset=0x0020 size=2 [ FLG ]; # ony one byte. Keep 2 to make SLE
 # b1        - (D) Debug flag
 # b0        - (C) Carry flag
 
-@define CARRY         "FLG[0,1]"
-@define DEBUG         "FLG[1,1]"
-@define ZERO          "FLG[2,1]"
-@define SIGN          "FLG[3,1]"
-@define REG_BANK      "FLG[4,1]"
-@define OVERFLOW    "FLG[5,1]"
-@define INTERRUPT   "FLG[6,1]"
-@define STACK_SEL   "FLG[7,1]"
-@define IPL         "FLG[12,3]"
+@define CARRY         "PS[0,1]"
+@define DEBUG         "PS[1,1]"
+@define ZERO          "PS[2,1]"
+@define SIGN          "PS[3,1]"
+@define REG_BANK      "PS[4,1]"
+@define OVERFLOW    "PS[5,1]"
+@define INTERRUPT   "PS[6,1]"
+@define STACK_SEL   "PS[7,1]"
+@define IPL         "PS[12,3]"
 
+macro flag(register_s, register_d) {
+ZERO=( register_s == register_d );
+SIGN=( register_s > register_d ); # N
+#SIGN= 	sext(register_d);
+OVERFLOW=carry(register_s, register_d) || sborrow(register_d, register_s);
+CARY=(register_s[15,1]==1) && (register_d[15,1]==1);
+
+}
 
 #
 # FLAG MACROS...
@@ -61,11 +70,11 @@ macro setResultFlags(result) {
 }
 macro push(val) {
     SP = SP - 2;
-    ptr:3 = zext(SP);
+    ptr:2 = (SP);
     *:2 ptr = val;
 }
 macro pop(val) {
-    ptr:3 = zext(SP);
+    ptr:2 = (SP);
     val = *:2 ptr;
     SP = SP + 2;
 }
@@ -123,40 +132,44 @@ REL: reloc		is rel	[ reloc = inst_next + 2 * rel; ] { export *:2 reloc; }
 :NOP		is imm16=0x0A0 {	R0=R0;}
 :HALT		is imm16=0 { PC=123;}
 :WAIT		is imm16=1 { PC=PC-2;}
-:CLC		is imm16=0x0A1 {FLG[0,1]=0;}
-:CLV		is imm16=0x0A2 {FLG[5,1]=0;}
-:CLZ		is imm16=0x0A4 {FLG[2,1]=0;}
-:CLN		is imm16=0x0A8 {FLG[3,1]=0;}
-:CCC		is imm16=0x0AF {FLG[0,1]=0; FLG[5,1]=0; FLG[2,1]=0; FLG[3,1]=0; }
+:CLC		is imm16=0x0A1 {PS[0,1]=0;}
+:CLV		is imm16=0x0A2 {PS[5,1]=0;}
+:CLZ		is imm16=0x0A4 {PS[2,1]=0;}
+:CLN		is imm16=0x0A8 {PS[3,1]=0;}
+:CCC		is imm16=0x0AF {PS[0,1]=0; PS[5,1]=0; PS[2,1]=0; PS[3,1]=0; }
 
-:SEC		is imm16=0x0b1 {FLG[0,1]=1;}
-:SEV		is imm16=0x0b2 {FLG[5,1]=1;}
-:SEZ		is imm16=0x0b4 {FLG[2,1]=1;}
-:SEN		is imm16=0x0b8 {FLG[3,1]=1;}
-:SCC		is imm16=0x0bF {FLG[0,1]=1; FLG[5,1]=1; FLG[2,1]=1; FLG[3,1]=1; }
-:EMT "'"baitas"'"		is op_h=0x88 & baitas { PC=(18);} # NETEISYBE
-:TRAP		is op_h=0x89 { PC=(36);} # NETEISYBE
-:IOT		is imm16=0x004 {PC=(20);} # NETEISYBE
-:BPT		is imm16=0x003 {PC=(14);} # NETEISYBE
-:RTI		is imm16=0x002 {SP=SP+2;} # NETEISYBE
+:SEC		is imm16=0x0b1 {PS[0,1]=1;}
+:SEV		is imm16=0x0b2 {PS[5,1]=1;}
+:SEZ		is imm16=0x0b4 {PS[2,1]=1;}
+:SEN		is imm16=0x0b8 {PS[3,1]=1;}
+:SCC		is imm16=0x0bF {PS[0,1]=1; PS[5,1]=1; PS[2,1]=1; PS[3,1]=1; }
+:EMT "'"baitas"'"		is op_h=0x88 & baitas { push(PS); push(PC); PC=(0x18); call [PC];} # NETEISYBE
+:TRAP		is op_h=0x89 {PC=(0x1C); call [PC];} # NETEISYBE
+:IOT		is imm16=0x004 {PC=(0x10); call [PC];} # NETEISYBE
+:BPT		is imm16=0x003 {PC=(0x0C); call [PC];} # NETEISYBE
+:RTI		is imm16=0x002 {pop(PC); pop(PS); return [PC];} # NETEISYBE
 :RTT		is imm16=0x006 {SP=SP+2;} # NETEISYBE
 :RESET		is imm16=0x005 {SP=SP;}
 
 :BR   REL			is op_h=1 & REL {goto REL;}
-:BNE  REL			is op_h=2 & REL {if !FLG[2,1] goto REL;} # Z=0
-:BEQ  REL			is op_h=3 & REL {if FLG[2,1] goto REL;} # Z=1
-:BPL  REL			is op_h=0x80 & REL {if !FLG[3,1] goto REL;} # N=0 sign
-:BMI  REL			is op_h=0x81 & REL {if FLG[3,1] goto REL;} # N=1
-:BVC  REL			is op_h=0x84 & REL {if !FLG[5,1] goto REL;} # V=0 overflow
-:BVS  REL			is op_h=0x85 & REL {if FLG[5,1] goto REL;} # V=1
-:BCC  REL			is op_h=0x86 & REL {if !FLG[0,1] goto REL;} # C=0 carry
-:BCS  REL			is op_h=0x87 & REL {if FLG[0,1] goto REL;} # C=1
-:BGE  REL			is op_h=4 & REL {if !(FLG[3,1] ^ FLG[5,1]) goto REL;} # N xor V =0
-:BLT  REL			is op_h=5 & REL {if (FLG[3,1] ^ FLG[5,1]) goto REL;} # N xor V =1
+:BNE  REL			is op_h=2 & REL {if !PS[2,1] goto REL;} # Z=0
+:BEQ  REL			is op_h=3 & REL {if PS[2,1] goto REL;} # Z=1
+:BPL  REL			is op_h=0x80 & REL {if !PS[3,1] goto REL;} # N=0 sign
+:BMI  REL			is op_h=0x81 & REL {if PS[3,1] goto REL;} # N=1
+:BVC  REL			is op_h=0x84 & REL {if !PS[5,1] goto REL;} # V=0 overflow
+:BVS  REL			is op_h=0x85 & REL {if PS[5,1] goto REL;} # V=1
+:BCC  REL			is op_h=0x86 & REL {if !PS[0,1] goto REL;} # C=0 carry
+:BCS  REL			is op_h=0x87 & REL {if PS[0,1] goto REL;} # C=1
+:BGE  REL			is op_h=4 & REL {if !(PS[3,1] ^ PS[5,1]) goto REL;} # N xor V =0
+:BLT  REL			is op_h=5 & REL {if (PS[3,1] ^ PS[5,1]) goto REL;} # N xor V =1
 :BGT  REL			is op_h=6 & REL {goto REL;} # (N xor V) or Z =0
 :BLE  REL			is op_h=7 & REL {goto REL;} # (N xor V) or Z =0
 :BHI  REL			is op_h=0x82 & REL {goto REL;} # C or Z =0
-:BLOS REL			is op_h=0x83 & REL {goto REL;} # C or Z =1
+:BLOS REL			is op_h=0x83 & REL {
+if PS[2,1] goto REL;
+if PS[0,1] goto REL;
+goto inst_next;
+} # C or Z =1
 
 # is manualo
 # file:///C:/Users/User/Downloads/ghidra_12.0_PUBLIC_20251205/ghidra_12.0_PUBLIC/docs/languages/html/sleigh_constructors.html#sleigh_sections_constructor
@@ -178,16 +191,22 @@ RRD: reg_d is reg_d { export *:2 reg_d;}
 # 7 - @X(Rn)
 
 # OPerator Source [OPS]. All possible methods.
-OPS: reg_s			is metod_s=0 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
+OPS: reg_s			is metod_s=0 & reg_s {
+#tmp:2 = *:2 reg_s; export tmp;
+export reg_s;
+}
 OPS: (reg_s)		is metod_s=1 & reg_s {export *[const]:2 reg_s;}
 
-OPS: (reg_s)+		is metod_s=2 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
-OPS: #imm16			is metod_s=2 & reg_ss=7 & metod_d!=2; imm16 {tmp:2 = imm16; export tmp;}
-OPS: #imm32L		is metod_s=2 & metod_d=2 & reg_s;imm32L {tmp:2 = imm32L; export tmp;}
+# "012522" mov     (r5)+,(r2)+ , metod_s=2 reg_s=2 metod_d=2 reg_d=2
+OPS: (reg_s)+		is metod_s=2 & reg_s							{reg_s=reg_s+1; tmp:2 = *:2 reg_s; export tmp;}
+OPS: #imm16			is metod_s=2 & reg_s=7; imm16 					{tmp:2 = imm16; export tmp;}
+OPS: #imm32L is metod_s=2 & metod_d=2 & reg_s=7 & reg_d=7; imm32L	{tmp:2 = imm32L; export tmp;}
 
-OPS: @(reg_s)+		is metod_s=3 & reg_s {export reg_s;}
-OPS: @#imm16"z"		is metod_s=3 & reg_s=7 ; imm16 {tmp:2 = imm16; export tmp;}
-OPS: @#imm32L"zz"	is metod_s=3 & reg_s=7 & reg_d=7 ;imm32L {tmp:2 = imm32L; export tmp;}
+# cia beda ------------------^^^---------^^^-----^^^-gal cia 7?
+
+OPS: @(reg_s)+		is metod_s=3 & reg_s						{reg_s=reg_s+1; export reg_s;}
+OPS: @#imm16"z"		is metod_s=3 & reg_s=7 ; imm16				{tmp:2 = imm16; export tmp;}
+OPS: @#imm32L	is metod_s=3 & reg_s=7 & reg_d=7 ;imm32L	{tmp:2 = imm32L; export tmp;}
 
 
 OPS: -(reg_s)		is metod_s=4 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
@@ -207,23 +226,66 @@ OPD: reg_d			is metod_d=0 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
 OPD: (reg_d)		is metod_d=1 & reg_d {export *[const]:2 reg_d;}
 
 OPD: (reg_d)+		is metod_d=2 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
-OPD: #imm16			is metod_d=2 & reg_dd=7 &metod_s!=2; imm16 {tmp:2 = imm16; export tmp;}
-OPD: #imm32H		is metod_d=2 & metod_s=2 &reg_d;imm32H {tmp:2 = imm32H; export tmp;}
+OPD: #imm16			is metod_d=2 & reg_d=7 ; imm16 {tmp:2 = imm16; export tmp;}
+OPD: #imm32H 		is metod_s=2 & metod_d=2 & reg_s=7 & reg_d=7; imm32H {tmp:2 = imm32H; export tmp;}
+
 
 OPD: @(reg_d)+		is metod_d=3 & reg_d {export reg_d;}
 OPD: @#imm16"z"		is metod_d=3 & reg_d=7 ; imm16 {tmp:2 = imm16; export tmp;}
-OPD: @#imm32H"zz"	is metod_d=3 & reg_d=7 & reg_s=7 ;imm32H {tmp:2 = imm32H; export tmp;}
+OPD: @#imm32H		is metod_d=3 & reg_d=7 & reg_s=7 ;imm32H {tmp:2 = imm32H; export tmp;}
 
 OPD: -(reg_d)		is metod_d=4 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
 OPD: @-(reg_d)		is metod_d=5 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
 
-OPD: imm16(reg_d)	is metod_d=6 & reg_d; imm16 {tmp:2 = imm16; export tmp;}
-OPD: imm32H(reg_d)	is metod_d=6 & metod_s=6 &reg_d;imm32H {tmp:2 = imm32H; export tmp;}
-OPD: imm32H(reg_d)	is metod_d=6 & metod_s=7 &reg_d;imm32H {tmp:2 = imm32H; export tmp;}
+#OPD: imm16(reg_d)"A"	is metod_d=6 & reg_d; imm16 {tmp:2 = imm16; export tmp;}
+#OPD: imm32H(reg_d)"B"	is metod_d=6 & metod_s=6 &reg_d;imm32H {tmp:2 = imm32H; export tmp;}
+#OPD: imm32H(reg_d)"C"	is metod_d=6 & metod_s=7 & reg_s=7 &reg_dd=7 & reg_d;imm32H {tmp:2 = imm32H; export tmp;}
+
+OPD: imm16(reg_d)"A"	is metod_d=6 & reg_dd!=7 & reg_s=7 &reg_d; imm16 {tmp:2 = imm16; export tmp;}
+
+REL32: reloc 	is imm32H  [ reloc = inst_next + imm32H; ] { export *:2 reloc; } 
+
+OPD: REL32" OK"		is metod_d=6 & reg_s=7 & reg_dd=7;REL32 {tmp:2 = REL32; export tmp;}
+
+
+#OPD: imm32H(reg_d)"C"	is metod_d=6 & reg_s!=7 & reg_dd=7 & reg_d;imm32H {tmp:2 = imm32H; export tmp;}
+
+
 
 OPD: @imm16(reg_d)	is metod_d=7 & reg_d; imm16 {tmp:2 = imm16; export tmp;}
 OPD: @imm32H(reg_d)	is metod_d=7 & metod_s=7 & reg_d;imm32H {tmp:2 = imm32H; export tmp;}
 OPD: @imm32H(reg_d)	is metod_d=7 & metod_s=6 & reg_d;imm32H {tmp:2 = imm32H; export tmp;}
+
+
+
+
+OPD2: reg_d			is metod_d=0 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
+OPD2: (reg_d)		is metod_d=1 & reg_d {export *[const]:2 reg_d;}
+
+OPD2: (reg_d)+		is metod_d=2 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
+OPD2: #imm16		is metod_d=2 & reg_d=7 ; imm16 {tmp:2 = imm16; export tmp;}
+
+
+OPD2: @(reg_d)+		is metod_d=3 & reg_d {export reg_d;}
+OPD2: @#imm16"z"	is metod_d=3 & reg_d=7 ; imm16 {tmp:2 = imm16; export tmp;}
+
+OPD2: -(reg_d)		is metod_d=4 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
+
+OPD2: @-(reg_d)		is metod_d=5 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
+
+OPD2: imm16(reg_d)	is metod_d=6 & reg_dd!=7 &reg_d; imm16 {tmp:2 = imm16; export tmp;}
+OPD2: REL" OK"			is metod_d=6 & reg_dd=7; REL {tmp:2 = REL; export tmp;}
+
+OPD2: @imm16(reg_d)	is metod_d=7 & reg_d; imm16 {tmp:2 = imm16; export tmp;}
+
+
+
+
+
+
+
+
+
 
 # monstru pozymiai visai ne reg_s ir reg_d
 # metod_s=7 metod_d=7
@@ -264,48 +326,70 @@ goto [RELN];
 :BICB OPS,OPD 	is (kodas_s=0xC)... & OPS & OPD { OPD=OPS; }
 :BIS OPS,OPD 	is (kodas_s=0x5)... & OPS & OPD { OPD=OPS; }
 :BISB OPS,OPD 	is (kodas_s=0xD)... & OPS & OPD { OPD=OPS; }
-:INC OPD		is (kodas_s=0 & metod_s=5 &reg_s=2)... &OPD {PC=PC;}
-:INCB OPD		is (kodas_s=8 & metod_s=5 &reg_s=2)... &OPD {PC=PC;}
-:CLR OPD		is (kodas_s=0 & metod_s=5 &reg_s=0)... &OPD {PC=PC;}
-:CLRB OPD		is (kodas_s=8 & metod_s=5 &reg_s=0)... &OPD {PC=PC;}
+:INC OPD2		is (kodas_s=0 & metod_s=5 &reg_s=2)... &OPD2 {PC=PC;}
+:INCB OPD2		is (kodas_s=8 & metod_s=5 &reg_s=2)... &OPD2 {PC=PC;}
+:CLR OPD2		is (kodas_s=0 & metod_s=5 &reg_s=0)... &OPD2 {PC=PC;}
+:CLRB OPD2		is (kodas_s=8 & metod_s=5 &reg_s=0)... &OPD2 {PC=PC;}
 
-:COM OPD		is (kodas_s=0 & metod_s=5 &reg_s=1)... &OPD {PC=PC;}
-:COMB OPD		is (kodas_s=8 & metod_s=5 &reg_s=1)... &OPD {PC=PC;}
-:DEC OPD		is (kodas_s=0 & metod_s=5 &reg_s=3)... &OPD {PC=PC;}
-:DECB OPD		is (kodas_s=8 & metod_s=5 &reg_s=3)... &OPD {PC=PC;}
-:NEG OPD		is (kodas_s=0 & metod_s=5 &reg_s=4)... &OPD {PC=PC;}
-:NEGB OPD		is (kodas_s=8 & metod_s=5 &reg_s=4)... &OPD {PC=PC;}
-:ADC OPD		is (kodas_s=0 & metod_s=5 &reg_s=5)... &OPD {PC=PC;}
-:ADCB OPD		is (kodas_s=8 & metod_s=5 &reg_s=5)... &OPD {PC=PC;}
+:COM OPD2		is (kodas_s=0 & metod_s=5 &reg_s=1)... &OPD2 {PC=PC;}
+:COMB OPD2		is (kodas_s=8 & metod_s=5 &reg_s=1)... &OPD2 {PC=PC;}
+:DEC OPD2		is (kodas_s=0 & metod_s=5 &reg_s=3)... &OPD2 {PC=PC;}
+:DECB OPD2		is (kodas_s=8 & metod_s=5 &reg_s=3)... &OPD2 {PC=PC;}
+:NEG OPD2		is (kodas_s=0 & metod_s=5 &reg_s=4)... &OPD2 {PC=PC;}
+:NEGB OPD2		is (kodas_s=8 & metod_s=5 &reg_s=4)... &OPD2 {PC=PC;}
+:ADC OPD2		is (kodas_s=0 & metod_s=5 &reg_s=5)... &OPD2 {PC=PC;}
+:ADCB OPD2		is (kodas_s=8 & metod_s=5 &reg_s=5)... &OPD2 {PC=PC;}
 
-:SBC OPD		is (kodas_s=0 & metod_s=5 &reg_s=6)... &OPD {PC=PC;}
-:SBCB OPD		is (kodas_s=8 & metod_s=5 &reg_s=6)... &OPD {PC=PC;}
+:SBC OPD2		is (kodas_s=0 & metod_s=5 &reg_s=6)... &OPD2 {PC=PC;}
+:SBCB OPD2		is (kodas_s=8 & metod_s=5 &reg_s=6)... &OPD2 {PC=PC;}
 
-:ROR OPD		is (kodas_s=0 & metod_s=6 &reg_s=0)... &OPD {OPD=OPD>>1;}
-:RORB OPD		is (kodas_s=8 & metod_s=6 &reg_s=0)... &OPD {PC=PC;}
-:ROL OPD		is (kodas_s=0 & metod_s=6 &reg_s=1)... &OPD {OPD=OPD<<1;}
-:ROLB OPD		is (kodas_s=8 & metod_s=6 &reg_s=1)... &OPD {PC=PC;}
-:ASR OPD		is (kodas_s=0 & metod_s=6 &reg_s=2)... &OPD {PC=PC;}
-:ASRB OPD		is (kodas_s=8 & metod_s=6 &reg_s=2)... &OPD {PC=PC;}
-:ASL OPD		is (kodas_s=0 & metod_s=6 &reg_s=3)... &OPD {PC=PC;}
-:ASLB OPD		is (kodas_s=8 & metod_s=6 &reg_s=3)... &OPD {PC=PC;}
-:TST OPD		is (kodas_s=0 & metod_s=5 &reg_s=7)... &OPD {PC=PC;}
-:TSTB OPD		is (kodas_s=8 & metod_s=5 &reg_s=7)... &OPD {PC=PC;}
-:SXT OPD		is (kodas_s=0 & metod_s=6 &reg_s=7)... &OPD {PC=PC;}
-:SWAB OPD		is (kodas_s=0 & metod_s=0 &reg_s=3)... &OPD {PC=PC;}
-:MFPS OPD		is (kodas_s=8 & metod_s=6 &reg_s=7)... &OPD {PC=PC;}
-:MTPS OPD		is (kodas_s=8 & metod_s=6 &reg_s=4)... &OPD {FLG=OPD;}
+:ROR OPD2		is (kodas_s=0 & metod_s=6 &reg_s=0)... &OPD2 {OPD2=OPD2>>1;}
+:RORB OPD2		is (kodas_s=8 & metod_s=6 &reg_s=0)... &OPD2 {PC=PC;}
+:ROL OPD2		is (kodas_s=0 & metod_s=6 &reg_s=1)... &OPD2 {OPD2=OPD2<<1;}
+:ROLB OPD2		is (kodas_s=8 & metod_s=6 &reg_s=1)... &OPD2 {PC=PC;}
+:ASR OPD2		is (kodas_s=0 & metod_s=6 &reg_s=2)... &OPD2 {PC=PC;}
+:ASRB OPD2		is (kodas_s=8 & metod_s=6 &reg_s=2)... &OPD2 {PC=PC;}
+:ASL OPD2		is (kodas_s=0 & metod_s=6 &reg_s=3)... &OPD2 {PC=PC;}
+:ASLB OPD2		is (kodas_s=8 & metod_s=6 &reg_s=3)... &OPD2 {PC=PC;}
+:TST OPD2		is (kodas_s=0 & metod_s=5 &reg_s=7)... &OPD2 {PC=PC;}
+:TSTB OPD2		is (kodas_s=8 & metod_s=5 &reg_s=7)... &OPD2 {PC=PC;}
+:SXT OPD2		is (kodas_s=0 & metod_s=6 &reg_s=7)... &OPD2 {PC=PC;}
+:SWAB OPD2		is (kodas_s=0 & metod_s=0 &reg_s=3)... &OPD2 {PC=PC;}
+:MFPS OPD2		is (kodas_s=8 & metod_s=6 &reg_s=7)... &OPD2 {PC=PC;}
+:MTPS OPD2		is (kodas_s=8 & metod_s=6 &reg_s=4)... &OPD2 {PS=OPD2;}
 ############################################################################################
 RELL: reloc 	is rell  [ reloc = inst_next + rell; ] { export *:2 reloc; } 
+# Jumpai (PC registras, R7)
+#          543210
+# 2 - #X   010 111 = 17
+# 3 - @#X  011 111 = 1f
+# 6 - X    110 111 = 37
+# 7 - @X   111 111 = 3f
 
 # JSR/JMP - need to rewrite
-:JMP RELL   is (kodas=1 &metod=6 & regai=7) ; RELL { goto RELL;} #OK
-:JMP @RELL	is (kodas=1 &metod=7 & regai=7) ; RELL {goto [RELL];} #JUMP @XXXXX
-:JMP OPD	is (kodas=1 & metod<6)... & OPD {PC=OPD; goto [PC];} # JMP R0 ir pan metod:2,3. kiti negalimi
+:JMP RELL   	is (kodas=1 &metod=6 & regai=7) ; RELL { goto RELL;} #OK
+:JMP "?"OPD		is (kodas=1 &metod=6 & regai!=7)... &OPD  {tmp= OPD; goto [tmp];}
+# {tmp=*:2 OPD; goto [tmp];}
+
+:JMP @RELL		is (kodas=1 &metod=7 & regai=7) ; RELL {goto [RELL];} #JUMP @XXXXX
+:JMPI OPD		is (kodas=1 & metod<6)... & OPD {tmp= OPD; goto [tmp];} # JMP R0 ir pan metod:2,3. kiti negalimi
 
 # JSR methods.
 JPS: reg_s	is  reg_s {tmp:2 = *:2 reg_s; export tmp;}
 I16: imm16	is imm16 {export *:2 imm16;}
+# v0=v1; assign v1 to v0.
+# *v0=v1; v0 is pointer to space. Store v1 to space
+# *[space]v0=v1;
+# *:4 v0 = v1;
+# *[space]:4 v0=v1;
+#
+# galimi tik sitie
+# goto v0; goto to address of v0
+# goto [v0]; goto to as offset of current space
+# call v0;
+# call [v0];
+# return [v0];
+
 
 
 :JSR JPS,#I16	is (kodas_s=0 & metod_s=4 & reg_s<7 & reg_d=7 & metod_d=2)& JPS ;I16 {tmp=JPS+I16; call [tmp];}
@@ -314,14 +398,16 @@ I16: imm16	is imm16 {export *:2 imm16;}
 :JSR JPS,RELL	is (kodas_s=0 & metod_s=4 & reg_s<7 & reg_d=7 & metod_d=6)& JPS ;RELL {tmp=JPS+RELL; call [*:2 tmp];}
 :JSR JPS,@RELL	is (kodas_s=0 & metod_s=4 & reg_s<7 & reg_d=7 & metod_d=7)& JPS ;RELL {tmp=JPS+RELL; call [*:2 tmp];}
 
+:JSR "PC?",OPD	is (kodas=0x27 & reg_d!=7)... & OPD {call OPD;}
+
 :"ILLEGAL CALL 0>"RELL	is (kodas=0x27 & metod_d=0 & reg_d=7) ; RELL { *SP=PC; SP=SP-1; call RELL; }
 :"ILLEGAL CALL 1>"RELL	is (kodas=0x27 & metod_d=1 & reg_d=7) ; RELL { *SP=PC; SP=SP-1; call RELL; }
-:CALL #I16			is (kodas=0x27 & metod_d=2 & reg_d=7) ; I16 {call [I16];}
-:CALL @#I16	is (kodas=0x27 & metod_d=3 & reg_d=7) ; I16 {call I16; }
+:CALL #I16				is (kodas=0x27 & metod_d=2 & reg_d=7) ; I16 {call [I16];}
+:CALL @#I16				is (kodas=0x27 & metod_d=3 & reg_d=7) ; I16 {call I16; }
 :"ILLEGAL CALL 4>"RELL	is (kodas=0x27 & metod_d=4 & reg_d=7) ; RELL { *SP=PC; SP=SP-1; call RELL; }
 :"ILLEGAL CALL 5>"RELL	is (kodas=0x27 & metod_d=5 & reg_d=7) ; RELL { *SP=PC; SP=SP-1; call RELL; }
-:CALL RELL		is (kodas=0x27 & metod_d=6 & reg_d=7) ; RELL { *SP=PC; SP=SP-1; call RELL; }
-:CALL "@"RELL	is (kodas=0x27 & metod_d=7 & reg_d=7) ; RELL { *SP=PC; SP=SP-1; call RELL; }
+:CALL RELL				is (kodas=0x27 & metod_d=6 & reg_d=7) ; RELL { *SP=PC; SP=SP-1; call RELL; }
+:CALL "@"RELL			is (kodas=0x27 & metod_d=7 & reg_d=7) ; RELL { *SP=PC; SP=SP-1; call RELL; }
 
 ###### RETURN
 :RETURN		is imm16=0x87 {PC = *SP; SP = SP+1; return [PC];}
@@ -330,12 +416,7 @@ I16: imm16	is imm16 {export *:2 imm16;}
 
 :MARK nnn is kodas=0x34 &nnn {PC=PC;} # SP := PC + 2 * NN; PC := R5; R5 := (SP)+
  
-# Jumpai (PC registras, R7)
-#          543210
-# 2 - #X   010 111 = 17
-# 3 - @#X  011 111 = 1f
-# 6 - X    110 111 = 37
-# 7 - @X   111 111 = 3f
+
 
 ######## FPU FPU FPU #########################
 
