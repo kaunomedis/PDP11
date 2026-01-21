@@ -88,7 +88,7 @@ define token word_1 (16)
 	regai =(0,2)
 	
 	op_h =(8,15)
-	rel = (0,7) signed
+	rell = (0,7) signed
 	baitas = (0,7)
 	
 	kodas_s = (12,15)
@@ -106,15 +106,15 @@ attach variables [ reg_s] [ R0 R1 R2 R3 R4 R5 SP PC];
 attach variables [ reg_d] [ R0 R1 R2 R3 R4 R5 SP PC];
 
 # one byte, not used here
-define token data8 (8)
-   imm8		= (0,7)
-   rela		= (0,7) signed
-;
+#define token data8 (8)
+#   imm8		= (0,7)
+#   rela		= (0,7) signed
+#;
 
 # next word with data or first opcode
 define token data_word (16)
 	imm16 = (0,15)
-	rell	=(0,15) signed
+	rell16	=(0,15) signed
 ;
 
 
@@ -123,15 +123,22 @@ define token data_word (16)
 define token data_double_word (32)
 	imm32=(0,31)
 	imm32H=(16,31)
+	rell32h=(16,31) signed
 	imm32L=(0,15)
+	rell32l=(0,15) signed
 ;
 # Relative addressing. Note x2 multiplication (adressing is in words)
-REL: reloc		is rel	[ reloc = inst_next + 2 * rel; ] { export *:2 reloc; } 
+REL8:	reloc	is rell			[reloc = inst_next + 2 * rell;]	{ export *:2 reloc; } 
+# relative values from extra bytes.
+REL32H:	reloc 	is rell32h  	[reloc = inst_next + rell32h;]	{ export *:2 reloc; } 
+REL32L:	reloc 	is rell32l  	[reloc = inst_next + rell32l;]	{ export *:2 reloc; } 
+REL16:	reloc	is rell16   	[reloc = inst_next + rell16;]	{ export *:2 reloc; }
+RELN:	reloc	is rell &nnn	[reloc = inst_next-nnn*2;]		{ export *:2 reloc; } 
 
 # ############# VEIKIANTYS 
-:NOP		is imm16=0x0A0 {	R0=R0;}
-:HALT		is imm16=0 { PC=123;}
-:WAIT		is imm16=1 { PC=PC-2;}
+:NOP		is imm16=0x0A0	{R0=R0;}
+:HALT		is imm16=0		{ PC=(0x28); goto [PC];}
+:WAIT		is imm16=1		{ PC=PC-2; goto [PC];}
 :CLC		is imm16=0x0A1 {PS[0,1]=0;}
 :CLV		is imm16=0x0A2 {PS[5,1]=0;}
 :CLZ		is imm16=0x0A4 {PS[2,1]=0;}
@@ -151,23 +158,23 @@ REL: reloc		is rel	[ reloc = inst_next + 2 * rel; ] { export *:2 reloc; }
 :RTT		is imm16=0x006 {SP=SP+2;} # NETEISYBE
 :RESET		is imm16=0x005 {SP=SP;}
 
-:BR   REL			is op_h=1 & REL {goto REL;}
-:BNE  REL			is op_h=2 & REL {if !PS[2,1] goto REL;} # Z=0
-:BEQ  REL			is op_h=3 & REL {if PS[2,1] goto REL;} # Z=1
-:BPL  REL			is op_h=0x80 & REL {if !PS[3,1] goto REL;} # N=0 sign
-:BMI  REL			is op_h=0x81 & REL {if PS[3,1] goto REL;} # N=1
-:BVC  REL			is op_h=0x84 & REL {if !PS[5,1] goto REL;} # V=0 overflow
-:BVS  REL			is op_h=0x85 & REL {if PS[5,1] goto REL;} # V=1
-:BCC  REL			is op_h=0x86 & REL {if !PS[0,1] goto REL;} # C=0 carry
-:BCS  REL			is op_h=0x87 & REL {if PS[0,1] goto REL;} # C=1
-:BGE  REL			is op_h=4 & REL {if !(PS[3,1] ^ PS[5,1]) goto REL;} # N xor V =0
-:BLT  REL			is op_h=5 & REL {if (PS[3,1] ^ PS[5,1]) goto REL;} # N xor V =1
-:BGT  REL			is op_h=6 & REL {goto REL;} # (N xor V) or Z =0
-:BLE  REL			is op_h=7 & REL {goto REL;} # (N xor V) or Z =0
-:BHI  REL			is op_h=0x82 & REL {goto REL;} # C or Z =0
-:BLOS REL			is op_h=0x83 & REL {
-if PS[2,1] goto REL;
-if PS[0,1] goto REL;
+:BR   REL8			is op_h=1 & REL8 {goto REL8;}
+:BNE  REL8			is op_h=2 & REL8 {if !PS[2,1] goto REL8;} # Z=0
+:BEQ  REL8			is op_h=3 & REL8 {if PS[2,1] goto REL8;} # Z=1
+:BPL  REL8			is op_h=0x80 & REL8 {if !PS[3,1] goto REL8;} # N=0 sign
+:BMI  REL8			is op_h=0x81 & REL8 {if PS[3,1] goto REL8;} # N=1
+:BVC  REL8			is op_h=0x84 & REL8 {if !PS[5,1] goto REL8;} # V=0 overflow
+:BVS  REL8			is op_h=0x85 & REL8 {if PS[5,1] goto REL8;} # V=1
+:BCC  REL8			is op_h=0x86 & REL8 {if !PS[0,1] goto REL8;} # C=0 carry
+:BCS  REL8			is op_h=0x87 & REL8 {if PS[0,1] goto REL8;} # C=1
+:BGE  REL8			is op_h=4 & REL8 {if !(PS[3,1] ^ PS[5,1]) goto REL8;} # N xor V =0
+:BLT  REL8			is op_h=5 & REL8 {if (PS[3,1] ^ PS[5,1]) goto REL8;} # N xor V =1
+:BGT  REL8			is op_h=6 & REL8 {goto REL8;} # (N xor V) or Z =0
+:BLE  REL8			is op_h=7 & REL8 {goto REL8;} # (N xor V) or Z =0
+:BHI  REL8			is op_h=0x82 & REL8 {goto REL8;} # C or Z =0
+:BLOS REL8			is op_h=0x83 & REL8 {
+if PS[2,1] goto REL8;
+if PS[0,1] goto REL8;
 goto inst_next;
 } # C or Z =1
 
@@ -178,6 +185,7 @@ goto inst_next;
 #export only register names
 RRR: reg_s is reg_s { export *:2 reg_s;}
 RRD: reg_d is reg_d { export *:2 reg_d;}
+
 
 
 # adresacijos metodai (mode)? arba
@@ -207,6 +215,7 @@ OPS: #imm32L is metod_s=2 & metod_d=2 & reg_s=7 & reg_d=7; imm32L	{tmp:2 = imm32
 OPS: @(reg_s)+		is metod_s=3 & reg_s						{reg_s=reg_s+1; export reg_s;}
 OPS: @#imm16"z"		is metod_s=3 & reg_s=7 ; imm16				{tmp:2 = imm16; export tmp;}
 OPS: @#imm32L	is metod_s=3 & reg_s=7 & reg_d=7 ;imm32L	{tmp:2 = imm32L; export tmp;}
+OPS: @#imm16"y"	is metod_s=3 & reg_s=7 & reg_d=7 & metod_d<7;imm16 {tmp:2 = imm16; export tmp;}
 
 
 OPS: -(reg_s)		is metod_s=4 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
@@ -215,6 +224,12 @@ OPS: @-(reg_s)		is metod_s=5 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
 OPS: imm16(reg_s)	is metod_s=6 & reg_s; imm16 {tmp:2 = imm16; export tmp;}
 OPS: imm32L(reg_s)	is metod_s=6 & metod_d=7 & reg_s; imm32L {tmp:2 = imm32L; export tmp;}
 OPS: imm32L(reg_s)	is metod_s=6 & metod_d=6 & reg_s; imm32L {tmp:2 = imm32L; export tmp;}
+# REG.S is 7 (PC)
+OPS: "?a?"imm16(reg_s)	is metod_s=6 & reg_ss=7 & reg_s; imm16 {tmp:2 = imm16; export tmp;}
+OPS: "?b?"REL32L(reg_s)	is metod_s=6 & reg_ss=7 & metod_d=7 & reg_s; REL32L {tmp:2 = REL32L; export tmp;}
+OPS: "?c?"REL32L(reg_s)	is metod_s=6 & reg_ss=7 & metod_d=6 & reg_s; REL32L {tmp:2 = REL32L; export tmp;}
+
+
 
 OPS: @imm16(reg_s)	is metod_s=7 & reg_s; imm16 {tmp:2 = imm16; export tmp;}
 OPS: @imm32L(reg_s)	is metod_s=7 & metod_d=7 & reg_s; imm32L {tmp:2 = imm32L; export tmp;}
@@ -223,33 +238,33 @@ OPS: @imm32L(reg_s)	is metod_s=7 & metod_d=6 & reg_s; imm32L {tmp:2 = imm32L; ex
 
 # OPerator Destination [OPD]. All possible methods.
 OPD: reg_d			is metod_d=0 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
+
 OPD: (reg_d)		is metod_d=1 & reg_d {export *[const]:2 reg_d;}
 
 OPD: (reg_d)+		is metod_d=2 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
+# REG.D is 7 (PC)
 OPD: #imm16			is metod_d=2 & reg_d=7 ; imm16 {tmp:2 = imm16; export tmp;}
 OPD: #imm32H 		is metod_s=2 & metod_d=2 & reg_s=7 & reg_d=7; imm32H {tmp:2 = imm32H; export tmp;}
 
 
 OPD: @(reg_d)+		is metod_d=3 & reg_d {export reg_d;}
-OPD: @#imm16"z"		is metod_d=3 & reg_d=7 ; imm16 {tmp:2 = imm16; export tmp;}
+# REG.D is 7 (PC)
+OPD: @#imm16" OK"		is metod_d=3 & reg_d=7 ; imm16 {tmp:2 = imm16; export tmp;}
 OPD: @#imm32H		is metod_d=3 & reg_d=7 & reg_s=7 ;imm32H {tmp:2 = imm32H; export tmp;}
+OPD: @#imm16" OK"		is metod_d=3 & reg_d=7 & reg_s=7 & metod_s<7;imm16 {tmp:2 = imm16; export tmp;}
+
 
 OPD: -(reg_d)		is metod_d=4 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
 OPD: @-(reg_d)		is metod_d=5 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
 
-#OPD: imm16(reg_d)"A"	is metod_d=6 & reg_d; imm16 {tmp:2 = imm16; export tmp;}
-#OPD: imm32H(reg_d)"B"	is metod_d=6 & metod_s=6 &reg_d;imm32H {tmp:2 = imm32H; export tmp;}
-#OPD: imm32H(reg_d)"C"	is metod_d=6 & metod_s=7 & reg_s=7 &reg_dd=7 & reg_d;imm32H {tmp:2 = imm32H; export tmp;}
 
-OPD: imm16(reg_d)"A"	is metod_d=6 & reg_dd!=7 & reg_s=7 &reg_d; imm16 {tmp:2 = imm16; export tmp;}
-
-REL32: reloc 	is imm32H  [ reloc = inst_next + imm32H; ] { export *:2 reloc; } 
-
-OPD: REL32" OK"		is metod_d=6 & reg_s=7 & reg_dd=7;REL32 {tmp:2 = REL32; export tmp;}
-
-
-#OPD: imm32H(reg_d)"C"	is metod_d=6 & reg_s!=7 & reg_dd=7 & reg_d;imm32H {tmp:2 = imm32H; export tmp;}
-
+OPD: imm16(reg_d)	is metod_d=6 & reg_d; imm16 {tmp:2 = imm16; export tmp;}
+OPD: imm32H(reg_d)	is metod_d=6 & metod_s=7 & reg_d; imm32H {tmp:2 = imm32H; export tmp;}
+OPD: imm32H(reg_d)	is metod_d=6 & metod_s=6 & reg_d; imm32H {tmp:2 = imm32H; export tmp;}
+# REG.D is 7 (PC)
+OPD: "?a?"imm16(reg_d)	is metod_d=6 & reg_dd=7 & reg_d; imm16 {tmp:2 = imm16; export tmp;}
+OPD: "?b?"REL32H(reg_d)	is metod_d=6 & reg_dd=7 & metod_s=7 & reg_d; REL32H {tmp:2 = REL32H; export tmp;}
+OPD: "?c?"REL32H(reg_d)	is metod_d=6 & reg_dd=7 & metod_s=6 & reg_d; REL32H {tmp:2 = REL32H; export tmp;}
 
 
 OPD: @imm16(reg_d)	is metod_d=7 & reg_d; imm16 {tmp:2 = imm16; export tmp;}
@@ -274,7 +289,7 @@ OPD2: -(reg_d)		is metod_d=4 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
 OPD2: @-(reg_d)		is metod_d=5 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
 
 OPD2: imm16(reg_d)	is metod_d=6 & reg_dd!=7 &reg_d; imm16 {tmp:2 = imm16; export tmp;}
-OPD2: REL" OK"			is metod_d=6 & reg_dd=7; REL {tmp:2 = REL; export tmp;}
+OPD2: REL8" OK"			is metod_d=6 & reg_dd=7; REL8 {tmp:2 = REL8; export tmp;}
 
 OPD2: @imm16(reg_d)	is metod_d=7 & reg_d; imm16 {tmp:2 = imm16; export tmp;}
 
@@ -294,7 +309,6 @@ OPD2: @imm16(reg_d)	is metod_d=7 & reg_d; imm16 {tmp:2 = imm16; export tmp;}
 # metod_s=7 metod_d=6
 # metod_s=2 metod_d=2
 
-RELN: reloc		is rel &nnn	[ reloc = inst_next-nnn*2; ] { export *:2 reloc; } 
 
 ######### XOR SOB MUL DIV ASH ASHC
 :XOR RRR,OPD	is (kodas_s=7 &metod_s=4 & RRR) ...& OPD {PC=PC;}
@@ -358,7 +372,7 @@ goto [RELN];
 :MFPS OPD2		is (kodas_s=8 & metod_s=6 &reg_s=7)... &OPD2 {PC=PC;}
 :MTPS OPD2		is (kodas_s=8 & metod_s=6 &reg_s=4)... &OPD2 {PS=OPD2;}
 ############################################################################################
-RELL: reloc 	is rell  [ reloc = inst_next + rell; ] { export *:2 reloc; } 
+
 # Jumpai (PC registras, R7)
 #          543210
 # 2 - #X   010 111 = 17
@@ -367,11 +381,11 @@ RELL: reloc 	is rell  [ reloc = inst_next + rell; ] { export *:2 reloc; }
 # 7 - @X   111 111 = 3f
 
 # JSR/JMP - need to rewrite
-:JMP RELL   	is (kodas=1 &metod=6 & regai=7) ; RELL { goto RELL;} #OK
-:JMP "?"OPD		is (kodas=1 &metod=6 & regai!=7)... &OPD  {tmp= OPD; goto [tmp];}
+:JMPX REL16   	is (kodas=1 &metod=6 & regai=7) ; REL16 { goto REL16;} #OK
+:JMPX "?"OPD		is (kodas=1 &metod=6 & regai!=7)... &OPD  {tmp= OPD; goto [tmp];}
 # {tmp=*:2 OPD; goto [tmp];}
 
-:JMP @RELL		is (kodas=1 &metod=7 & regai=7) ; RELL {goto [RELL];} #JUMP @XXXXX
+:JMP @REL16		is (kodas=1 &metod=7 & regai=7) ; REL16 {goto [REL16];} #JUMP @XXXXX
 :JMPI OPD		is (kodas=1 & metod<6)... & OPD {tmp= OPD; goto [tmp];} # JMP R0 ir pan metod:2,3. kiti negalimi
 
 # JSR methods.
@@ -395,19 +409,19 @@ I16: imm16	is imm16 {export *:2 imm16;}
 :JSR JPS,#I16	is (kodas_s=0 & metod_s=4 & reg_s<7 & reg_d=7 & metod_d=2)& JPS ;I16 {tmp=JPS+I16; call [tmp];}
 :JSR JPS,@#I16	is (kodas_s=0 & metod_s=4 & reg_s<7 & reg_d=7 & metod_d=3)& JPS ;I16 {tmp=I16+JPS; call [*:2 tmp];}
 
-:JSR JPS,RELL	is (kodas_s=0 & metod_s=4 & reg_s<7 & reg_d=7 & metod_d=6)& JPS ;RELL {tmp=JPS+RELL; call [*:2 tmp];}
-:JSR JPS,@RELL	is (kodas_s=0 & metod_s=4 & reg_s<7 & reg_d=7 & metod_d=7)& JPS ;RELL {tmp=JPS+RELL; call [*:2 tmp];}
+:JSR JPS,REL16	is (kodas_s=0 & metod_s=4 & reg_s<7 & reg_d=7 & metod_d=6)& JPS ;REL16 {tmp=JPS+REL16; call [*:2 tmp];}
+:JSR JPS,@REL16	is (kodas_s=0 & metod_s=4 & reg_s<7 & reg_d=7 & metod_d=7)& JPS ;REL16 {tmp=JPS+REL16; call [*:2 tmp];}
 
 :JSR "PC?",OPD	is (kodas=0x27 & reg_d!=7)... & OPD {call OPD;}
 
-:"ILLEGAL CALL 0>"RELL	is (kodas=0x27 & metod_d=0 & reg_d=7) ; RELL { *SP=PC; SP=SP-1; call RELL; }
-:"ILLEGAL CALL 1>"RELL	is (kodas=0x27 & metod_d=1 & reg_d=7) ; RELL { *SP=PC; SP=SP-1; call RELL; }
+:"ILLEGAL CALL 0>"REL16	is (kodas=0x27 & metod_d=0 & reg_d=7) ; REL16 { *SP=PC; SP=SP-1; call REL16; }
+:"ILLEGAL CALL 1>"REL16	is (kodas=0x27 & metod_d=1 & reg_d=7) ; REL16 { *SP=PC; SP=SP-1; call REL16; }
 :CALL #I16				is (kodas=0x27 & metod_d=2 & reg_d=7) ; I16 {call [I16];}
 :CALL @#I16				is (kodas=0x27 & metod_d=3 & reg_d=7) ; I16 {call I16; }
-:"ILLEGAL CALL 4>"RELL	is (kodas=0x27 & metod_d=4 & reg_d=7) ; RELL { *SP=PC; SP=SP-1; call RELL; }
-:"ILLEGAL CALL 5>"RELL	is (kodas=0x27 & metod_d=5 & reg_d=7) ; RELL { *SP=PC; SP=SP-1; call RELL; }
-:CALL RELL				is (kodas=0x27 & metod_d=6 & reg_d=7) ; RELL { *SP=PC; SP=SP-1; call RELL; }
-:CALL "@"RELL			is (kodas=0x27 & metod_d=7 & reg_d=7) ; RELL { *SP=PC; SP=SP-1; call RELL; }
+:"ILLEGAL CALL 4>"REL16	is (kodas=0x27 & metod_d=4 & reg_d=7) ; REL16 { *SP=PC; SP=SP-1; call REL16; }
+:"ILLEGAL CALL 5>"REL16	is (kodas=0x27 & metod_d=5 & reg_d=7) ; REL16 { *SP=PC; SP=SP-1; call REL16; }
+:CALL REL16				is (kodas=0x27 & metod_d=6 & reg_d=7) ; REL16 { *SP=PC; SP=SP-1; call REL16; }
+:CALL "@"REL16			is (kodas=0x27 & metod_d=7 & reg_d=7) ; REL16 { *SP=PC; SP=SP-1; call REL16; }
 
 ###### RETURN
 :RETURN		is imm16=0x87 {PC = *SP; SP = SP+1; return [PC];}
