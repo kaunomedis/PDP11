@@ -191,68 +191,75 @@ RRD: reg_d is reg_d { export *:2 reg_d;}
 # 6 - indeksinis X(Rn)
 # 7 - @X(Rn)
 
-# OPerator Source [OPS]. All possible methods.
-OPS: reg_s			is metod_s=0 & reg_s { export reg_s;}
-OPS: (reg_s)		is metod_s=1 & reg_s {export *[const]:2 reg_s;}
 
-OPS: (reg_s)+		is metod_s=2 & reg_s							{reg_s=reg_s+1; tmp:2 = *:2 reg_s; export tmp;}
-OPS: #imm16			is metod_s=2 & reg_s=7; imm16 					{tmp:2 = imm16; export tmp;}
-OPS: #imm32L is metod_s=2 & metod_d=2 & reg_s=7 & reg_d=7; imm32L	{tmp:2 = imm32L; export tmp;}
-OPS: #imm32L is metod_s=2 & metod_d=3 & reg_s=7 & reg_d=7; imm32L	{tmp:2 = imm32L; export tmp;}
+OPS: "<0>"reg_s	is metod_s=0 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
+OPS: "<1>"reg_s	is metod_s=1 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
+OPS: "<2>"reg_s	is metod_s=2 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
+OPS: "<2#>"imm16	is metod_s=2 & reg_s=7 ;imm16{tmp:2 = imm16; export tmp;}
 
 
-OPS: @(reg_s)+		is metod_s=3 & reg_s						{reg_s=reg_s+1; export reg_s;}
-OPS: @#imm16"z"		is metod_s=3 & reg_s=7 ; imm16				{tmp:2 = imm16; export tmp;}
-OPS: @#imm32L	is metod_s=3 & reg_s=7 & reg_d=7 ;imm32L	{tmp:2 = imm32L; export tmp;}
-OPS: @#imm16"y"	is metod_s=3 & reg_s=7 & reg_d=7 & metod_d<7;imm16 {tmp:2 = imm16; export tmp;}
-
-OPS: -(reg_s)		is metod_s=4 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
-OPS: @-(reg_s)		is metod_s=5 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
-
-OPS: imm16(reg_s)	is metod_s=6 & reg_s; imm16 {tmp:2 = imm16; export tmp;}
-OPS: imm32L(reg_s)	is metod_s=6 & metod_d=7 & reg_s; imm32L {tmp:2 = imm32L; export tmp;}
-OPS: imm32L(reg_s)	is metod_s=6 & metod_d=6 & reg_s; imm32L {tmp:2 = imm32L; export tmp;}
-# REG.S is 7 (PC)
-OPS: "?a?"imm16(reg_s)	is metod_s=6 & reg_ss=7 & reg_s; imm16 {tmp:2 = imm16; export tmp;}
-OPS: "?b?"REL32L(reg_s)	is metod_s=6 & reg_ss=7 & metod_d=7 & reg_s; REL32L {tmp:2 = REL32L; export tmp;}
-OPS: "?c?"REL32L(reg_s)	is metod_s=6 & reg_ss=7 & metod_d=6 & reg_s; REL32L {tmp:2 = REL32L; export tmp;}
-
-OPS: @imm16(reg_s)	is metod_s=7 & reg_s; imm16 {tmp:2 = imm16; export tmp;}
-OPS: @imm32L(reg_s)	is metod_s=7 & metod_d=7 & reg_s; imm32L {tmp:2 = imm32L; export tmp;}
-OPS: @imm32L(reg_s)	is metod_s=7 & metod_d=6 & reg_s; imm32L {tmp:2 = imm32L; export tmp;}
-
-# OPerator Destination [OPD]. All possible methods.
-OPD: reg_d			is metod_d=0 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
-
-OPD: (reg_d)		is metod_d=1 & reg_d {export *[const]:2 reg_d;}
-
-OPD: (reg_d)+		is metod_d=2 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
-# REG.D is 7 (PC)
-OPD: #imm16			is metod_d=2 & reg_d=7 ; imm16 {tmp:2 = imm16; export tmp;}
-OPD: #imm32H 		is metod_d=2 & metod_s=2 & reg_s=7 & reg_d=7; imm32H {tmp:2 = imm32H; export tmp;}
-OPD: "SD>"#imm32H 		is metod_d=2 & metod_s=3 & reg_s=7 & reg_d=7; imm32H {tmp:2 = imm32H; export tmp;}
+OPS: "<3>"reg_s	is metod_s=3 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
+OPS: "<3#>"imm16	is metod_s=3 & reg_s=7 ;imm16{tmp:2 = imm16; export tmp;}
 
 
-OPD: @(reg_d)+		is metod_d=3 & reg_d {export reg_d;}
-# REG.D is 7 (PC)
-OPD: @#imm16" OK"	is metod_d=3 & reg_d=7 ; imm16 {tmp:2 = imm16; export tmp;}
-OPD: @#imm32H		is metod_d=3 & reg_d=7 & reg_s=7 ;imm32H {tmp:2 = imm32H; export tmp;}
-OPD: @#imm16" OK"	is metod_d=3 & reg_d=7 & reg_s=7 & metod_s<7;imm16 {tmp:2 = imm16; export tmp;}
+OPS: "<4>"reg_s	is metod_s=4 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
+OPS: "<5>"reg_s	is metod_s=5 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
 
-OPD: -(reg_d)		is metod_d=4 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
-OPD: @-(reg_d)		is metod_d=5 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
+OPS: "<6"reg_s">"imm16	is metod_s=6 & reg_s;imm16{tmp:2 = imm16; export tmp;}
+OPS: "<6#>"imm16	is metod_s=6 & reg_s=7 ;imm16{tmp:2 = imm16; export tmp;}
+OPS: "<6#>"imm32L	is metod_s=6 & metod_d=6 & reg_s=7 ;imm32L{tmp:2 = imm32L; export tmp;}
+OPS: "<6#>"imm32L	is metod_s=6 & metod_d=7 & reg_s=7 ;imm32L{tmp:2 = imm32L; export tmp;}
+OPS: "<6#"reg_s"#>"imm32L	is metod_s=6 & metod_d=6 & reg_s ;imm32L{tmp:2 = imm32L; export tmp;}
+OPS: "<6#"reg_s"#>"imm32L	is metod_s=6 & metod_d=7 & reg_s ;imm32L{tmp:2 = imm32L; export tmp;}
 
-OPD: imm16(reg_d)	is metod_d=6 & reg_d; imm16 {tmp:2 = imm16; export tmp;}
-OPD: imm32H(reg_d)	is metod_d=6 & metod_s=7 & reg_d; imm32H {tmp:2 = imm32H; export tmp;}
-OPD: imm32H(reg_d)	is metod_d=6 & metod_s=6 & reg_d; imm32H {tmp:2 = imm32H; export tmp;}
-# REG.D is 7 (PC)
-OPD: "?a?"imm16(reg_d)	is metod_d=6 & reg_dd=7 & reg_d; imm16 {tmp:2 = imm16; export tmp;}
-OPD: "?b?"REL32H(reg_d)	is metod_d=6 & reg_dd=7 & metod_s=7 & reg_d; REL32H {tmp:2 = REL32H; export tmp;}
-OPD: "?c?"REL32H(reg_d)	is metod_d=6 & reg_dd=7 & metod_s=6 & reg_d; REL32H {tmp:2 = REL32H; export tmp;}
 
-OPD: @imm16(reg_d)	is metod_d=7 & reg_d; imm16 {tmp:2 = imm16; export tmp;}
-OPD: @imm32H(reg_d)	is metod_d=7 & metod_s=7 & reg_d;imm32H {tmp:2 = imm32H; export tmp;}
-OPD: @imm32H(reg_d)	is metod_d=7 & metod_s=6 & reg_d;imm32H {tmp:2 = imm32H; export tmp;}
+OPS: "<7"reg_s">"imm16	is metod_s=7 & reg_s; imm16 {tmp:2 = imm16; export tmp;}
+OPS: "<7"reg_s">"imm16	is metod_s=7 & metod_d=6 & reg_s ; imm16{tmp:2 = imm16; export tmp;}
+#OPS: "<7"reg_s">"imm16	is metod_s=7 & metod_d=7 & reg_s ; imm16{tmp:2 = imm16; export tmp;}
+
+OPS: "<7#>"imm16	is metod_s=7 & reg_s=7 ;imm16{tmp:2 = imm16; export tmp;}
+OPS: "<7#>"imm16	is metod_s=7 & metod_d=6 & reg_s=7 ;imm16{tmp:2 = imm16; export tmp;}
+OPS: "<7#"reg_s">"imm32L	is metod_s=7 & metod_d=7 & reg_s ;imm32L{tmp:2 = imm32L; export tmp;}
+
+OPS: "<7#>"imm32L	is metod_s=7 & metod_d=7 & reg_s=7 ;imm32L{tmp:2 = imm32L; export tmp;}
+
+
+# DESTINATION
+OPD: "<0>"reg_d	is metod_d=0 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
+OPD: "<1>"reg_d	is metod_d=1 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
+OPD: "<2>"reg_d	is metod_d=2 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
+OPD: "<2#>"imm16	is metod_d=2 & reg_d=7 ;imm16{tmp:2 = imm16; export tmp;}
+
+
+OPD: "<3>"reg_d	is metod_d=3 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
+OPD: "<3#>"imm16	is metod_d=3 & reg_d=7 ;imm16{tmp:2 = imm16; export tmp;}
+
+
+OPD: "<4>"reg_d	is metod_d=4 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
+OPD: "<5>"reg_d	is metod_d=5 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
+
+OPD: "<6"reg_d">"imm16	is metod_d=6 & reg_d;imm16{tmp:2 = imm16; export tmp;}
+OPD: "<6#>"imm16	is metod_d=6 & reg_d=7 ;imm16{tmp:2 = imm16; export tmp;}
+OPD: "<6#>"imm32H	is metod_d=6 & metod_s=6 & reg_d=7 ;imm32H{tmp:2 = imm32H; export tmp;}
+OPD: "<6#>"imm32H	is metod_d=6 & metod_s=7 & reg_d=7 ;imm32H{tmp:2 = imm32H; export tmp;}
+OPD: "<6#"reg_d"#>"imm32H	is metod_d=6 & metod_s=6 & reg_d ;imm32H{tmp:2 = imm32H; export tmp;}
+OPD: "<6#"reg_d"#>"imm32H	is metod_d=6 & metod_s=7 & reg_d ;imm32H{tmp:2 = imm32H; export tmp;}
+
+
+OPD: "<7"reg_d">"imm16	is metod_d=7 & reg_d; imm16 {tmp:2 = imm16; export tmp;}
+OPD: "<7"reg_d">"imm16	is metod_d=7 & metod_s=6 & reg_d ; imm16{tmp:2 = imm16; export tmp;}
+#OPD: "<7"reg_d">"imm16	is metod_d=7 & metod_s=7 & reg_d ; imm16{tmp:2 = imm16; export tmp;}
+
+OPD: "<7#>"imm16	is metod_d=7 & reg_d=7 ;imm16{tmp:2 = imm16; export tmp;}
+OPD: "<7#>"imm16	is metod_d=7 & metod_s=6 & reg_d=7 ;imm16{tmp:2 = imm16; export tmp;}
+OPD: "<7#"reg_d">"imm32H	is metod_d=7 & metod_s=7 & reg_d ;imm32H{tmp:2 = imm32H; export tmp;}
+
+OPD: "<7#>"imm32H	is metod_d=7 & metod_s=7 & reg_d=7 ;imm32H{tmp:2 = imm32H; export tmp;}
+
+
+
+
+
 
 # nezinau ar sitie nesutampa su virsutiniais.
 OPD2: reg_d			is metod_d=0 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
