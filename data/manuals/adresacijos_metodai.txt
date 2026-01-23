@@ -1,0 +1,192 @@
+PDP-11 MOV — Extra Word Encoding Table
+(What is stored in word 2 or 3 of the instruction)
+
+Mode   Syntax Example         Extra Word Value
+-----  ---------------------- ----------------
+0      MOV R0, Rn             -
+1      MOV R0, (Rn)           -
+2      MOV R0, (Rn)+          -
+2*     MOV R0, #1234          VALUE
+3      MOV R0, @(Rn)+         -
+3*     MOV R0, @#1234         VALUE
+4      MOV R0, -(Rn)          -
+5      MOV R0, @-(Rn)         -
+6      MOV R0, X(Rn)          VALUE
+6*     MOV R0, label          RELATIVE
+7      MOV R0, @X(Rn)         VALUE
+7*     MOV R0, @label         RELATIVE
+
+* Only PC (R7) turns mode 6/7 into RELATIVE.
+
+
+mode6_pc:      is metod=6 & reg == 7  { offset = inst_next; offset = offset + inst_next_addr; ... }
+mode7_pc:      is metod=7 & reg == 7  { offset = inst_next; offset = offset + inst_next_addr; ... }
+
+-----
+PDP-11 Addressing Modes (0–7)
+
+Mode 0 — Register        (MOV R0, Rn)
+    operand = Rn
+
+Mode 1 — Register Deferred        (MOV R0, (Rn))
+    addr = Rn
+    operand = MEM[addr]
+
+
+Mode 2 — Autoincrement        (MOV R0, (Rn)+)
+    addr = Rn
+    operand = MEM[addr]
+    Rn = Rn + size
+
+Mode 3 — Autoincrement Deferred        (MOV R0, @(Rn)+)
+    ptr = Rn
+    addr = MEM[ptr]
+    operand = MEM[addr]
+    Rn = Rn + 2
+
+Mode 4 — Autodecrement        (MOV R0, -(Rn))
+    Rn = Rn - size
+    addr = Rn
+    operand = MEM[addr]
+
+Mode 5 — Autodecrement Deferred        (MOV R0, @-(Rn))
+    Rn = Rn - 2
+    ptr = Rn
+    addr = MEM[ptr]
+    operand = MEM[addr]
+
+Mode 6 — Index        (MOV R0, X(Rn))
+    addr = Rn + offset
+    operand = MEM[addr]
+
+Mode 7 — Index Deferred        (MOV R0, @X(Rn))
+    ptr = Rn + offset
+    addr = MEM[ptr]
+    operand = MEM[addr]
+
+=================================================JMP==PC========
+PDP-11 Addressing Modes (PC = R7) with JMP Equivalents
+
+Mode 0 — Register (MOV R0, PC)
+    ILLEGAL AS DESTINATION
+    (PC cannot be written by MOV)
+    JMP variant:  ILLEGAL (JMP PC is not allowed)
+
+Mode 1 — Register Deferred (MOV R0, (PC))
+    ILLEGAL
+    (PC cannot be used in register-deferred mode)
+    JMP variant:  ILLEGAL
+
+Mode 2 — Autoincrement (MOV R0, (PC)+)
+    ; Literal constant
+    addr = PC
+    operand = MEM[addr]
+    PC = PC + 2
+    Assembler MOV syntax:  MOV R0, #value
+    JMP equivalent:        JMP #value      ; ILLEGAL — JMP cannot use immediate
+    (JMP does NOT allow immediate mode)
+    So: JMP variant = ILLEGAL
+
+Mode 3 — Autoincrement Deferred (MOV R0, @(PC)+)
+    ; Absolute addressing
+    ptr = PC
+    addr = MEM[ptr]
+    operand = MEM[addr]
+    PC = PC + 2
+    Assembler MOV syntax:  MOV R0, @#value
+    JMP equivalent:        JMP @#value     ; ABSOLUTE JUMP (LEGAL)
+
+Mode 4 — Autodecrement (MOV R0, -(PC))
+    ILLEGAL
+    (PC cannot be decremented for addressing)
+    JMP variant:  ILLEGAL
+
+Mode 5 — Autodecrement Deferred (MOV R0, @-(PC))
+    ILLEGAL
+    (PC cannot be decremented for addressing)
+    JMP variant:  ILLEGAL
+
+Mode 6 — Index (MOV R0, X(PC))
+    ; PC-relative addressing
+    addr = PC + offset
+    operand = MEM[addr]
+    Assembler MOV syntax:  MOV R0, label
+    JMP equivalent:        JMP label       ; PC-relative jump (LEGAL)
+
+Mode 7 — Index Deferred (MOV R0, @X(PC))
+    ; PC-relative indirect
+    ptr = PC + offset
+    addr = MEM[ptr]
+    operand = MEM[addr]
+    Assembler MOV syntax:  MOV R0, @label
+    JMP equivalent:        JMP @label      ; PC-relative indirect jump (LEGAL)
+----------------------------------------
+PDP-11 MOV — Legal Modes That Use Extra Instruction Words
+(Only modes that produce 4- or 6-byte instructions)
+
+-----------------------------------------------------------------------
+Mode 2 — Autoincrement (PC) ? Immediate literal
+Example:      MOV R0, #1234
+Bytes:        4
+EA steps:     addr = PC
+              operand = MEM[addr]
+              PC = PC + 2
+Notes:        Immediate literal; source register ignored when writing PC.
+-----------------------------------------------------------------------
+
+Mode 3 — Autoincrement Deferred (PC) ? Absolute address
+Example:      MOV R0, @#1234
+Bytes:        4
+EA steps:     ptr = PC
+              addr = MEM[ptr]
+              operand = MEM[addr]
+              PC = PC + 2
+Notes:        Absolute indirect; legal jump form.
+-----------------------------------------------------------------------
+
+Mode 6 — Index (Rn + displacement)
+Example:      MOV R0, 20(R5)
+Bytes:        4
+EA steps:     addr = R5 + offset
+              operand = MEM[addr]
+Notes:        Standard PC-relative or register-relative addressing.
+-----------------------------------------------------------------------
+
+Mode 6 (PC) — PC-relative
+Example:      MOV R0, label
+Bytes:        4
+EA steps:     addr = PC + offset
+              operand = MEM[addr]
+Notes:        Most common form for accessing nearby data.
+-----------------------------------------------------------------------
+
+Mode 7 — Index Deferred (Rn + displacement ? pointer)
+Example:      MOV R0, @20(R5)
+Bytes:        4
+EA steps:     ptr = R5 + offset
+              addr = MEM[ptr]
+              operand = MEM[addr]
+Notes:        Indirect through pointer in memory.
+-----------------------------------------------------------------------
+
+Mode 7 (PC) — PC-relative indirect
+Example:      MOV R0, @label
+Bytes:        4
+EA steps:     ptr = PC + offset
+              addr = MEM[ptr]
+              operand = MEM[addr]
+Notes:        Used for jump tables and far pointers.
+-----------------------------------------------------------------------
+
+Mode 7 with pointer to pointer (6-byte total)
+Example:      MOV R0, @X(PC) where X points to another pointer
+Bytes:        6
+EA steps:     ptr1 = PC + offset
+              ptr2 = MEM[ptr1]
+              addr = MEM[ptr2]
+              operand = MEM[addr]
+Notes:        Rare but fully legal; two extra words fetched.
+
+7+7,PC+PC
+mov @sx7, @dx7
+-----------------------------------------------------------------------
