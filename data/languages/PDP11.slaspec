@@ -344,7 +344,7 @@ OPD: "@"REL32H"?OK7e"	is met_d=7 &         (met_s=6 | met_s=7) & reg_d=7				;REL
 # 7 - @X   111 111 = 3f
 
 # JSR/JMP - need to rewrite
-:JMPX REL16   	is (kodas=1 &metod=6 & regai=7) ; REL16 { goto REL16;} #OK
+:JMP REL16   	is (kodas=1 &metod=6 & regai=7) ; REL16 { goto REL16;} #OK
 :JMPX "?"OPD		is (kodas=1 &metod=6 & regai!=7)... &OPD  {tmp= OPD; goto [tmp];}
 # {tmp=*:2 OPD; goto [tmp];}
 
@@ -367,15 +367,13 @@ I16: imm16	is imm16 {export *:2 imm16;}
 # call [v0];
 # return [v0];
 
-
-
-:JSR JPS,#I16	is (kodas_s=0 & met_s=4 & reg_s<7 & reg_d=7 & met_d=2)& JPS ;I16 {tmp=JPS+I16; call [tmp];}
-:JSR JPS,@#I16	is (kodas_s=0 & met_s=4 & reg_s<7 & reg_d=7 & met_d=3)& JPS ;I16 {tmp=I16+JPS; call [*:2 tmp];}
-
-:JSR JPS,REL16	is (kodas_s=0 & met_s=4 & reg_s<7 & reg_d=7 & met_d=6)& JPS ;REL16 {tmp=JPS+REL16; call [*:2 tmp];}
-:JSR JPS,@REL16	is (kodas_s=0 & met_s=4 & reg_s<7 & reg_d=7 & met_d=7)& JPS ;REL16 {tmp=JPS+REL16; call [*:2 tmp];}
-
-:JSR "PC?",OPD	is (kodas=0x27 & reg_d!=7)... & OPD {call OPD;}
+:JSRa JPS,(RRD)	is (kodas_s=0 & met_s=4 & reg_s<7 & met_d=1)& RRD &JPS{tmp=JPS+RRD; call [tmp];}
+:JSRb JPS,#I16	is (kodas_s=0 & met_s=4 & reg_s<7 & reg_d=7 & met_d=1)& JPS ;I16 {tmp=JPS+I16; call [tmp];}
+:JSRc JPS,#I16	is (kodas_s=0 & met_s=4 & reg_s<7 & reg_d=7 & met_d=2)& JPS ;I16 {tmp=JPS+I16; call [tmp];}
+:JSRd JPS,@#I16	is (kodas_s=0 & met_s=4 & reg_s<7 & reg_d=7 & met_d=3)& JPS ;I16 {tmp=I16+JPS; call [*:2 tmp];}
+:JSRe JPS,REL16	is (kodas_s=0 & met_s=4 & reg_s<7 & reg_d=7 & met_d=6)& JPS ;REL16 {tmp=JPS+REL16; call [*:2 tmp];}
+:JSRf JPS,@REL16	is (kodas_s=0 & met_s=4 & reg_s<7 & reg_d=7 & met_d=7)& JPS ;REL16 {tmp=JPS+REL16; call [*:2 tmp];}
+:JSRg "PC?",OPD	is (kodas=0x27 & reg_d!=7)... & OPD {call OPD;}
 
 :"ILLEGAL CALL 0>"REL16	is (kodas=0x27 & met_d=0 & reg_d=7) ; REL16 { *SP=PC; SP=SP-1; call REL16; }
 :"ILLEGAL CALL 1>"REL16	is (kodas=0x27 & met_d=1 & reg_d=7) ; REL16 { *SP=PC; SP=SP-1; call REL16; }
