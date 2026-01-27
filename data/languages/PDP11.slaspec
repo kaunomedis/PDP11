@@ -129,7 +129,7 @@ define token data_double_word (32)
 REL8:	reloc	is rell			[reloc = inst_next + 2 * rell;]	{ export *:2 reloc; } 
 # relative values from extra bytes.
 REL32H:	reloc 	is rell32h  	[reloc = inst_next + rell32h;]	{ export *:2 reloc; } 
-REL32L:	reloc 	is rell32l  	[reloc = inst_next + rell32l;]	{ export *:2 reloc; } 
+REL32L:	reloc 	is rell32l  	[reloc = inst_next + rell32l-2;]	{ export *:2 reloc; } 
 REL16:	reloc	is rell16   	[reloc = inst_next + rell16;]	{ export *:2 reloc; }
 RELN:	reloc	is rell &nnn	[reloc = inst_next-nnn*2;]		{ export *:2 reloc; } 
 # NE16:   ne16 	is reg_s [ne16= inst_next;] {export *:2 ne16;}
@@ -196,14 +196,28 @@ RRD: reg_d is reg_d { export *:2 reg_d;}
 
 OPS: reg_s" OK0"				is met_s=0 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
 OPS: "("reg_s") OK1"			is met_s=1 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
+
 OPS: "("reg_s")+ OK2"		is met_s=2 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
 OPS: "#"imm16" OK2"			is met_s=2 & reg_s=7 ;imm16{tmp:2 = imm16; export tmp;}
 
+#OPS: "@("reg_s")+ OK3a"		is met_s=3 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
+#OPS: "@#"imm16" OK3b"		is met_s=3 & reg_s=7 & reg_d!=7 &met_d!=7;imm16{tmp:2 = imm16; export tmp;}
 
-OPS: "@("reg_s")+ OK3a"		is met_s=3 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
-OPS: "@#"imm16" OK3b"		is met_s=3 & reg_s=7 & reg_d!=7 &met_d!=7;imm16{tmp:2 = imm16; export tmp;}
-OPS: "@#"imm32L" ok3a"	is met_s=3 & reg_s=7 & reg_d=7 & met_d!=7; imm32L{tmp:2 = imm32L; export tmp;}
-OPS: "@#"imm32L" ok3b"	is met_s=3 & reg_s=7 & met_d=7;imm32L{tmp:2 = imm32L; export tmp;}
+
+
+OPS: "@("reg_s")+ OK3a"		is met_s=3& reg_ss!=7 & (met_d=0 | met_d=1 | met_d=4 | met_d=5)   & reg_s {tmp:2 = *:2 reg_s; export tmp;}
+OPS: "@("reg_s")+ OK3b"		is met_s=3& reg_ss!=7 & (met_d=2 | met_d=3) &                 reg_d!=7        & reg_s {tmp:2 = *:2 reg_s; export tmp;}
+OPS: "@("reg_s")+ OK3c"		is met_s=3& reg_ss!=7 & (met_d=2 | met_d=3) &                 reg_d=7         & reg_s {tmp:2 = *:2 reg_s; export tmp;}
+OPS: "@("reg_s")+ OK3d"		is met_s=3& reg_ss!=7 & (met_d=6 | met_d=7) &                        reg_s {tmp:2 = *:2 reg_s; export tmp;}
+OPS: "@#"imm16" OK3e"		is met_s=3&  reg_ss=7 & (met_d=0 | met_d=1 | met_d=4 | met_d=5)    & reg_s ;imm16 {tmp:2 =imm16; export tmp;}
+OPS: "@("reg_s")+ OK3f"		is met_s=3&  reg_ss=7 & (met_d=2 | met_d=3) &                 reg_d!=7         & reg_s {tmp:2 = *:2 reg_s; export tmp;}
+OPS: "@#"imm32L" OK3g"		is met_s=3&  reg_ss=7 & (met_d=2 | met_d=3) &                 reg_d=7          & reg_s;imm32L {tmp:2 = imm32L; export tmp;}
+OPS: "@#"imm32L" OK3h"		is met_s=3&  reg_ss=7 & (met_d=6 | met_d=7) &                  reg_s ;imm32L{tmp:2 = imm32L; export tmp;}
+
+
+
+#OPS: "@#"imm32L" ok3a"	is met_s=3 & reg_s=7 & reg_d=7 & met_d!=7; imm32L{tmp:2 = imm32L; export tmp;}
+#OPS: "@#"imm32L" ok3b"	is met_s=3 & reg_s=7 & met_d=7;imm32L{tmp:2 = imm32L; export tmp;}
 
 
 
@@ -215,21 +229,27 @@ OPS: "@-("reg_s") OK5a"		is met_s=5 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
 
 OPS: imm16"("reg_s") OK6a"	is met_s=6 & reg_s;imm16{tmp:2 = imm16; export tmp;}
 OPS: REL16" OK6b"			is met_s=6 & reg_s=7 ;REL16{tmp:2 = REL16; export tmp;}
-OPS: imm32L" OK6c"			is met_s=6 & met_d=6 & reg_s=7 ;imm32L{tmp:2 = imm32L; export tmp;}
-OPS: imm32L" OK6d"			is met_s=6 & met_d=7 & reg_s=7 ;imm32L{tmp:2 = imm32L; export tmp;}
+OPS: REL32L" OK6c"			is met_s=6 & met_d=6 & reg_s=7 ;REL32L{tmp:2 = REL32L; export tmp;}
+OPS: REL32L" OK6d"			is met_s=6 & met_d=7 & reg_s=7 ;REL32L{tmp:2 = REL32L; export tmp;}
 OPS: imm32L"("reg_s") OK6e"	is met_s=6 & met_d=6 & reg_s ;imm32L{tmp:2 = imm32L; export tmp;}
 OPS: imm32L"("reg_s")?OK6f"	is met_s=6 & met_d=7 & reg_s ;imm32L{tmp:2 = imm32L; export tmp;}
+OPS: REL32L" OK6g"			is met_s=6 & met_d=3 & reg_s=7;REL32L{tmp:2 = REL32L; export tmp;}
 
+#OPS: "@"imm16"("reg_s") OK7a"	is met_s=7 & reg_s; imm16 {tmp:2 = imm16; export tmp;}
+#OPS: "@"imm16"("reg_s") OK7b"	is met_s=7 & met_d=6 & reg_s ; imm16{tmp:2 = imm16; export tmp;}
+##OPS: "<7c."reg_s">"imm16	is met_s=7 & met_d=7 & reg_s ; imm16{tmp:2 = imm16; export tmp;}
+#OPS: "@"REL16" OK7c"	is met_s=7 & reg_s=7 ;REL16{tmp:2 = REL16; export tmp;}
+#OPS: "@"REL32L" ok7d"	is met_s=7 & met_d=6 & reg_s=7 ;REL32L{tmp:2 = REL32L; export tmp;}
+#OPS: "@"imm32L"("reg_s") ok7e"	is met_s=7 & met_d=7 & reg_s ;imm32L{tmp:2 = imm32L; export tmp;}
+#OPS: "@"REL32L" ok7f"	is met_s=7 & met_d=7 & reg_s=7 ;REL32L{tmp:2 = REL32L; export tmp;}
 
-OPS: "@"imm16"("reg_s") OK7a"	is met_s=7 & reg_s; imm16 {tmp:2 = imm16; export tmp;}
-OPS: "@"imm16"("reg_s") OK7b"	is met_s=7 & met_d=6 & reg_s ; imm16{tmp:2 = imm16; export tmp;}
-#OPS: "<7c."reg_s">"imm16	is met_s=7 & met_d=7 & reg_s ; imm16{tmp:2 = imm16; export tmp;}
+OPS: "@"imm16"("reg_s")7a" is met_s=7 & (met_d=0 | met_d=1 | met_d=4 | met_d=5) & reg_ss!=7 & reg_s ;imm16{tmp:2 = imm16; export tmp;}
+OPS: "@"REL16" 7f" is met_s=7 & (met_d=0 | met_d=1 | met_d=4 | met_d=5) & reg_ss=7 & reg_s ;REL16{tmp:2 = REL16; export tmp;}
 
-OPS: "@"REL16" OK7c"	is met_s=7 & reg_s=7 ;REL16{tmp:2 = REL16; export tmp;}
-OPS: "@"REL16" ok7d"	is met_s=7 & met_d=6 & reg_s=7 ;REL16{tmp:2 = REL16; export tmp;}
-OPS: "@"imm32L"("reg_s") ok7e"	is met_s=7 & met_d=7 & reg_s ;imm32L{tmp:2 = imm32L; export tmp;}
-
-OPS: "@"REL32L" ok7f"	is met_s=7 & met_d=7 & reg_s=7 ;REL32L{tmp:2 = REL32L; export tmp;}
+OPS: "@"REL16"("reg_s")7b" is met_s=7 & (met_d=2 | met_d=3) &reg_d!=7 & reg_s 			;REL16{tmp:2 = REL16; export tmp;}
+OPS: "@"REL32L"?OK7c"	is met_s=7 & reg_s & (met_d=2 | met_d=3) &reg_d=7				;REL32L{tmp:2 = REL32L; export tmp;}
+OPS: "@"imm32L"?OK7d"	is met_s=7 &         (met_d=6 | met_d=7) & reg_s!=7				;imm32L{tmp:2 = imm32L; export tmp;}
+OPS: "@"REL32L"?OK7e"	is met_s=7 &         (met_d=6 | met_d=7) & reg_s=7				;REL32L{tmp:2 = REL32L; export tmp;}
 
 
 # DESTINATION
@@ -239,10 +259,24 @@ OPD: "("reg_d")+ OK2"	is met_d=2 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
 OPD: "<2#>"imm16	is met_d=2 & reg_d=7 ;imm16{tmp:2 = imm16; export tmp;}
 
 
-OPD: "@("reg_d")+ OK3a"	is met_d=3 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
-OPD: "<3#a>"imm16	is met_d=3 & reg_d=7 & reg_s!=7;imm16{tmp:2 = imm16; export tmp;}
-OPD: "@#"imm32H" ok3c"	is met_d=3 & reg_d=7 & reg_s=7;imm32H{tmp:2 = imm32H; export tmp;}
-OPD: "@#"imm32H" 3d"	is met_d=3 & reg_s=7 & met_s=6 &reg_d!=7;imm32H{tmp:2 = imm32H; export tmp;}
+#OPD: "@("reg_d")+ OK3a"	is met_d=3 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
+#OPD: "<3#a>"imm16	is met_d=3 & reg_d=7 & reg_s!=7;imm16{tmp:2 = imm16; export tmp;}
+#OPD: "@#"imm32H" ok3c"	is met_d=3 & reg_d=7 & reg_s=7;imm32H{tmp:2 = imm32H; export tmp;}
+#OPD: "@#"imm32H" 3d"	is met_d=3 & reg_s=7 & met_s=6 &reg_d!=7;imm32H{tmp:2 = imm32H; export tmp;}
+
+OPD: "@("reg_d")+ OK3a"		is met_d=3& reg_dd!=7 & (met_s=0 | met_s=1 | met_s=4 | met_s=5)   & reg_d {tmp:2 = *:2 reg_d; export tmp;}
+OPD: "@("reg_d")+ OK3b"		is met_d=3& reg_dd!=7 & (met_s=2 | met_s=3) &                 reg_s!=7        & reg_d {tmp:2 = *:2 reg_d; export tmp;}
+OPD: "@("reg_d")+ OK3c"		is met_d=3& reg_dd!=7 & (met_s=2 | met_s=3) &                 reg_s=7         & reg_d {tmp:2 = *:2 reg_d; export tmp;}
+OPD: "@("reg_d")+ OK3d"		is met_d=3& reg_dd!=7 & (met_s=6 | met_s=7) &                        reg_d {tmp:2 = *:2 reg_d; export tmp;}
+OPD: "@#"imm16" OK3e"		is met_d=3&  reg_dd=7 & (met_s=0 | met_s=1 | met_s=4 | met_s=5)    & reg_d ;imm16 {tmp:2 =imm16; export tmp;}
+OPD: "@("reg_d")+ OK3f"		is met_d=3&  reg_dd=7 & (met_s=2 | met_s=3) &                 reg_s!=7         & reg_d {tmp:2 = *:2 reg_d; export tmp;}
+OPD: "@#"imm32H" OK3g"		is met_d=3&  reg_dd=7 & (met_s=2 | met_s=3) &                 reg_s=7          & reg_d;imm32H {tmp:2 = imm32H; export tmp;}
+OPD: "@("reg_d")+ OK3h"		is met_d=3&  reg_dd=7 & (met_s=6 | met_s=7) &                  reg_d {tmp:2 = *:2 reg_d; export tmp;}
+
+
+
+
+
 
 
 OPD: "-("reg_d") OK4a"	is met_d=4 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
@@ -253,22 +287,31 @@ OPD: REL16" OK6b"		is met_d=6 & reg_d=7 ;REL16{tmp:2 = REL16; export tmp;}
 # kazkokio reikia: met_s=2, reg_s=7, met_d=6, reg_d=1
 #OPD: "<6#b>"imm32H		is met_d=6 & met_d=2 & reg_s=7 ; imm32H{tmp:2 = imm32H; export tmp;}
 #
-OPD: imm32H" OK6d"		is met_d=6 & met_s=6 & reg_d=7 ; imm32H{tmp:2 = imm32H; export tmp;}
+OPD: REL32H" OK6d"		is met_d=6 & met_s=6 & reg_d=7 ; REL32H{tmp:2 = REL32H; export tmp;}
 OPD: REL32H" ok6e"		is met_d=6 & met_s=7 & reg_d=7 ; REL32H{tmp:2 = REL32H; export tmp;}
 OPD: imm32H"("reg_d") OK6f"	is met_d=6 & met_s=6 & reg_d ;imm32H{tmp:2 = imm32H; export tmp;}
 OPD: imm32H"("reg_d") OK6g"	is met_d=6 & met_s=7 & reg_d ;imm32H{tmp:2 = imm32H; export tmp;}
 
 
-OPD: "@"imm16"("reg_d") OK7a"	is met_d=7 & reg_d; imm16 {tmp:2 = imm16; export tmp;}
-OPD: "@"imm32H"("reg_d") OK7b"	is met_d=7 & met_s=6 & reg_d ; imm32H{tmp:2 = imm32H; export tmp;}
-#OPD: "<7c."reg_d">"imm16	is met_d=7 & met_s=7 & reg_d ; imm16{tmp:2 = imm16; export tmp;}
+#OPD: "@"imm16"("reg_d") OK7a"	is met_d=7 & reg_s!=7 	& reg_d		; imm16 {tmp:2 = imm16; export tmp;}
+#OPD: "@"REL32H"("reg_d") OK7g"	is met_d=7 & reg_s =7 	& reg_d		; REL32H {tmp:2 = REL32H; export tmp;}
+#OPD: "@"imm32H"("reg_d") OK7b"	is met_d=7 & met_s =6 	& reg_d 	; imm32H{tmp:2 = imm32H; export tmp;}
+#OPD: "@"REL16" OK7c"		    is met_d=7 & reg_d=7 				;REL16{tmp:2 = REL16; export tmp;}
+#OPD: "@"REL32H"?OK7d"	is met_d=7 & met_s=6 & reg_d=7 				;REL32H{tmp:2 = REL32H; export tmp;}
+#OPD: "@"imm32H"("reg_d") ok7e"	is met_d=7 & met_s=7 & reg_d 		;imm32H{tmp:2 = imm32H; export tmp;}
+#OPD: "@"REL32H" ok7f"	is met_d=7 & met_s=7 & reg_d=7 				;REL32H{tmp:2 = REL32H; export tmp;}
 
-OPD: "@"REL16" OK7c"		is met_d=7 & reg_d=7 ;REL16{tmp:2 = REL16; export tmp;}
-OPD: "@"imm32H"?OK7d"	is met_d=7 & met_s=6 & reg_d=7 ;imm32H{tmp:2 = imm32H; export tmp;}
-OPD: "@"imm32H"("reg_d") ok7e"	is met_d=7 & met_s=7 & reg_d ;imm32H{tmp:2 = imm32H; export tmp;}
 
-OPD: "@"REL32H" ok7f"	is met_d=7 & met_s=7 & reg_d=7 ;REL32H{tmp:2 = REL32H; export tmp;}
 
+
+
+OPD: "@"imm16"("reg_d")7a" is met_d=7 & (met_s=0 | met_s=1 | met_s=4 | met_s=5) & reg_dd!=7 & reg_d ;imm16{tmp:2 = imm16; export tmp;}
+OPD: "@"REL16" ok7f" is met_d=7 & (met_s=0 | met_s=1 | met_s=4 | met_s=5) & reg_dd=7 & reg_d ;REL16{tmp:2 = REL16; export tmp;}
+
+OPD: "@"REL16"("reg_d")7b" is met_d=7 & (met_s=2 | met_s=3) &reg_s!=7 & reg_d 			;REL16{tmp:2 = REL16; export tmp;}
+OPD: "@"REL32H"?OK7c"	is met_d=7 & reg_d & (met_s=2 | met_s=3) &reg_s=7				;REL32H{tmp:2 = REL32H; export tmp;}
+OPD: "@"imm32H"?OK7d"	is met_d=7 &         (met_s=6 | met_s=7) & reg_d!=7				;imm32H{tmp:2 = imm32H; export tmp;}
+OPD: "@"REL32H"?OK7e"	is met_d=7 &         (met_s=6 | met_s=7) & reg_d=7				;REL32H{tmp:2 = REL32H; export tmp;}
 
 
 
