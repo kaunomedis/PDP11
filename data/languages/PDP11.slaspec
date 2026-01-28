@@ -41,33 +41,58 @@ define register offset=0x0020 size=2 [ PS ]; # ony one byte. Keep 2 to make SLEI
 # b1        - (D) Debug flag
 # b0        - (C) Carry flag
 
-@define CARRY         "PS[0,1]"
+@define FC         "PS[0,1]" #cary
 @define DEBUG         "PS[1,1]"
-@define ZERO          "PS[2,1]"
-@define SIGN          "PS[3,1]"
+@define FZ          "PS[2,1]" #zero
+@define FS          "PS[3,1]" #sign
 @define REG_BANK      "PS[4,1]"
-@define OVERFLOW    "PS[5,1]"
+@define FV    "PS[5,1]" #oVerflow
 @define INTERRUPT   "PS[6,1]"
 @define STACK_SEL   "PS[7,1]"
 @define IPL         "PS[12,3]"
 
-macro flag(register_s, register_d) {
-ZERO=( register_s == register_d );
-SIGN=( register_s > register_d ); # N
-#SIGN= 	sext(register_d);
-OVERFLOW=carry(register_s, register_d) || sborrow(register_d, register_s);
-CARY=(register_s[15,1]==1) && (register_d[15,1]==1);
+macro CC(){PS[0,1]=0;}
+macro SC(){PS[0,1]=1;}
+macro CZ(){PS[2,1]=0;}
+macro SZ(){PS[2,1]=1;}
+macro CS(){PS[3,1]=0;}
+macro SS(){PS[3,1]=1;}
+macro CN(){PS[3,1]=0;}
+macro SN(){PS[3,1]=1;}
+macro CV(){PS[5,1]=0;}
+macro SV(){PS[5,1]=1;}
+macro CI(){PS[6,1]=0;}
+macro SI(){PS[6,1]=1;}
 
+macro flag(register_s, register_d) {
+PS[2,1]=( register_s == register_d ); #zero
+PS[3,1]=( register_s > register_d ); # N, sign
+#SIGN= 	sext(register_d);
+PS[5,1]=carry(register_s, register_d) || sborrow(register_d, register_s); #V, overflow
+PS[0,1]=(register_s[15,1]==1) && (register_d[15,1]==1); #carry
+
+}
+
+macro FLG(register)
+{
+PS[2,1]=( register==0); #zero
+PS[0,1]=( register==0); #carry
+
+}
+macro MemRead(dest,adresas) {
+   	ptr:2 = adresas;
+	dest = *:2 ptr;
+}
+
+macro MemStore(adresas,val) {
+   	ptr:2 = adresas;
+	*:2 ptr = val;
 }
 
 #
 # FLAG MACROS...
 #
-# Set zero and sign flags from result
-macro setResultFlags(result) {
-    $(SIGN) = (result s< 0x0);
-    $(ZERO) = (result == 0x0);
-}
+
 macro push(val) {
     SP = SP - 2;
     ptr:2 = (SP);
@@ -83,6 +108,7 @@ macro pop(val) {
 
 # main opcode
 define token word_1 (16)
+	byte = (15,15)
 	kodas = (6,15)
 	metod = (3,5)
 	regai =(0,2)
@@ -195,13 +221,31 @@ RRD: reg_d is reg_d { export *:2 reg_d;}
 
 # SOURCE
 
+# MODE0: Operand is in the register
+# operand = Rn
 OPS: reg_s" OK0"			is met_s=0 & reg_s {tmp:2 =  reg_s; export tmp;}
-OPS: "("reg_s") OK1"		is met_s=1 & reg_s {tmp:2 = *:2 reg_s; export tmp;}
 
-OPS: "("reg_s")+ OK2"		is met_s=2 & reg_s {tmp:2 = *:2 reg_s; reg_s=reg_s+2; export tmp;}
-OPS: "#"imm16" OK2"			is met_s=2 & reg_s=7 & reg_s ;imm16{tmp:2 = imm16; reg_s=reg_s+2; export tmp;}
+# MODE1:(register deferred)
+# Register contains the address of the operand
+# EA = Rn
+# operand = MEM[EA]
+OPS: "("reg_s") OK1"		is met_s=1 & reg_s {tmp:2 =0;  MemRead(tmp,reg_s); export tmp;}
 
-OPS: "@("reg_s")+ OK3a"		is met_s=3& reg_ss!=7 & (met_d=0 | met_d=1 | met_d=4 | met_d=5)   & reg_s 				{tmp:2 = *:2 reg_s; reg_s=reg_s+2; export tmp;}
+# MODE2: (autoincrement)
+# EA = Rn
+# operand = MEM[EA]
+# Rn = Rn + (is_byte ? 1 : 2)
+OPS: "("reg_s")+ OK2a"		is byte=1 & met_s=2 & reg_s {tmp:2 = 0; MemRead(tmp,reg_s); reg_s=reg_s+1; export tmp;}
+OPS: "("reg_s")+ OK2b"		is byte=0 & met_s=2 & reg_s {tmp:2 = 0; MemRead(tmp,reg_s); reg_s=reg_s+2; export tmp;}
+OPS: "#"imm16" OK2c"		is byte=0 & met_s=2 & reg_s=7 & reg_s ;imm16{tmp:2 = imm16; reg_s=reg_s+2; export tmp;}
+
+# MODE3: (autoincrement deferred)
+# EA_ptr = Rn
+# EA = MEM[EA_ptr]
+# operand = MEM[EA]
+# Rn = Rn + 2
+
+OPS: "@("reg_s")+ OK3a"		is met_s=3& reg_ss!=7 & (met_d=0 | met_d=1 | met_d=4 | met_d=5)   & reg_s 				{tmp:2 = *:2 reg_s; tmp2=*:2 tmp; reg_s=reg_s+2; export tmp2;}
 OPS: "@("reg_s")+ OK3b"		is met_s=3& reg_ss!=7 & (met_d=2 | met_d=3) &                 reg_d!=7        & reg_s	{tmp:2 = *:2 reg_s; reg_s=reg_s+2; export tmp;}
 OPS: "@("reg_s")+ OK3c"		is met_s=3& reg_ss!=7 & (met_d=2 | met_d=3) &                 reg_d=7         & reg_s	{tmp:2 = *:2 reg_s; reg_s=reg_s+2; export tmp;}
 OPS: "@("reg_s")+ OK3d"		is met_s=3& reg_ss!=7 & (met_d=6 | met_d=7) &                        reg_s 				{tmp:2 = *:2 reg_s; reg_s=reg_s+2; export tmp;}
@@ -210,11 +254,22 @@ OPS: "@("reg_s")+ OK3f"		is met_s=3&  reg_ss=7 & (met_d=2 | met_d=3) &          
 OPS: "@#"imm32L" OK3g"		is met_s=3&  reg_ss=7 & (met_d=2 | met_d=3) &                 reg_d=7  & reg_s;imm32L	{tmp:2 = imm32L; export tmp;}
 OPS: "@#"imm32L" OK3h"		is met_s=3&  reg_ss=7 & (met_d=6 | met_d=7) &                  reg_s ;imm32L			{tmp:2 = imm32L; export tmp;}
 
-
+# MODE4: (autodecrement)
+# Rn = Rn - (is_byte ? 1 : 2)
+# EA = Rn
+# operand = MEM[EA]
 OPS: "-("reg_s") OK4"		is met_s=4 & reg_s {reg_s=reg_s-2; tmp:2 = *:2 reg_s; export tmp;}
 
-OPS: "@-("reg_s") OK5a"		is met_s=5 & reg_s {reg_s=reg_s-2; tmp:2 = *:2 reg_s; export tmp;}
+# MODE5: (autodecrement deferred)
+# Rn = Rn - 2
+# EA_ptr = Rn
+# EA = MEM[EA_ptr]
+# operand = MEM[EA]
+OPS: "@-("reg_s") OK5a"		is met_s=5 & reg_s {reg_s=reg_s-2; tmp:2 = *:2 reg_s; tmp2=*:2 tmp; export tmp2;}
 
+# MODE6: (index)
+# EA = Rn + offset
+# operand = MEM[EA]
 OPS: imm16"("reg_s") OK6a"	is met_s=6 & reg_s		;imm16{tmp:2 = imm16; export tmp;}
 OPS: REL16" OK6b"			is met_s=6 & reg_s=7 	;REL16{tmp:2 = REL16; export tmp;}
 OPS: REL32L" OK6c"			is met_s=6 & met_d=6 & reg_s=7 ;REL32L{tmp:2 = REL32L; export tmp;}
@@ -222,26 +277,26 @@ OPS: REL32L" OK6d"			is met_s=6 & met_d=7 & reg_s=7 ;REL32L{tmp:2 = REL32L; expo
 OPS: imm32L"("reg_s") OK6e"	is met_s=6 & met_d=6 & reg_s ;imm32L{tmp:2 = imm32L; export tmp;}
 OPS: imm32L"("reg_s")?OK6f"	is met_s=6 & met_d=7 & reg_s ;imm32L{tmp:2 = imm32L; export tmp;}
 OPS: REL32L" OK6g"			is met_s=6 & met_d=3 & reg_s=7;REL32L{tmp:2 = REL32L; export tmp;}
-
 OPS: imm32L" OK6h"			is met_s=6 & met_d=3 & reg_d=7 & reg_s!=7;imm32L{tmp:2 = imm32L; export tmp;}
 
-
+# MODE7: (index deferred)
+# EA_ptr = Rn + offset
+# EA = MEM[EA_ptr]
+# operand = MEM[EA]
 OPS: "@"imm16"("reg_s")7a" is met_s=7 & (met_d=0 | met_d=1 | met_d=4 | met_d=5) & reg_ss!=7 & reg_s ;imm16{tmp:2 = imm16; export tmp;}
 OPS: "@"REL16" 7f" 			is met_s=7 & (met_d=0 | met_d=1 | met_d=4 | met_d=5) & reg_ss=7 & reg_s ;REL16{tmp:2 = REL16; export tmp;}
-
-OPS: "@"REL16"("reg_s")7b"	is met_s=7 & (met_d=2 | met_d=3) &reg_d!=7 & reg_s 			;REL16{tmp:2 = REL16; export tmp;}
-OPS: "@"REL32L"?OK7c"		is met_s=7 & reg_s=7 & (met_d=2 | met_d=3) &reg_d=7				;REL32L{tmp:2 = REL32L; export tmp;}
+OPS: "@"REL16"("reg_s")7b"	is met_s=7 & (met_d=2 | met_d=3) &reg_d!=7 & reg_s 			;REL16		{tmp:2 = REL16; export tmp;}
+OPS: "@"REL32L"?OK7c"		is met_s=7 & reg_s=7 & (met_d=2 | met_d=3) &reg_d=7				;REL32L	{tmp:2 = REL32L; export tmp;}
 OPS: "@"imm32L"("reg_s") OK7cc"	is met_s=7 & reg_ss!=7 & (met_d=2 | met_d=3) &reg_d=7 &reg_s				;imm32L{tmp:2 = imm32L; export tmp;}
-
-OPS: "@"imm32L"?OK7d"		is met_s=7 &         (met_d=6 | met_d=7) & reg_s!=7				;imm32L{tmp:2 = imm32L; export tmp;}
-OPS: "@"REL32L"?OK7e"		is met_s=7 &         (met_d=6 | met_d=7) & reg_s=7				;REL32L{tmp:2 = REL32L; export tmp;}
+OPS: "@"imm32L"?OK7d"		is met_s=7 &         (met_d=6 | met_d=7) & reg_s!=7				;imm32L	{tmp:2 = imm32L; export tmp;}
+OPS: "@"REL32L"?OK7e"		is met_s=7 &         (met_d=6 | met_d=7) & reg_s=7				;REL32L	{tmp:2 = REL32L; export tmp;}
 
 
 # DESTINATION
-OPD: reg_d" OK0"	is met_d=0 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
-OPD: "("reg_d") OK1"	is met_d=1 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
-OPD: "("reg_d")+ OK2"	is met_d=2 & reg_d {tmp:2 = *:2 reg_d; export tmp;}
-OPD: "<2#>"imm16	is met_d=2 & reg_d=7 ;imm16{tmp:2 = imm16; export tmp;}
+OPD: reg_d" OK0"	is met_d=0 & reg_d 			{export reg_d;}
+OPD: "("reg_d") OK1"	is met_d=1 & reg_d 		{export *:2 reg_d;}
+OPD: "("reg_d")+ OK2"	is met_d=2 & reg_d 		{reg_d=reg_d+2; export *:2 reg_d;}
+OPD: "<2#>"imm16	is met_d=2 & reg_d=7 ;imm16	{tmp:2 = imm16; export *:2 tmp;}
 
 
 OPD: "@("reg_d")+ OK3a"		is met_d=3& reg_dd!=7 & (met_s=0 | met_s=1 | met_s=4 | met_s=5)   & reg_d {tmp:2 = *:2 reg_d; export tmp;}
@@ -290,10 +345,10 @@ OPD: "@"REL32H"?OK7e"	is met_d=7 &         (met_s=6 | met_s=7) & reg_d=7				;REL
 
 ##################################################################################
 
-:MOV OPS,OPD 	is (kodas_s=0x1)...& OPD & OPS { OPD = OPS; }
+:MOV OPS,OPD 	is (kodas_s=0x1)...& OPD & OPS { OPD = OPS; flag(OPS,OPD);}
 :MOVB OPS,OPD 	is (kodas_s=0x9)...& OPD & OPS { OPD = OPS; }
-:CMP OPS,OPD 	is (kodas_s=0x2)...& OPD & OPS { OPD = OPS; }
-:CMPB OPS,OPD 	is (kodas_s=0xA)...& OPD & OPS { OPD = OPS; }
+:CMP OPS,OPD 	is (kodas_s=0x2)...& OPD & OPS { flag(OPS,OPD); }
+:CMPB OPS,OPD 	is (kodas_s=0xA)...& OPD & OPS { flag(OPS,OPD); }
 
 :SUB OPS,OPD 	is (kodas_s=0xE)... & OPS & OPD { OPD=OPD-OPS;}
 :ADD OPS,OPD 	is (kodas_s=0x6)... & OPS & OPD { OPD=OPD+OPS;}
@@ -303,16 +358,16 @@ OPD: "@"REL32H"?OK7e"	is met_d=7 &         (met_s=6 | met_s=7) & reg_d=7				;REL
 :BICB OPS,OPD 	is (kodas_s=0xC)... & OPS & OPD { OPD=OPS; }
 :BIS OPS,OPD 	is (kodas_s=0x5)... & OPS & OPD { OPD=OPD | OPS; }
 :BISB OPS,OPD 	is (kodas_s=0xD)... & OPS & OPD { OPD=OPS; }
-:INC OPD		is (kodas_s=0 & met_s=5 &reg_s=2)... &OPD {OPD=OPD+1;}
-:INCB OPD		is (kodas_s=8 & met_s=5 &reg_s=2)... &OPD {PC=PC;}
-:CLR OPD		is (kodas_s=0 & met_s=5 &reg_s=0)... &OPD {OPD=0;}
-:CLRB OPD		is (kodas_s=8 & met_s=5 &reg_s=0)... &OPD {PC=PC;}
+:INC OPD		is (kodas_s=0 & met_s=5 &reg_s=2)... &OPD {OPD=OPD+1; FLG(OPD);}
+:INCB OPD		is (kodas_s=8 & met_s=5 &reg_s=2)... &OPD {OPD=OPD+1; FLG(OPD);}
+:CLR OPD		is (kodas_s=0 & met_s=5 &reg_s=0)... &OPD {OPD=0; CN(); SZ(); CV(); CC();}
+:CLRB OPD		is (kodas_s=8 & met_s=5 &reg_s=0)... &OPD {OPD=0; CN(); SZ(); CV(); CC();}
 
-:COM OPD		is (kodas_s=0 & met_s=5 &reg_s=1)... &OPD {OPD=~OPD;}
+:COM OPD		is (kodas_s=0 & met_s=5 &reg_s=1)... &OPD {OPD=~OPD; FLG(OPD);}
 :COMB OPD		is (kodas_s=8 & met_s=5 &reg_s=1)... &OPD {PC=PC;}
-:DEC OPD		is (kodas_s=0 & met_s=5 &reg_s=3)... &OPD {OPD=OPD-1;}
+:DEC OPD		is (kodas_s=0 & met_s=5 &reg_s=3)... &OPD {OPD=OPD-1; FLG(OPD);}
 :DECB OPD		is (kodas_s=8 & met_s=5 &reg_s=3)... &OPD {PC=PC;}
-:NEG OPD		is (kodas_s=0 & met_s=5 &reg_s=4)... &OPD {OPD=-OPD;}
+:NEG OPD		is (kodas_s=0 & met_s=5 &reg_s=4)... &OPD {OPD=-OPD; FLG(OPD);}
 :NEGB OPD		is (kodas_s=8 & met_s=5 &reg_s=4)... &OPD {PC=PC;}
 :ADC OPD		is (kodas_s=0 & met_s=5 &reg_s=5)... &OPD {if !(PS[0,1]) goto <b>;OPD=OPD+1;<b>}
 :ADCB OPD		is (kodas_s=8 & met_s=5 &reg_s=5)... &OPD {OPD=OPD;}
@@ -328,7 +383,7 @@ OPD: "@"REL32H"?OK7e"	is met_d=7 &         (met_s=6 | met_s=7) & reg_d=7				;REL
 :ASRB OPD		is (kodas_s=8 & met_s=6 &reg_s=2)... &OPD {OPD=OPD;}
 :ASL OPD		is (kodas_s=0 & met_s=6 &reg_s=3)... &OPD {OPD=OPD;}
 :ASLB OPD		is (kodas_s=8 & met_s=6 &reg_s=3)... &OPD {OPD=OPD;}
-:TST OPD		is (kodas_s=0 & met_s=5 &reg_s=7)... &OPD {OPD=OPD;}
+:TST OPD		is (kodas_s=0 & met_s=5 &reg_s=7)... &OPD {FLG(OPD);}
 :TSTB OPD		is (kodas_s=8 & met_s=5 &reg_s=7)... &OPD {OPD=OPD;}
 :SXT OPD		is (kodas_s=0 & met_s=6 &reg_s=7)... &OPD {tmp=0xFFFF;if (PS[3,1]) goto <b>;tmp=0;<b>OPD=tmp;}
 :SWAB OPD		is (kodas_s=0 & met_s=0 &reg_s=3)... &OPD {tmp=OPD>>8; OPD=OPD<<8+tmp;}
