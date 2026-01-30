@@ -152,14 +152,12 @@ define token data_double_word (32)
 	rell32l=(0,15) signed
 ;
 # Relative addressing. Note x2 multiplication (adressing is in words)
-REL8:	reloc	is rell			[reloc = inst_next + 2 * rell;]	{ export *:2 reloc; } 
+REL8:	reloc	is rell			[reloc = inst_next + 2 * rell;]	{ tmp:2 = 0; tmp=reloc; export  tmp;} 
 # relative values from extra bytes.
-REL32H:	reloc 	is rell32h  	[reloc = inst_next + rell32h;]	{ export *:2 reloc; } 
-REL32L:	reloc 	is rell32l  	[reloc = inst_next + rell32l-2;]	{ export *:2 reloc; } 
+REL32H:	reloc 	is rell32h  	[reloc = inst_next + rell32h;]	{ tmp:2 = 0; tmp=reloc; export  tmp; } 
+REL32L:	reloc 	is rell32l  	[reloc = inst_next + rell32l-2;]	{tmp:2 = 0; tmp=reloc; export  tmp; } 
 REL16:	reloc	is rell16   	[reloc = inst_next + rell16;]	{tmp:2 = 0; tmp=reloc; export  tmp; }
-RELN:	reloc	is rell &nnn	[reloc = inst_next-nnn*2;]		{ export *:2 reloc; } 
-# NE16:   ne16 	is reg_s [ne16= inst_next;] {export *:2 ne16;}
-# offset = offset + inst_next_addr;
+RELN:	reloc	is rell &nnn	[reloc = inst_next-nnn*2;]		{tmp:2 = 0; tmp=reloc; export  tmp; } 
 
 # ############# VEIKIANTYS 
 :NOP		is imm16=0x0A0	{R0=R0;}
@@ -184,21 +182,21 @@ RELN:	reloc	is rell &nnn	[reloc = inst_next-nnn*2;]		{ export *:2 reloc; }
 :RTT		is imm16=0x006 {pop(PC); pop(PS); return [PC];} # NETEISYBE
 :RESET		is imm16=0x005 {SP=SP;}
 
-:BR   REL8			is op_h=1 & REL8 {goto REL8;}
-:BNE  REL8			is op_h=2 & REL8 {if !PS[2,1] goto REL8;} # Z=0
-:BEQ  REL8			is op_h=3 & REL8 {if PS[2,1] goto REL8;} # Z=1
-:BPL  REL8			is op_h=0x80 & REL8 {if !PS[3,1] goto REL8;} # N=0 sign
-:BMI  REL8			is op_h=0x81 & REL8 {if PS[3,1] goto REL8;} # N=1
-:BVC  REL8			is op_h=0x84 & REL8 {if !PS[5,1] goto REL8;} # V=0 overflow
-:BVS  REL8			is op_h=0x85 & REL8 {if PS[5,1] goto REL8;} # V=1
-:BCC  REL8			is op_h=0x86 & REL8 {if !PS[0,1] goto REL8;} # C=0 carry
-:BCS  REL8			is op_h=0x87 & REL8 {if PS[0,1] goto REL8;} # C=1
-:BGE  REL8			is op_h=4 & REL8 {if !(PS[3,1] ^ PS[5,1]) goto REL8;} # N xor V =0
-:BLT  REL8			is op_h=5 & REL8 {if (PS[3,1] ^ PS[5,1]) goto REL8;} # N xor V =1
-:BGT  REL8			is op_h=6 & REL8 {if( !(PS[3,1] ^ PS[5,1])|!PS[2,1])goto REL8;} # (N xor V) or Z =0
-:BLE  REL8			is op_h=7 & REL8 {if( (PS[3,1] ^ PS[5,1])|PS[2,1])goto REL8;} # (N xor V) or Z =0
-:BHI  REL8			is op_h=0x82 & REL8 {if(!PS[0,1] | !PS[2,1])goto REL8;} # C or Z =0
-:BLOS REL8			is op_h=0x83 & REL8 {if(PS[0,1] | PS[2,1])goto REL8;} # C or Z =1
+:BR   REL8			is op_h=1 & REL8 {goto [REL8];}
+:BNE  REL8			is op_h=2 & REL8 {if PS[2,1] goto inst_next; goto [REL8];} # Z=0
+:BEQ  REL8			is op_h=3 & REL8 {if !PS[2,1] goto inst_next; goto [REL8];} # Z=1
+:BPL  REL8			is op_h=0x80 & REL8 {if PS[3,1] goto inst_next; goto [REL8];} # N=0 sign
+:BMI  REL8			is op_h=0x81 & REL8 {if !PS[3,1] goto inst_next; goto [REL8];} # N=1
+:BVC  REL8			is op_h=0x84 & REL8 {if PS[5,1] goto inst_next; goto [REL8];} # V=0 overflow
+:BVS  REL8			is op_h=0x85 & REL8 {if !PS[5,1] goto inst_next; goto [REL8];} # V=1
+:BCC  REL8			is op_h=0x86 & REL8 {if PS[0,1] goto inst_next; goto [REL8];} # C=0 carry
+:BCS  REL8			is op_h=0x87 & REL8 {if !PS[0,1] goto inst_next; goto [REL8];} # C=1
+:BGE  REL8			is op_h=4 & REL8 {if (PS[3,1] ^ PS[5,1]) goto inst_next; goto [REL8];} # N xor V =0
+:BLT  REL8			is op_h=5 & REL8 {if !(PS[3,1] ^ PS[5,1]) goto inst_next; goto [REL8];} # N xor V =1
+:BGT  REL8			is op_h=6 & REL8 {if !(!(PS[3,1] ^ PS[5,1])|!PS[2,1]) goto inst_next; goto [REL8];} # (N xor V) or Z =0
+:BLE  REL8			is op_h=7 & REL8 {if !((PS[3,1] ^ PS[5,1])|PS[2,1]) goto inst_next; goto [REL8];} # (N xor V) or Z =0
+:BHI  REL8			is op_h=0x82 & REL8 {if !(!PS[0,1] | !PS[2,1]) goto inst_next; goto [REL8];} # C or Z =0
+:BLOS REL8			is op_h=0x83 & REL8 {if !(PS[0,1] | PS[2,1]) goto inst_next; goto [REL8];} # C or Z =1
 
 # is manualo
 # file:///C:/Users/User/Downloads/ghidra_12.0_PUBLIC_20251205/ghidra_12.0_PUBLIC/docs/languages/html/sleigh_constructors.html#sleigh_sections_constructor
@@ -429,7 +427,7 @@ OPD: "@"REL32H"?OK7e"	is met_d=7 &         (met_s=6 | met_s=7) & reg_d=7				;REL
 # 7 - @X   111 111 = 3f
 
 # JSR/JMP - need to rewrite
-:JMP REL16   	is (kodas=1 &metod=6 & regai=7) ; REL16 { goto REL16;} #OK
+:JMP REL16   	is (kodas=1 &metod=6 & regai=7) ; REL16 { goto [REL16];} #OK
 :JMPX "?"OPD		is (kodas=1 &metod=6 & regai!=7)... &OPD  {tmp= OPD; goto [tmp];}
 # {tmp=*:2 OPD; goto [tmp];}
 
@@ -460,14 +458,14 @@ I16: imm16	is imm16 {export *:2 imm16;}
 :JSRf JPS,@REL16	is (kodas_s=0 & met_s=4 & reg_s<7 & reg_d=7 & met_d=7)& JPS ;REL16 {tmp=JPS+REL16; call [*:2 tmp];}
 :JSRg "PC?",OPD	is (kodas=0x27 & reg_d!=7)... & OPD {call OPD;}
 
-:"ILLEGAL CALL 0>"REL16	is (kodas=0x27 & met_d=0 & reg_d=7) ; REL16 { *SP=PC; SP=SP-1; call REL16; }
-:"ILLEGAL CALL 1>"REL16	is (kodas=0x27 & met_d=1 & reg_d=7) ; REL16 { *SP=PC; SP=SP-1; call REL16; }
+:"ILLEGAL CALL 0>"REL16	is (kodas=0x27 & met_d=0 & reg_d=7) ; REL16 { *SP=PC; SP=SP-1; call [REL16]; }
+:"ILLEGAL CALL 1>"REL16	is (kodas=0x27 & met_d=1 & reg_d=7) ; REL16 { *SP=PC; SP=SP-1; call [REL16]; }
 :CALL #I16				is (kodas=0x27 & met_d=2 & reg_d=7) ; I16 {call [I16];}
 :CALL @#I16				is (kodas=0x27 & met_d=3 & reg_d=7) ; I16 {call I16; }
-:"ILLEGAL CALL 4>"REL16	is (kodas=0x27 & met_d=4 & reg_d=7) ; REL16 { *SP=PC; SP=SP-1; call REL16; }
-:"ILLEGAL CALL 5>"REL16	is (kodas=0x27 & met_d=5 & reg_d=7) ; REL16 { *SP=PC; SP=SP-1; call REL16; }
-:CALL REL16				is (kodas=0x27 & met_d=6 & reg_d=7) ; REL16 { *SP=PC; SP=SP-1; call REL16; }
-:CALL "@"REL16			is (kodas=0x27 & met_d=7 & reg_d=7) ; REL16 { *SP=PC; SP=SP-1; call REL16; }
+:"ILLEGAL CALL 4>"REL16	is (kodas=0x27 & met_d=4 & reg_d=7) ; REL16 { *SP=PC; SP=SP-1; call [REL16]; }
+:"ILLEGAL CALL 5>"REL16	is (kodas=0x27 & met_d=5 & reg_d=7) ; REL16 { *SP=PC; SP=SP-1; call [REL16]; }
+:CALL REL16				is (kodas=0x27 & met_d=6 & reg_d=7) ; REL16 { *SP=PC; SP=SP-1; call [REL16]; }
+:CALL "@"REL16			is (kodas=0x27 & met_d=7 & reg_d=7) ; REL16 { *SP=PC; SP=SP-1; call [REL16]; }
 
 ###### RETURN
 :RETURN		is imm16=0x87 {pop(PC); pop(PS); return [PC];}
