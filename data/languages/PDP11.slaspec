@@ -444,13 +444,16 @@ OPD: "@"REL32H"?OK7e"	is met_d=7 &         (met_s=6 | met_s=7) & reg_d=7				;REL
 :CLR OPD		is (kodas_s=0 & met_s=5 &reg_s=0)... &OPD {OPD=0; CN(); SZ(); CV(); CC();}
 :CLRB OPD		is (kodas_s=8 & met_s=5 &reg_s=0)... &OPD {OPD=OPD & 0xFF00; CN(); SZ(); CV(); CC();}
 
-:COM OPD		is (kodas_s=0 & met_s=5 &reg_s=1)... &OPD {OPD=~OPD; FLZ(OPD);FLN(OPD);}
+:COM OPD		is (kodas_s=0 & met_s=5 &reg_s=1)... &OPD {OPD=~OPD; FLZ(OPD);FLN(OPD); CV(); SC();}
 :COMB OPD		is (kodas_s=8 & met_s=5 &reg_s=1)... &OPD {PC=PC;}
-:DEC OPD		is (kodas_s=0 & met_s=5 &reg_s=3)... &OPD {OPD=OPD-1; FLZ(OPD); FLV(OPD);FLN(OPD);}
+:DEC OPD		is (kodas_s=0 & met_s=5 &reg_s=3)... &OPD {OPD=OPD-1; FLZ(OPD);CV();CC();if(OPD==0x8000) goto <d>;SV();<d>FLN(OPD);if(OPD==0) goto <e>;SC();<e>}
 :DECB OPD		is (kodas_s=8 & met_s=5 &reg_s=3)... &OPD {PC=PC;}
 :NEG OPD		is (kodas_s=0 & met_s=5 &reg_s=4)... &OPD {OPD=-OPD; FLZ(OPD); FLV(OPD);FLN(OPD);}
 :NEGB OPD		is (kodas_s=8 & met_s=5 &reg_s=4)... &OPD {PC=PC;}
-:ADC OPD		is (kodas_s=0 & met_s=5 &reg_s=5)... &OPD {if !(PS[0,1]) goto <b>;OPD=OPD+1; FLZ(OPD); FLV(OPD); FLN(OPD);<b>}
+:ADC OPD		is (kodas_s=0 & met_s=5 &reg_s=5)... &OPD {
+tmp:2=OPD+(PS&1);SV();if((OPD==0x7FFF)&((PS&1)==1))goto<a>;CV();
+<a>SC();if((OPD==0xFFFF)&((PS&1)==1))goto<b>;CC();
+<b>OPD=tmp;FLZ(OPD);FLN(OPD);}
 :ADCB OPD		is (kodas_s=8 & met_s=5 &reg_s=5)... &OPD {OPD=OPD;}
 
 :SBC OPD		is (kodas_s=0 & met_s=5 &reg_s=6)... &OPD {if !(PS[0,1]) goto <b>;OPD=OPD-1;<b>CHKNZ(OPD);}
@@ -467,9 +470,9 @@ CC();
 OPD=OPD | tmp2;PS=PS|tmp;FLZ(OPD); FLN(OPD);V_NZ();
 }
 :RORB OPD		is (kodas_s=8 & met_s=6 &reg_s=0)... &OPD {OPD=OPD; FLZ(OPD);}
-:ROL OPD		is (kodas_s=0 & met_s=6 &reg_s=1)... &OPD {OPD=OPD<<1; FLZ(OPD);}
-:ROLB OPD		is (kodas_s=8 & met_s=6 &reg_s=1)... &OPD {OPD=OPD; FLZ(OPD);}
-:ASR OPD		is (kodas_s=0 & met_s=6 &reg_s=2)... &OPD {tmp:2=OPD & 0x8000;PS[0,1]=(OPD & 1)==1;OPD=(OPD>>1) | tmp;FLZ(OPD);V_NZ();}
+:ROL OPD		is (kodas_s=0 & met_s=6 &reg_s=1)... &OPD {OPD=OPD<<1; FLZ(OPD);FLN(OPD);V_NZ();}
+:ROLB OPD		is (kodas_s=8 & met_s=6 &reg_s=1)... &OPD {OPD=OPD; FLZ(OPD);FLN(OPD);V_NZ();}
+:ASR OPD		is (kodas_s=0 & met_s=6 &reg_s=2)... &OPD {tmp:2=OPD & 0x8000;PS[0,1]=(OPD & 1)==1;OPD=(OPD>>1) | tmp;FLZ(OPD);FLN(OPD);V_NZ();}
 :ASRB OPD		is (kodas_s=8 & met_s=6 &reg_s=2)... &OPD {OPD=OPD; FLZ(OPD);}
 :ASL OPD		is (kodas_s=0 & met_s=6 &reg_s=3)... &OPD {PS[0,1]=(OPD & 0x8000)!=0;OPD=OPD<<1;FLZ(OPD); FLN(OPD); V_NZ();}
 
