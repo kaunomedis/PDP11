@@ -65,15 +65,9 @@ macro SV(){PS[5,1]=1;}
 macro I(a){PS[6,1]=a;}
 
 macro CHKNZ(a){PS[3,1]=(a & 0x8000)!=0;PS[2,1]=(a==0);}
-macro V_NZ()
-{
-PS[5,1]=PS[0,1] ^ PS[3,1]; #V = N xor C
-}
+macro V_NZ(){PS[5,1]=PS[0,1] ^ PS[3,1];}
 
-macro signn(check, result)
-{
-result=(check & 0x8000)!=0;
-}
+macro signn(check, result){result=(check & 0x8000)!=0;}
 
 macro CMP_FLAGS(ss,dd) {
 
@@ -114,10 +108,6 @@ macro MemStore(adresas,val) {
 	*:2 ptr = val;
 }
 
-#
-# CMP_FLAGS MACROS...
-#
-
 macro push(val) {
     SP = SP - 2;
     ptr:2 = (SP);
@@ -156,11 +146,6 @@ define token word_1 (16)
 attach variables [ reg_s] [ R0 R1 R2 R3 R4 R5 SP PC];
 attach variables [ reg_d] [ R0 R1 R2 R3 R4 R5 SP PC];
 
-# one byte, not used here
-#define token data8 (8)
-#   imm8		= (0,7)
-#   rela		= (0,7) signed
-#;
 
 # next word with data or first opcode
 define token data_word (16)
@@ -402,14 +387,7 @@ OPD: "@"REL32H"?OK7e"	is met_d=7 &         (met_s=6 | met_s=7) & reg_d=7				;REL
 
 ##################################################################################
 
-:MOV OPS,OPD 	is (kodas_s=0x1)...& OPD & OPS {
- tmp:1=0;
- signn(OPS, tmp);
- N(tmp);
-
- FLZ(OPS); 
- OPD = OPS; CV();
- }
+:MOV OPS,OPD 	is (kodas_s=0x1)...& OPD & OPS {tmp:1=0;signn(OPS, tmp);N(tmp);FLZ(OPS); OPD = OPS; CV();}
 :MOVB OPS,OPD 	is (kodas_s=0x9)...& OPD & OPS {
  OPD=OPD & 0xFF00; OPD =OPD | (OPS & 0x00FF); FLZ(OPS & 0x00FF);}
 # N =src<0
@@ -426,11 +404,6 @@ OPD: "@"REL32H"?OK7e"	is met_d=7 &         (met_s=6 | met_s=7) & reg_d=7				;REL
 # V=(aign(scr) xor sign(dst)) and not(sign(res) xor sign(dst))
 # C=(not sign(src) and sign(dst)) or (not(sign(src) xor sing(dst)) and sign(res))
 
-
-
-
-
-
 :SUB OPS,OPD 	is (kodas_s=0xE)... & OPS & OPD { OPD=OPD-OPS; FLZ(OPD);FLN(OPD);}
 :ADD OPS,OPD 	is (kodas_s=0x6)... & OPS & OPD { OPD=OPD+OPS; FLZ(OPD);FLN(OPD);}
 :BIT OPS,OPD 	is (kodas_s=0x3)... & OPS & OPD { OPD=OPD; }
@@ -439,8 +412,8 @@ OPD: "@"REL32H"?OK7e"	is met_d=7 &         (met_s=6 | met_s=7) & reg_d=7				;REL
 :BICB OPS,OPD 	is (kodas_s=0xC)... & OPS & OPD { OPD=OPS; }
 :BIS OPS,OPD 	is (kodas_s=0x5)... & OPS & OPD { OPD=OPD | OPS; }
 :BISB OPS,OPD 	is (kodas_s=0xD)... & OPS & OPD { OPD=OPS; }
-:INC OPD		is (kodas_s=0 & met_s=5 &reg_s=2)... &OPD {OPD=OPD+1; FLZ(OPD); FLV(OPD);}
-:INCB OPD		is (kodas_s=8 & met_s=5 &reg_s=2)... &OPD {tmp=OPD & 0xFF00; OPD=((OPD+1)&0x00FF)|tmp; FLZ(OPD); FLV(OPD | 0xFF00);FLN(OPD);}
+:INC OPD		is (kodas_s=0 & met_s=5 &reg_s=2)... &OPD {OPD=OPD+1; FLZ(OPD); FLV(OPD);FLN(OPD);}
+:INCB OPD		is (kodas_s=8 & met_s=5 &reg_s=2)... &OPD {tmp=OPD & 0xFF00; OPD=((OPD+1)&0x00FF)|tmp; FLZ(OPD & 0xFF00); FLV(OPD | 0xFF00);FLN(OPD<<8);}
 :CLR OPD		is (kodas_s=0 & met_s=5 &reg_s=0)... &OPD {OPD=0; CN(); SZ(); CV(); CC();}
 :CLRB OPD		is (kodas_s=8 & met_s=5 &reg_s=0)... &OPD {OPD=OPD & 0xFF00; CN(); SZ(); CV(); CC();}
 
@@ -456,7 +429,12 @@ tmp:2=OPD+(PS&1);SV();if((OPD==0x7FFF)&((PS&1)==1))goto<a>;CV();
 <b>OPD=tmp;FLZ(OPD);FLN(OPD);}
 :ADCB OPD		is (kodas_s=8 & met_s=5 &reg_s=5)... &OPD {OPD=OPD;}
 
-:SBC OPD		is (kodas_s=0 & met_s=5 &reg_s=6)... &OPD {if !(PS[0,1]) goto <b>;OPD=OPD-1;<b>CHKNZ(OPD);}
+:SBC OPD		is (kodas_s=0 & met_s=5 &reg_s=6)... &OPD {
+V(OPD+(PS&1)==0x8001);
+C(OPD-(PS&1)==0xFFFF);
+OPD=OPD-(PS&1);FLN(OPD);FLZ(OPD);
+
+}
 :SBCB OPD		is (kodas_s=8 & met_s=5 &reg_s=6)... &OPD {if !(PS[0,1]) goto <b>;OPD=OPD-1;<b>CHKNZ(OPD);}
 
 :ROR OPD		is (kodas_s=0 & met_s=6 &reg_s=0)... &OPD {
@@ -470,7 +448,7 @@ CC();
 OPD=OPD | tmp2;PS=PS|tmp;FLZ(OPD); FLN(OPD);V_NZ();
 }
 :RORB OPD		is (kodas_s=8 & met_s=6 &reg_s=0)... &OPD {OPD=OPD; FLZ(OPD);}
-:ROL OPD		is (kodas_s=0 & met_s=6 &reg_s=1)... &OPD {OPD=OPD<<1; FLZ(OPD);FLN(OPD);V_NZ();}
+:ROL OPD		is (kodas_s=0 & met_s=6 &reg_s=1)... &OPD {tmp:2=OPD>>15;OPD=(OPD<<1)|(PS & 1);CC();PS=PS|tmp;FLZ(OPD);FLN(OPD);V_NZ();}
 :ROLB OPD		is (kodas_s=8 & met_s=6 &reg_s=1)... &OPD {OPD=OPD; FLZ(OPD);FLN(OPD);V_NZ();}
 :ASR OPD		is (kodas_s=0 & met_s=6 &reg_s=2)... &OPD {tmp:2=OPD & 0x8000;PS[0,1]=(OPD & 1)==1;OPD=(OPD>>1) | tmp;FLZ(OPD);FLN(OPD);V_NZ();}
 :ASRB OPD		is (kodas_s=8 & met_s=6 &reg_s=2)... &OPD {OPD=OPD; FLZ(OPD);}
