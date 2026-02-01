@@ -408,12 +408,12 @@ OPD: "@"REL32H"?OK7e"	is met_d=7 &         (met_s=6 | met_s=7) & reg_d=7				;REL
 :ADD OPS,OPD 	is (kodas_s=0x6)... & OPS & OPD { OPD=OPD+OPS; FLZ(OPD);FLN(OPD);}
 :BIT OPS,OPD 	is (kodas_s=0x3)... & OPS & OPD { OPD=OPD; }
 :BITB OPS,OPD 	is (kodas_s=0xB)... & OPS & OPD { OPD=OPD; }
-:BIC OPS,OPD 	is (kodas_s=0x4)... & OPS & OPD { OPD=(~OPS) & OPD; } #bit clear dst=not(src) and (dst)
-:BICB OPS,OPD 	is (kodas_s=0xC)... & OPS & OPD { OPD=OPS; }
+:BIC OPS,OPD 	is (kodas_s=0x4)... & OPS & OPD { OPD=(~OPS) & OPD;FLZ(OPD);FLN(OPD); } #bit clear dst=not(src) and (dst)
+:BICB OPS,OPD 	is (kodas_s=0xC)... & OPS & OPD { tmp=OPD&0xFF00;OPD=((~OPS)&0x00FF)|tmp;FLZ(OPD&0x00FF);FLN(OPD<<8); }
 :BIS OPS,OPD 	is (kodas_s=0x5)... & OPS & OPD { OPD=OPD | OPS; }
 :BISB OPS,OPD 	is (kodas_s=0xD)... & OPS & OPD { OPD=OPS; }
-:INC OPD		is (kodas_s=0 & met_s=5 &reg_s=2)... &OPD {OPD=OPD+1; FLZ(OPD); FLV(OPD);FLN(OPD);}
-:INCB OPD		is (kodas_s=8 & met_s=5 &reg_s=2)... &OPD {tmp=OPD & 0xFF00; OPD=((OPD+1)&0x00FF)|tmp; FLZ(OPD & 0xFF00); FLV(OPD | 0xFF00);FLN(OPD<<8);}
+:INC OPD		is (kodas_s=0 & met_s=5 &reg_s=2)... &OPD {V(OPD==0x7FFF);OPD=OPD+1; FLZ(OPD);FLN(OPD);}
+:INCB OPD		is (kodas_s=8 & met_s=5 &reg_s=2)... &OPD {V(OPD==0x7F);tmp=OPD & 0xFF00; OPD=((OPD+1)&0x00FF)|tmp; FLZ(OPD & 0xFF00); FLN(OPD<<8);}
 :CLR OPD		is (kodas_s=0 & met_s=5 &reg_s=0)... &OPD {OPD=0; CN(); SZ(); CV(); CC();}
 :CLRB OPD		is (kodas_s=8 & met_s=5 &reg_s=0)... &OPD {OPD=OPD & 0xFF00; CN(); SZ(); CV(); CC();}
 
@@ -430,10 +430,10 @@ tmp:2=OPD+(PS&1);SV();if((OPD==0x7FFF)&((PS&1)==1))goto<a>;CV();
 :ADCB OPD		is (kodas_s=8 & met_s=5 &reg_s=5)... &OPD {OPD=OPD;}
 
 :SBC OPD		is (kodas_s=0 & met_s=5 &reg_s=6)... &OPD {
+tmp=OPD-(PS&1);
 V(OPD+(PS&1)==0x8001);
 C(OPD-(PS&1)==0xFFFF);
-OPD=OPD-(PS&1);FLN(OPD);FLZ(OPD);
-
+OPD=tmp;FLN(OPD);FLZ(OPD);
 }
 :SBCB OPD		is (kodas_s=8 & met_s=5 &reg_s=6)... &OPD {if !(PS[0,1]) goto <b>;OPD=OPD-1;<b>CHKNZ(OPD);}
 
