@@ -34,9 +34,9 @@ define register offset=0x0020 size=2 [ PS ]; # ony one byte. Keep 2 to make SLEI
 # b11:b8     - Reserved area
 # b7        - (U) Stack pointer select flag
 # b6         - (I) Interrupt enable flag
-# b5         - (O) Overflow flag
+# b5         - (O)(V) Overflow flag
 # b4        - (B) Register bank select flag
-# b3         - (S) Sign flag
+# b3         - (S)(N) Sign flag
 # b2        - (Z) Zero flag
 # b1        - (D) Debug flag
 # b0        - (C) Carry flag
@@ -147,7 +147,7 @@ REL8:	reloc	is rell			[reloc = inst_next + 2 * rell;]	{ tmp:2 = 0; tmp=reloc; ex
 REL32H:	reloc 	is rell32h  	[reloc = inst_next + rell32h;]	{ tmp:2 = 0; tmp=reloc; export  tmp; } 
 REL32L:	reloc 	is rell32l  	[reloc = inst_next + rell32l-2;]	{tmp:2 = 0; tmp=reloc; export  tmp; } 
 REL16:	reloc	is rell16   	[reloc = inst_next + rell16;]	{tmp:2 = 0; tmp=reloc; export  tmp; }
-RELN:	reloc	is rell &nnn	[reloc = inst_next-nnn*2;]		{tmp:2 = 0; tmp=reloc; export  tmp; } 
+RELN:	reloc	is nnn	[reloc = inst_next-nnn*2;]		{tmp:2 = 0; tmp=reloc; export  tmp; } 
 
 # ############# VEIKIANTYS 
 :NOP		is imm16=0x0A0	{R0=R0;}
@@ -397,29 +397,68 @@ OPD: "@"REL32H"?OK7e"	is met_d=7 &         (met_s=6 | met_s=7) & reg_d=7				;REL
 
 :COM OPD		is (kodas_s=0 & met_s=5 &reg_s=1)... &OPD {OPD=~OPD; FLZ(OPD);FLN(OPD); CV(); SC();}
 :COMB OPD		is (kodas_s=8 & met_s=5 &reg_s=1)... &OPD {tmp=OPD&0xFF00;OPD=((~OPD)&0x00FF)|tmp;FLZ(OPD&0x00FF);FLN(OPD<<8); CV(); SC();}
-:DEC OPD		is (kodas_s=0 & met_s=5 &reg_s=3)... &OPD {OPD=OPD-1; FLZ(OPD);CV();CC();if(OPD==0x8000) goto <d>;SV();<d>FLN(OPD);if(OPD==0) goto <e>;SC();<e>}
-:DECB OPD		is (kodas_s=8 & met_s=5 &reg_s=3)... &OPD {PC=PC;}
+:DEC OPD		is (kodas_s=0 & met_s=5 &reg_s=3)... &OPD {
+V(OPD==0x8000);OPD=OPD-1;FLZ(OPD);FLN(OPD);}
+#OPD=OPD-1; FLZ(OPD);CV();CC();if(OPD==0x8000) goto <d>;SV();<d>FLN(OPD);if(OPD==0) goto <e>;SC();<e>}
+:DECB OPD		is (kodas_s=8 & met_s=5 &reg_s=3)... &OPD {
+tmp0:2=OPD&0xFF00;OPD=OPD&0xFF;
+V(OPD==0x80);OPD=(OPD-1)&0xFF;FLZ(OPD);FLN(OPD<<8);
+OPD=OPD|tmp0;
+}
 :NEG OPD		is (kodas_s=0 & met_s=5 &reg_s=4)... &OPD {OPD=-OPD; FLZ(OPD); FLV(OPD);FLN(OPD);}
-:NEGB OPD		is (kodas_s=8 & met_s=5 &reg_s=4)... &OPD {PC=PC;}
+:NEGB OPD		is (kodas_s=8 & met_s=5 &reg_s=4)... &OPD {
+tmp0=OPD&0xFF00;OPD=OPD&0xFF;
+OPD=(-OPD)&0xFF;
+FLZ(OPD); V(OPD==0x80);FLN(OPD<<8);C(OPD==0);
+OPD=OPD|tmp0;
+}
 :ADC OPD		is (kodas_s=0 & met_s=5 &reg_s=5)... &OPD {tmp:2=OPD+(PS&1);SV();if((OPD==0x7FFF)&((PS&1)==1))goto<a>;CV();<a>SC();if((OPD==0xFFFF)&((PS&1)==1))goto<b>;CC();<b>OPD=tmp;FLZ(OPD);FLN(OPD);}
-:ADCB OPD		is (kodas_s=8 & met_s=5 &reg_s=5)... &OPD {OPD=OPD;}
+:ADCB OPD		is (kodas_s=8 & met_s=5 &reg_s=5)... &OPD {
+tmp0:2=OPD&0xFF00;
+tmp:2=(OPD&0xFF)+(PS&1);SV();
+OPD=OPD&0xFF;
+if((OPD==0x7F)&((PS&1)==1))goto<a>;
+CV();<a>SC();
+if((OPD==0xFF)&((PS&1)==1))goto<b>;
+CC();<b>OPD=tmp;
+FLZ(OPD);FLN(OPD<<8);
+OPD=OPD|tmp0;
+}
 
 :SBC OPD		is (kodas_s=0 & met_s=5 &reg_s=6)... &OPD {tmp=OPD-(PS&1);V(OPD+(PS&1)==0x8001);C(OPD-(PS&1)==0xFFFF);OPD=tmp;FLN(OPD);FLZ(OPD);}
-:SBCB OPD		is (kodas_s=8 & met_s=5 &reg_s=6)... &OPD {if !(PS[0,1]) goto <b>;OPD=OPD-1;<b>CHKNZ(OPD);}
+:SBCB OPD		is (kodas_s=8 & met_s=5 &reg_s=6)... &OPD {
+tmp0=OPD&0xFF00;OPD=OPD&0xFF;
+tmp=OPD-(PS&1);V(OPD+(PS&1)==0x81);C(OPD-(PS&1)==0xFF);OPD=tmp;FLN(OPD<<8);FLZ(OPD);
+OPD=OPD|tmp0;
+}
 
 :ROR OPD		is (kodas_s=0 & met_s=6 &reg_s=0)... &OPD {tmp:2=OPD & 1;tmp2:2=0;OPD=OPD>>1;if !(PS[0,1]) goto <c>;tmp2=0x8000;<c>CC();OPD=OPD | tmp2;PS=PS|tmp;FLZ(OPD); FLN(OPD);V_NZ();}
 :RORB OPD		is (kodas_s=8 & met_s=6 &reg_s=0)... &OPD {tmp:2=(OPD&0xFF00)|((PS&1)<<7);CC();PS=PS|(OPD&1);OPD=((OPD&0x00FF)>>1)|tmp;FLZ(OPD&0x00FF);FLN(OPD<<8);V_NZ();}
 :ROL OPD		is (kodas_s=0 & met_s=6 &reg_s=1)... &OPD {tmp:2=OPD>>15;OPD=(OPD<<1)|(PS & 1);CC();PS=PS|tmp;FLZ(OPD);FLN(OPD);V_NZ();}
-:ROLB OPD		is (kodas_s=8 & met_s=6 &reg_s=1)... &OPD {OPD=OPD; FLZ(OPD);FLN(OPD);V_NZ();}
+:ROLB OPD		is (kodas_s=8 & met_s=6 &reg_s=1)... &OPD {
+tmp0:2=OPD&0xFF00;OPD=OPD&0xFF;
+tmp:2=OPD>>7;OPD=(OPD<<1)|(PS & 1);CC();PS=PS|tmp;FLZ(OPD);FLN(OPD<<8);V_NZ();
+OPD=OPD|tmp0;
+}
 :ASR OPD		is (kodas_s=0 & met_s=6 &reg_s=2)... &OPD {tmp:2=OPD & 0x8000;PS[0,1]=(OPD & 1)==1;OPD=(OPD>>1) | tmp;FLZ(OPD);FLN(OPD);V_NZ();}
 :ASRB OPD		is (kodas_s=8 & met_s=6 &reg_s=2)... &OPD {tmp=OPD&0xFF80;CC();PS=PS|(OPD&1);OPD=(OPD>>1)|tmp;FLZ(OPD&0x00FF);FLN(OPD<<8);V_NZ();}
 :ASL OPD		is (kodas_s=0 & met_s=6 &reg_s=3)... &OPD {PS[0,1]=(OPD & 0x8000)!=0;OPD=OPD<<1;FLZ(OPD); FLN(OPD); V_NZ();}
 
-:ASLB OPD		is (kodas_s=8 & met_s=6 &reg_s=3)... &OPD {OPD=OPD; FLZ(OPD);}
+:ASLB OPD		is (kodas_s=8 & met_s=6 &reg_s=3)... &OPD {
+PS[0,1]=(OPD & 0x0080)!=0;
+tmp=OPD&0xFF00;
+OPD=(OPD&0x007F)<<1;
+FLZ(OPD);
+FLN(OPD<<8); V_NZ();
+OPD=OPD|tmp;}
 :TST OPD		is (kodas_s=0 & met_s=5 &reg_s=7)... &OPD {FLZ(OPD); CV(); CC(); FLN(OPD);}
 :TSTB OPD		is (kodas_s=8 & met_s=5 &reg_s=7)... &OPD {FLZ(OPD & 0x00FF); CV(); CC(); FLN(OPD & 0x00FF);}
 :SXT OPD		is (kodas_s=0 & met_s=6 &reg_s=7)... &OPD {tmp=0xFFFF;if (PS[3,1]) goto <b>;tmp=0;<b>OPD=tmp;}
-:SWAB OPD		is (kodas_s=0 & met_s=0 &reg_s=3)... &OPD {tmp=OPD>>8; OPD=OPD<<8+tmp;}
+:SWAB OPD		is (kodas_s=0 & met_s=0 &reg_s=3)... &OPD {
+tmp=OPD>>8; OPD=(OPD<<8)|tmp;
+FLN(OPD<<8);FLZ(OPD&0xFF);
+CV();CC();
+}
 :MFPS OPD		is (kodas_s=8 & met_s=6 &reg_s=7)... &OPD {OPD=PS;}
 :MTPS OPD		is (kodas_s=8 & met_s=6 &reg_s=4)... &OPD {PS=OPD;}
 ############################################################################################
