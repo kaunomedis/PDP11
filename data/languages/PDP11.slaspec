@@ -397,19 +397,17 @@ OPD: "@"REL32H"?OK7e"	is met_d=7 &         (met_s=6 | met_s=7) & reg_d=7				;REL
 
 :COM OPD		is (kodas_s=0 & met_s=5 &reg_s=1)... &OPD {OPD=~OPD; FLZ(OPD);FLN(OPD); CV(); SC();}
 :COMB OPD		is (kodas_s=8 & met_s=5 &reg_s=1)... &OPD {tmp=OPD&0xFF00;OPD=((~OPD)&0x00FF)|tmp;FLZ(OPD&0x00FF);FLN(OPD<<8); CV(); SC();}
-:DEC OPD		is (kodas_s=0 & met_s=5 &reg_s=3)... &OPD {
-V(OPD==0x8000);OPD=OPD-1;FLZ(OPD);FLN(OPD);}
-#OPD=OPD-1; FLZ(OPD);CV();CC();if(OPD==0x8000) goto <d>;SV();<d>FLN(OPD);if(OPD==0) goto <e>;SC();<e>}
-:DECB OPD		is (kodas_s=8 & met_s=5 &reg_s=3)... &OPD {
-tmp0:2=OPD&0xFF00;OPD=OPD&0xFF;
-V(OPD==0x80);OPD=(OPD-1)&0xFF;FLZ(OPD);FLN(OPD<<8);
-OPD=OPD|tmp0;
-}
-:NEG OPD		is (kodas_s=0 & met_s=5 &reg_s=4)... &OPD {OPD=-OPD; FLZ(OPD); FLV(OPD);FLN(OPD);}
+:DEC OPD		is (kodas_s=0 & met_s=5 &reg_s=3)... &OPD {V(OPD==0x8000);OPD=OPD-1;FLZ(OPD);FLN(OPD);}
+:DECB OPD		is (kodas_s=8 & met_s=5 &reg_s=3)... &OPD {tmp0:2=OPD&0xFF00;OPD=OPD&0xFF;V(OPD==0x80);OPD=(OPD-1)&0xFF;FLZ(OPD);FLN(OPD<<8);OPD=OPD|tmp0;}
+
+:NEG OPD		is (kodas_s=0 & met_s=5 &reg_s=4)... &OPD {
+OPD=-OPD; FLZ(OPD); FLV(OPD);FLN(OPD);C(OPD!=0);}
+
 :NEGB OPD		is (kodas_s=8 & met_s=5 &reg_s=4)... &OPD {
-tmp0=OPD&0xFF00;OPD=OPD&0xFF;
-OPD=(-OPD)&0xFF;
-FLZ(OPD); V(OPD==0x80);FLN(OPD<<8);C(OPD==0);
+tmp0=OPD&0xFF00;
+OPD=(0-OPD)&0xFF;
+V(OPD==0x80);
+FLZ(OPD);FLN(OPD<<8);C(OPD!=0);
 OPD=OPD|tmp0;
 }
 :ADC OPD		is (kodas_s=0 & met_s=5 &reg_s=5)... &OPD {tmp:2=OPD+(PS&1);SV();if((OPD==0x7FFF)&((PS&1)==1))goto<a>;CV();<a>SC();if((OPD==0xFFFF)&((PS&1)==1))goto<b>;CC();<b>OPD=tmp;FLZ(OPD);FLN(OPD);}
