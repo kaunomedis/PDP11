@@ -63,16 +63,24 @@ macro V_NZ(){PS[5,1]=PS[0,1] ^ PS[3,1];}
 macro signn(check, result){result=(check & 0x8000)!=0;}
 
 macro CMP_FLAGS(ss,dd) {
-PS[2,1]=ss==dd; #zero
-PS[3,1]=(ss-dd)s<0; # N, sign
-ts:1=0;
-td:1=0;
-tr:1=0;
-signn(ss,ts);
-signn(dd,td);
-signn(ss-dd,tr);
-PS[5,1]=(ts ^ td) & !(tr ^ ts);#V
-PS[0,1]=(!ts & td)|(!(ts ^ td) & tr);#C
+
+ts=(ss & 0x8000)!=0;
+td=(dd & 0x8000)!=0;
+tr=(((ss-dd) & 0x8000)!=0);
+Z(ss==dd);
+V((ts ^ td) & (!(tr ^ td)));
+C((! ts & td)|(!(ts ^ td) & tr));
+
+#PS[2,1]=(ss==dd); #zero
+#PS[3,1]=(ss-dd)s<0; # N, sign
+#ts:1=0;
+#td:1=0;
+#tr:1=0;
+#signn(ss,ts);
+#signn(dd,td);
+#signn(ss-dd,tr);
+#PS[5,1]=(ts ^ td) & !(tr ^ ts);#V
+#PS[0,1]=(!ts & td)|(!(ts ^ td) & tr);#C
 }
 
 macro FLZ(register){PS[2,1]=(register==0);}
@@ -320,8 +328,8 @@ OPD: "@#"imm32H" OK3h"		is met_d=3&  reg_dd=7 & (met_s=6 | met_s=7) & reg_d=7  ;
 # Rn = Rn - (is_byte ? 1 : 2)
 # EA = Rn
 # operand = MEM[EA]
-OPD: "-("reg_d") OK4a"	is byte=1 & met_d=4 & reg_d 	{reg_d=reg_d-1; tmp:2 = *:2 reg_d; export tmp;}
-OPD: "-("reg_d") OK4b"	is byte=0 & met_d=4 & reg_d 	{reg_d=reg_d-2; tmp:2 = *:2 reg_d; export tmp;}
+OPD: "-("reg_d") OK4a"	is byte=1 & met_d=4 & reg_d 	{reg_d=reg_d-1; tmp:2=reg_d; export *:2 tmp;}
+OPD: "-("reg_d") OK4b"	is byte=0 & met_d=4 & reg_d 	{reg_d=reg_d-2; tmp:2=reg_d; export *:2 tmp;}
 
 
 # MODE5: (autodecrement deferred)
@@ -374,22 +382,17 @@ OPD: "@"REL32H"?OK7e"	is met_d=7 &         (met_s=6 | met_s=7) & reg_d=7				;REL
 # C no change
 
 
-:CMP OPS,OPD 	is (kodas_s=0x2)...& OPD & OPS { CMP_FLAGS(OPS,OPD); }
-:CMPB OPS,OPD 	is (kodas_s=0xA)...& OPD & OPS { CMP_FLAGS(OPS,OPD); }
-# a=src-dst
-# a=0 ->Z=1
-# a<0 ->N=1
-# V=(aign(scr) xor sign(dst)) and not(sign(res) xor sign(dst))
-# C=(not sign(src) and sign(dst)) or (not(sign(src) xor sing(dst)) and sign(res))
+:CMP OPS,OPD 	is (kodas_s=0x2)... & OPD & OPS { CMP_FLAGS(OPD,OPS); }
+:CMPB OPS,OPD 	is (kodas_s=0xA)... & OPD & OPS { CMP_FLAGS(OPD,OPS); }
+:SUB OPS,OPD 	is (kodas_s=0xE)... & OPS & OPD { CMP_FLAGS(OPS,OPD); OPD=OPD-OPS; }
 
-:SUB OPS,OPD 	is (kodas_s=0xE)... & OPS & OPD { OPD=OPD-OPS; FLZ(OPD);FLN(OPD);}
 :ADD OPS,OPD 	is (kodas_s=0x6)... & OPS & OPD { OPD=OPD+OPS; FLZ(OPD);FLN(OPD);}
 :BIT OPS,OPD 	is (kodas_s=0x3)... & OPS & OPD { OPD=OPD; }
 :BITB OPS,OPD 	is (kodas_s=0xB)... & OPS & OPD { OPD=OPD; }
 :BIC OPS,OPD 	is (kodas_s=0x4)... & OPS & OPD { OPD=(~OPS) & OPD;FLZ(OPD);FLN(OPD); } #bit clear dst=not(src) and (dst)
 :BICB OPS,OPD 	is (kodas_s=0xC)... & OPS & OPD { tmp=OPD&0xFF00;OPD=((~OPS)&0x00FF)|tmp;FLZ(OPD&0x00FF);FLN(OPD<<8); }
-:BIS OPS,OPD 	is (kodas_s=0x5)... & OPS & OPD { OPD=OPD | OPS; }
-:BISB OPS,OPD 	is (kodas_s=0xD)... & OPS & OPD { OPD=OPS; }
+:BIS OPS,OPD 	is (kodas_s=0x5)... & OPS & OPD { OPD=OPD | OPS; FLN(OPD);FLZ(OPD);CV();}
+:BISB OPS,OPD 	is (kodas_s=0xD)... & OPS & OPD { OPD=OPD | (OPS&0xFF); FLN(OPD);FLZ(OPD);CV();}
 :INC OPD		is (kodas_s=0 & met_s=5 &reg_s=2)... &OPD {V(OPD==0x7FFF);OPD=OPD+1; FLZ(OPD);FLN(OPD);}
 :INCB OPD		is (kodas_s=8 & met_s=5 &reg_s=2)... &OPD {V(OPD==0x7F);tmp=OPD & 0xFF00; OPD=((OPD+1)&0x00FF)|tmp; FLZ(OPD & 0xFF00); FLN(OPD<<8);}
 :CLR OPD		is (kodas_s=0 & met_s=5 &reg_s=0)... &OPD {OPD=0; CN(); SZ(); CV(); CC();}
@@ -450,7 +453,7 @@ FLZ(OPD);
 FLN(OPD<<8); V_NZ();
 OPD=OPD|tmp;}
 :TST OPD		is (kodas_s=0 & met_s=5 &reg_s=7)... &OPD {FLZ(OPD); CV(); CC(); FLN(OPD);}
-:TSTB OPD		is (kodas_s=8 & met_s=5 &reg_s=7)... &OPD {FLZ(OPD & 0x00FF); CV(); CC(); FLN(OPD & 0x00FF);}
+:TSTB OPD		is (kodas_s=8 & met_s=5 &reg_s=7)... &OPD {FLZ(OPD & 0x00FF); CV(); CC(); FLN(OPD<<8);}
 :SXT OPD		is (kodas_s=0 & met_s=6 &reg_s=7)... &OPD {tmp=0xFFFF;if (PS[3,1]) goto <b>;tmp=0;<b>OPD=tmp;}
 :SWAB OPD		is (kodas_s=0 & met_s=0 &reg_s=3)... &OPD {
 tmp=OPD>>8; OPD=(OPD<<8)|tmp;
