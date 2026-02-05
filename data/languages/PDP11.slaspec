@@ -381,7 +381,7 @@ OPD: "@"REL32H"?OK7e"	is met_d=7 &         (met_s=6 | met_s=7) & reg_d=7				;REL
 
 
 :CMP OPS,OPD 	is (kodas_s=0x2)... & OPD & OPS { CMP_FLAGS(OPD,OPS); }
-:CMPB OPS,OPD 	is (kodas_s=0xA)... & OPD & OPS { CMP_FLAGS(OPD<<8,OPS<<8); }
+:CMPB OPS,OPD 	is (kodas_s=0xA)... & OPD & OPS { CMP_FLAGS(OPD<<8,OPS<<8); FLZ((OPD&0xFF)==(OPS&0xFF));}
 :SUB OPS,OPD 	is (kodas_s=0xE)... & OPS & OPD { SUB_FLAGS(OPS,OPD); OPD=OPD-OPS;FLN(OPD);}
 
 :ADD OPS,OPD 	is (kodas_s=0x6)... & OPS & OPD {ADD_FLAGS(OPS,OPD);OPD=OPD+OPS;FLN(OPD);}
@@ -390,8 +390,8 @@ OPD: "@"REL32H"?OK7e"	is met_d=7 &         (met_s=6 | met_s=7) & reg_d=7				;REL
 
 :BIT OPS,OPD 	is (kodas_s=0x3)... & OPS & OPD {tmp:2=OPS&OPD;FLN(tmp);FLZ(tmp);CV();}
 :BITB OPS,OPD 	is (kodas_s=0xB)... & OPS & OPD {tmp:2=OPS&OPD;FLN(tmp<<8);FLZ(tmp&0xFF);CV();}
-:BIC OPS,OPD 	is (kodas_s=0x4)... & OPS & OPD { OPD=(~OPS) & OPD;FLZ(OPD);FLN(OPD); } #bit clear dst=not(src) and (dst)
-:BICB OPS,OPD 	is (kodas_s=0xC)... & OPS & OPD { tmp=OPD&0xFF00;OPD=((~OPS)&0x00FF)|tmp;FLZ(OPD&0x00FF);FLN(OPD<<8); }
+:BIC OPS,OPD 	is (kodas_s=0x4)... & OPS & OPD { OPD=(~OPS) & OPD;FLZ(OPD);FLN(OPD); CV();} #bit clear dst=not(src) and (dst)
+:BICB OPS,OPD 	is (kodas_s=0xC)... & OPS & OPD { tmp=OPD&0xFF00;OPD=((~OPS)&0x00FF)|tmp;FLZ(OPD&0x00FF);FLN(OPD<<8); CV();}
 :BIS OPS,OPD 	is (kodas_s=0x5)... & OPS & OPD { OPD=OPD | OPS; FLN(OPD);FLZ(OPD);CV();}
 :BISB OPS,OPD 	is (kodas_s=0xD)... & OPS & OPD { OPD=OPD | (OPS&0xFF); FLN(OPD);FLZ(OPD);CV();}
 :INC OPD		is (kodas_s=0 & met_s=5 &reg_s=2)... &OPD {V(OPD==0x7FFF);OPD=OPD+1; FLZ(OPD);FLN(OPD);}
@@ -439,11 +439,13 @@ OPD: "@"REL32H"?OK7e"	is met_d=7 &         (met_s=6 | met_s=7) & reg_d=7				;REL
 
 # JSR/JMP - need to rewrite
 :JMP REL16   	is (kodas=1 &metod=6 & regai=7) ; REL16 { goto [REL16];} #OK
-:JMPX "?"OPD		is (kodas=1 &metod=6 & regai!=7)... &OPD  {tmp= OPD; goto [tmp];}
+#:JMPX "?"OPD		is (kodas=1 &metod=6 & regai!=7)... &OPD  {tmp= OPD; goto [tmp];}
 # {tmp=*:2 OPD; goto [tmp];}
 
-:JMP @REL16		is (kodas=1 &metod=7 & regai=7) ; REL16 {goto [REL16];} #JUMP @XXXXX
-:JMP OPD		is (kodas=1 & metod<6)... & OPD {tmp= OPD; goto [tmp];} # JMP R0 ir pan metod:2,3. kiti negalimi
+:JMP0 @REL16		is (kodas=1 &metod=7 & regai=7) ; REL16 {goto [REL16];} #JUMP @XXXXX
+
+# JMP R0 ir pan metod:2,3. kiti negalimi
+:JMP OPD is (kodas_s=0 & met_s=0 & reg_s=1 & met_d<6)...&OPD {goto OPD;} #???
 
 # JSR methods.
 JPS: reg_s	is  reg_s {tmp:2 = *:2 reg_s; export tmp;}
