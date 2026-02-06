@@ -165,8 +165,8 @@ RELN:	reloc	is nnn	[reloc = inst_next-nnn*2;]		{tmp:2 = 0; tmp=reloc; export  tm
 
 # ############# VEIKIANTYS 
 :NOP		is imm16=0x0A0	{R0=R0;}
-:HALT		is imm16=0		{ PC=(0x28); PS=(0x2A); goto [PC];}
-:WAIT		is imm16=1		{ PC=PC-2; goto [PC];}
+:HALT		is imm16=0		{ tmp:2=0x28; PC=*:2 tmp; tmp=0x2A; PS=*:2 tmp; goto [PC];}
+:WAIT		is imm16=1		{ PC=PC; goto [PC];}
 :CLC		is imm16=0x0A1 {CC();}
 :CLV		is imm16=0x0A2 {CV();}
 :CLZ		is imm16=0x0A4 {CZ();}
@@ -179,7 +179,7 @@ RELN:	reloc	is nnn	[reloc = inst_next-nnn*2;]		{tmp:2 = 0; tmp=reloc; export  tm
 :SEN		is imm16=0x0b8 {SN();}
 :SCC		is imm16=0x0bF {SC();SV();SZ();SN();}
 :EMT "'"baitas"'"		is op_h=0x88 & baitas { push(PS); push(PC); PC=(0x18);PS=(0x1A); call [PC];} # NETEISYBE
-:TRAP		is op_h=0x89 {push(PS); push(PC); PC=(0x1C);PS=(0x1e); call [PC];} # NETEISYBE
+:TRAP		is op_h=0x89 {push(PS); push(PC); tmp:2=0x1c; PC=*:2 tmp; tmp=0x1e; PS=*:2 tmp; goto [PC]; call [PC];} # NETEISYBE
 :IOT		is imm16=0x004 {push(PS); push(PC); PC=(0x10); PS=(0x12); call [PC];} # NETEISYBE
 :BPT		is imm16=0x003 {push(PS); push(PC); PC=(0x0C); PS=(0x0E); call [PC];} # NETEISYBE
 :RTI		is imm16=0x002 {pop(PC); pop(PS); return [PC];} # NETEISYBE
@@ -206,8 +206,7 @@ RELN:	reloc	is nnn	[reloc = inst_next-nnn*2;]		{tmp:2 = 0; tmp=reloc; export  tm
 # file:///C:/Users/User/Downloads/ghidra_12.0_PUBLIC_20251205/ghidra_12.0_PUBLIC/docs/languages/html/sleigh_constructors.html#sleigh_sections_constructor
 
 ####################### VARIANTAI adresacijos #############################################
-#export only register names
-RRR: reg_s is reg_s { export *:2 reg_s;}
+
 
 
 # adresacijos metodai (mode)? arba
@@ -240,7 +239,7 @@ OPS: "("reg_s") OK1"		is met_s=1 & reg_s {tmp:2 =0;  MemRead(tmp,reg_s); export 
 OPS: "("reg_s")+ OK2a"		is byte=1 & met_s=2 & reg_s {tmp:2=reg_s; reg_s=reg_s+1; export *:2 tmp; }
 OPS: "("reg_s")+ OK2b"		is byte=0 & met_s=2 & reg_s {tmp:2=reg_s; reg_s=reg_s+2; export *:2 tmp; }
 OPS: "#"imm16" OK2c"		is byte=0 & met_s=2 & reg_s=7 & reg_s ;imm16{tmp:2 = imm16; reg_s=reg_s+2; export tmp;}
-OPS: "#"imm16" OK2c"		is byte=1 & met_s=2 & reg_s=7 & reg_s ;imm16{tmp:2 = imm16; reg_s=reg_s+2; export tmp;}
+OPS: "#"imm16" OK2d"		is byte=1 & met_s=2 & reg_s=7 & reg_s ;imm16{reg_s=reg_s+2; export *:2 reg_s;}
 
 # MODE3: (autoincrement deferred)
 # EA_ptr = Rn
@@ -275,7 +274,7 @@ OPS: "@-("reg_s") OK5a"		is met_s=5 & reg_s {reg_s=reg_s-2; tmp:2 = *:2 reg_s; e
 # EA = Rn + offset
 # operand = MEM[EA]
 OPS: imm16"("reg_s") OK6a"	is met_s=6 & reg_s		;imm16			{tmp:2 = imm16+reg_s; export *:2 tmp;}
-OPS: REL16"] OK6b"			is met_s=6 & reg_s=7 	;REL16			{export REL16;}
+OPS: REL16"] OK6b"			is met_s=6 & reg_s=7 	;REL16			{tmp:2= REL16; export tmp;} #ar tikrai
 OPS: REL32L" OK6c"			is met_s=6 & met_d=6 & reg_s=7 ;REL32L	{tmp:2 = REL32L; export *:2 tmp;}
 OPS: REL32L" OK6d"			is met_s=6 & met_d=7 & reg_s=7 ;REL32L	{tmp:2 = REL32L; export *:2 tmp;}
 OPS: imm32L"("reg_s") OK6e"	is met_s=6 & met_d=6 & reg_s ;imm32L	{tmp:2 = imm32L+reg_s; export *:2 tmp;}
@@ -297,7 +296,7 @@ OPS: "@"REL32L"?OK7e"		is met_s=7 &         (met_d=6 | met_d=7) & reg_s=7				;RE
 
 # DESTINATION DESTINATION DESTINATION DESTINATION DESTINATION DESTINATION DESTINATION DESTINATION DESTINATION DESTINATION DESTINATION DESTINATION DESTINATION DESTINATION
 OPD: reg_d" OK0"	is met_d=0 & reg_d 			{export reg_d;}
-OPD: "("reg_d") OK1"	is met_d=1 & reg_d 		{export *:2 reg_d;}
+OPD: "("reg_d") OK1"	is met_d=1 & reg_d 		{tmp:2=reg_d; export *:2 tmp;}
 
 # MODE2: (autoincrement)
 # EA = Rn
@@ -362,13 +361,21 @@ OPD: "@"imm32H"?OK7d"	is met_d=7 &         (met_s=6 | met_s=7) & reg_d!=7				;im
 OPD: "@"REL32H"?OK7e"	is met_d=7 &         (met_s=6 | met_s=7) & reg_d=7				;REL32H				{tmp:2 = REL32H; export *:2 tmp;}
 
 ######### XOR SOB MUL DIV ASH ASHC
-:XOR reg_s,OPD	is (kodas_s=7 &met_s=4 & reg_s) ...& OPD {OPD=OPD^reg_s; FLZ(OPD);FLN(OPD);}
+:XOR reg_s,OPD	is (kodas_s=7 &met_s=4 & reg_s) ...& OPD {OPD=OPD^reg_s; FLZ(OPD);FLN(OPD);CV();}
 :SOB reg_s,RELN	is kodas_s=7 &met_s=7 & reg_s & RELN &nnn {reg_s=reg_s-1;if (reg_s==0) goto inst_next;goto [RELN];} # SOB RRR,NNN NNN : R := R – 1; IF (R != 0) THEN PC := PC – 2 * NN
 
-:MUL RRR,OPD	is (kodas_s=7 &met_s=0 & RRR) ...& OPD {OPD=OPD*RRR;  FLZ(OPD); FLN(OPD);}
-:DIV RRR,OPD	is (kodas_s=7 &met_s=1 & RRR) ...& OPD {OPD=OPD/RRR;  FLZ(OPD); FLN(OPD);}
-:ASH RRR,OPD	is (kodas_s=7 &met_s=2 & RRR) ...& OPD {OPD=RRR;  FLZ(OPD); FLN(OPD);}
-:ASHC RRR,OPD	is (kodas_s=7 &met_s=3 & RRR) ...& OPD {OPD=RRR;  FLZ(OPD); FLN(OPD);}
+
+:MUL reg_s,OPD	is (kodas_s=7 &met_s=0 & reg_s) ...& OPD {
+r:4=zext(OPD)*zext(reg_s); 
+OPD=r[0,15];
+reg_s=r[16,15];
+Z(r==0);CV();
+N((r>>31)==1);
+#C((r)>32767 or r<-32768);#???? kaip?
+}
+:DIV reg_s,OPD	is (kodas_s=7 &met_s=1 & reg_s) ...& OPD {OPD=OPD/reg_s;  FLZ(OPD); FLN(OPD);}
+:ASH reg_s,OPD	is (kodas_s=7 &met_s=2 & reg_s) ...& OPD {OPD=reg_s;  FLZ(OPD); FLN(OPD);}
+:ASHC reg_s,OPD	is (kodas_s=7 &met_s=3 & reg_s) ...& OPD {OPD=reg_s;  FLZ(OPD); FLN(OPD);}
 
 ##################################################################################
 
@@ -446,46 +453,36 @@ OPD: "@"REL32H"?OK7e"	is met_d=7 &         (met_s=6 | met_s=7) & reg_d=7				;REL
 #:JMP "@"REL16" ok7" 	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=7 & reg_d=7; REL16 {goto [REL16];}
 #:JMP ""REL16" ok6"		is kodas_s=0 & met_s=0 & reg_s=1 & met_d=6 & reg_d=7; REL16 {goto REL16;}
 #:JMP "@#"REL16" ok3"	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=3 & reg_d=7; REL16 {goto REL16;}
-#:JMP "#"REL16" ok2"		is kodas_s=0 & met_s=0 & reg_s=1 & met_d=2 & reg_d=7; REL16 {goto REL16;}
+#:JMP "#"REL16" ok2"	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=2 & reg_d=7; REL16 {goto REL16;}
 
 
 # JSR methods.
-JPS: reg_s	is  reg_s {export reg_s;}
 I16: imm16	is imm16 {export *:2 imm16;}
-RRD: reg_d is reg_d { export reg_d;}
 
 
 :JSRa reg_s,(reg_d)	is kodas_s=0 & met_s=4 & reg_ss<7 & met_d=1 & reg_s & reg_d{
-tmp:2=reg_d;
-push(reg_s);
-reg_s=PC+2;
-PC=tmp;
-call[PC];
+tmp:2=reg_d;push(reg_s);reg_s=PC+2;PC=tmp;call[PC];
 }
 
-:JSRb JPS,#I16	is (kodas_s=0 & met_s=4 & reg_s<7 & reg_d=7 & met_d=1)& JPS ;I16 {tmp=JPS+I16; call [tmp];}
-:JSRc JPS,#I16	is (kodas_s=0 & met_s=4 & reg_s<7 & reg_d=7 & met_d=2)& JPS ;I16 {tmp=JPS+I16; call [tmp];}
-:JSRd JPS,@#I16	is (kodas_s=0 & met_s=4 & reg_s<7 & reg_d=7 & met_d=3)& JPS ;I16 {tmp=I16+JPS; call [*:2 tmp];}
-:JSRe JPS,REL16	is (kodas_s=0 & met_s=4 & reg_s<7 & reg_d=7 & met_d=6)& JPS ;REL16 {tmp=JPS+REL16; call [*:2 tmp];}
-:JSRf JPS,@REL16	is (kodas_s=0 & met_s=4 & reg_s<7 & reg_d=7 & met_d=7)& JPS ;REL16 {tmp=JPS+REL16; call [*:2 tmp];}
+:JSRb reg_s,#I16	is (kodas_s=0 & met_s=4 & reg_ss<7 & reg_d=7 & met_d=1)& reg_s ;I16 {push(PC+2); tmp=reg_s+I16; call [tmp];}
+:JSRc reg_s,#I16	is (kodas_s=0 & met_s=4 & reg_ss<7 & reg_d=7 & met_d=2)& reg_s ;I16 {push(PC+2); tmp=reg_s+I16; call [tmp];}
+:JSRd reg_s,@#I16	is (kodas_s=0 & met_s=4 & reg_ss<7 & reg_d=7 & met_d=3)& reg_s ;I16 {push(PC+2); tmp=I16+reg_s; call [*:2 tmp];}
+:JSRe reg_s,REL16	is (kodas_s=0 & met_s=4 & reg_ss<7 & reg_d=7 & met_d=6)& reg_s ;REL16 {push(PC+2); tmp=reg_s+REL16; call [*:2 tmp];}
+:JSRf reg_s,@REL16	is (kodas_s=0 & met_s=4 & reg_ss<7 & reg_d=7 & met_d=7)& reg_s ;REL16 {push(PC+2); tmp=reg_s+REL16; call [*:2 tmp];}
 :JSRg "PC?",OPD	is (kodas=0x27 & reg_d!=7)... & OPD {call OPD;}
 
-:"ILLEGAL CALL 0>"REL16	is (kodas=0x27 & met_d=0 & reg_d=7) ; REL16 { *SP=PC; SP=SP-1; call [REL16]; }
-:"ILLEGAL CALL 1>"REL16	is (kodas=0x27 & met_d=1 & reg_d=7) ; REL16 { *SP=PC; SP=SP-1; call [REL16]; }
-:CALL #I16				is (kodas=0x27 & met_d=2 & reg_d=7) ; I16 {call [I16];}
-:CALL @#I16				is (kodas=0x27 & met_d=3 & reg_d=7) ; I16 {call I16; }
-:"ILLEGAL CALL 4>"REL16	is (kodas=0x27 & met_d=4 & reg_d=7) ; REL16 { *SP=PC; SP=SP-1; call [REL16]; }
-:"ILLEGAL CALL 5>"REL16	is (kodas=0x27 & met_d=5 & reg_d=7) ; REL16 { *SP=PC; SP=SP-1; call [REL16]; }
-:CALL REL16				is (kodas=0x27 & met_d=6 & reg_d=7) ; REL16 { *SP=PC; SP=SP-1; call [REL16]; }
-:CALL "@"REL16			is (kodas=0x27 & met_d=7 & reg_d=7) ; REL16 { *SP=PC; SP=SP-1; call [REL16]; }
+:"ILLEGAL CALL 0>"REL16	is (kodas=0x27 & met_d=0 & reg_d=7) ; REL16 {push(PC+2); call [REL16]; }
+:"ILLEGAL CALL 1>"REL16	is (kodas=0x27 & met_d=1 & reg_d=7) ; REL16 {push(PC+2); call [REL16]; }
+:CALL #I16				is (kodas=0x27 & met_d=2 & reg_d=7) ; I16 {push(PC+2);call [I16];}
+:CALL @#I16				is (kodas=0x27 & met_d=3 & reg_d=7) ; I16 {push(PC+2);call I16; }
+:"ILLEGAL CALL 4>"REL16	is (kodas=0x27 & met_d=4 & reg_d=7) ; REL16 {push(PC+2);call [REL16]; }
+:"ILLEGAL CALL 5>"REL16	is (kodas=0x27 & met_d=5 & reg_d=7) ; REL16 {push(PC+2);call [REL16]; }
+:CALL REL16				is (kodas=0x27 & met_d=6 & reg_d=7) ; REL16 {push(PC+2); call [REL16]; }
+:CALL "@"REL16			is (kodas=0x27 & met_d=7 & reg_d=7) ; REL16 {push(PC+2); call [REL16]; }
 
 ###### RETURN
-:RETURN		is imm16=0x87 {pop(PC); pop(PS); return [PC];}
-:RTS RRD	is kodas=2 & metod=0 & regai<7 &RRD {
-PC=RRD;
-pop(RRD);
-return [PC];
-}
+:RETURN		is imm16=0x87 {pop(PC);return [PC];}
+:RTS reg_d	is kodas=2 & metod=0 & regai<7 &reg_d {PC=reg_d;pop(reg_d);return [PC];}
 
 :MARK nnn is kodas=0x34 &nnn {SP=PC+2*nnn;PC=R5;pop(R5);} # SP := PC + 2 * NN; PC := R5; R5 := (SP)+
 
