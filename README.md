@@ -1,4 +1,4 @@
-#PDP-11 for Ghidra
+##PDP-11 for Ghidra
 
 
 A Ghidra processor module that brings the PDP-11 architecture into the modern reverse-engineering workflow. It defines the instruction set, addressing modes, and Sleigh semantics, enabling both static disassembly and interactive emulation inside Ghidra.
