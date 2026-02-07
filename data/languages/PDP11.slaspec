@@ -98,18 +98,13 @@ macro MemRead(dest,adresas) {
 	dest = *:2 ptr;
 }
 
-macro MemStore(adresas,val) {
-   	ptr:2 = adresas;
-	*:2 ptr = val;
-}
+macro MemStore(adresas,val) {ptr:2 = adresas;*:2 ptr = val;}
 
 macro push(val) {
     SP = SP - 2;
-    # ptr:2 = (SP);
     *:2 SP = val;
 }
 macro pop(val) {
-    #ptr:2 = (SP);
     val = *:2 SP;
     SP = SP + 2;
 }
@@ -446,14 +441,19 @@ N((r>>31)==1);
 
 # JSR/JMP - need to rewrite
 
+:JMP ""reg_d" ok0" 		is kodas_s=0 & met_s=0 & reg_s=1 & met_d=0 & reg_d {PC=reg_d; goto reg_d;} #OK
 :JMP "("reg_d") ok1" 	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=1 & reg_d {PC=reg_d; goto [PC];} #OK
-:JMP "-("reg_d") ok4" 	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=4 & reg_d {reg_d=reg_d-2; PC=reg_d; goto [PC];} #OK
-:JMP REL16 "ok6"		is kodas_s=0 & met_s=0 & reg_s=1 & met_d=6 & reg_d=7 ; REL16{PC=REL16; goto [PC];}
+:JMP "#"imm16" ok2a"	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=2 & reg_d=7; imm16 {PC=imm16; goto [PC];}
+:JMP "("reg_d")+ ok2b"	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=2 & reg_dd!=7 & reg_d { PC=reg_d; reg_d=reg_d+2; goto [PC];}
 
-#:JMP "@"REL16" ok7" 	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=7 & reg_d=7; REL16 {goto [REL16];}
-#:JMP ""REL16" ok6"		is kodas_s=0 & met_s=0 & reg_s=1 & met_d=6 & reg_d=7; REL16 {goto REL16;}
-#:JMP "@#"REL16" ok3"	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=3 & reg_d=7; REL16 {goto REL16;}
-#:JMP "#"REL16" ok2"	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=2 & reg_d=7; REL16 {goto REL16;}
+
+:JMP "@#"imm16" ok3"	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=3 & reg_d=7; imm16 {PC=imm16; goto [PC];}
+:JMP "-("reg_d") ok4" 	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=4 & reg_d {reg_d=reg_d-2; PC=reg_d; goto [PC];} #OK
+# met_d=5
+:JMP REL16 "ok6"		is kodas_s=0 & met_s=0 & reg_s=1 & met_d=6 & reg_d=7 ; REL16{PC=REL16; goto [PC];}
+:JMP "@"REL16" ok7" 	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=7 & reg_d=7; REL16 {goto [REL16];}
+
+
 
 
 # JSR methods.
