@@ -236,6 +236,8 @@ OPS: "("reg_s")+ OK2b"		is byte=0 & met_s=2 & reg_s {tmp:2=reg_s; reg_s=reg_s+2;
 OPS: "#"imm16" OK2c"		is byte=0 & met_s=2 & reg_s=7 & reg_s ;imm16{tmp:2 = imm16; reg_s=reg_s+2; export tmp;}
 OPS: "#"imm16" OK2d"		is byte=1 & met_s=2 & reg_s=7 & reg_s ;imm16{reg_s=reg_s+2; export *:2 reg_s;}
 
+OPS: "#"imm32L"OK2e"	is byte=0 & met_s=2 & reg_s=7 & met_d=2 & reg_d=7;imm32L {tmp:2 = imm32L; export tmp;}
+
 # MODE3: (autoincrement deferred)
 # EA_ptr = Rn
 # EA = MEM[EA_ptr]
@@ -301,7 +303,10 @@ OPD: "("reg_d") OK1"	is met_d=1 & reg_d 		{tmp:2=reg_d; export *:2 tmp;}
 OPD: "("reg_d")+ OK2a"		is byte=1 & met_d=2 & reg_d {tmp:2=reg_d; reg_d=reg_d+1; export *:2 tmp; }
 OPD: "("reg_d")+ OK2b"		is byte=0 & met_d=2 & reg_d {tmp:2=reg_d; reg_d=reg_d+2; export *:2 tmp; }
 OPD: "#"imm16" OK2c"		is byte=0 & met_d=2 & reg_d=7 & reg_d ;imm16{tmp:2 = imm16; reg_d=reg_d+2; export tmp;}
-OPD: "#"imm16" OK2c"		is byte=1 & met_d=2 & reg_d=7 & reg_d ;imm16{tmp:2 = imm16; reg_d=reg_d+2; export tmp;}
+OPD: "#"imm16" OK2d"		is byte=1 & met_d=2 & reg_d=7 & reg_d ;imm16{tmp:2 = imm16; reg_d=reg_d+2; export tmp;}
+
+OPD: "#"imm32H"OK2e"	is byte=0 & met_s=2 & reg_s=7 & met_d=2 & reg_d=7;imm32H {tmp:2 = imm32H; export tmp;}
+
 
 # MODE3: (autoincrement deferred)
 # EA_ptr = Rn
@@ -428,8 +433,8 @@ N((r>>31)==1);
 :TSTB OPD		is (kodas_s=8 & met_s=5 &reg_s=7)... &OPD {FLZ(OPD & 0x00FF); CV(); CC(); FLN(OPD<<8);}
 :SXT OPD		is (kodas_s=0 & met_s=6 &reg_s=7)... &OPD {tmp=0xFFFF;if (PS[3,1]) goto <b>;tmp=0;<b>OPD=tmp;}
 :SWAB OPD		is (kodas_s=0 & met_s=0 &reg_s=3)... &OPD {tmp=OPD>>8; OPD=(OPD<<8)|tmp;FLN(OPD<<8);FLZ(OPD&0xFF);CV();CC();}
-:MFPS OPD		is (kodas_s=8 & met_s=6 &reg_s=7)... &OPD {OPD=PS;}
-:MTPS OPD		is (kodas_s=8 & met_s=6 &reg_s=4)... &OPD {PS=OPD;}
+:MFPS OPD		is (kodas_s=8 & met_s=6 &reg_s=7)... &OPD {tmp=OPD&0xFF00;OPD=PS&0xFF|tmp;FLZ(OPD&0xFF);CV();N((OPD&0x80)==0x80);}
+:MTPS OPD		is (kodas_s=8 & met_s=6 &reg_s=4)... &OPD {tmp=OPD&0b01010101;PS=PS&(~0b01010101)|tmp;}
 ############################################################################################
 
 # Jumpai (PC registras, R7)
@@ -439,14 +444,11 @@ N((r>>31)==1);
 # 6 - X    110 111 = 37
 # 7 - @X   111 111 = 3f
 
-# JSR/JMP - need to rewrite
-
+# JMP - jumps. Some of these make no sense, but are legal. Or semi-legal.
 :JMP ""reg_d" ok0" 		is kodas_s=0 & met_s=0 & reg_s=1 & met_d=0 & reg_d {PC=reg_d; goto reg_d;} #OK
 :JMP "("reg_d") ok1" 	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=1 & reg_d {PC=reg_d; goto [PC];} #OK
 :JMP "#"imm16" ok2a"	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=2 & reg_d=7; imm16 {PC=imm16; goto [PC];}
 :JMP "("reg_d")+ ok2b"	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=2 & reg_dd!=7 & reg_d { PC=reg_d; reg_d=reg_d+2; goto [PC];}
-
-
 :JMP "@#"imm16" ok3"	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=3 & reg_d=7; imm16 {PC=imm16; goto [PC];}
 :JMP "-("reg_d") ok4" 	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=4 & reg_d {reg_d=reg_d-2; PC=reg_d; goto [PC];} #OK
 # met_d=5
@@ -460,10 +462,7 @@ N((r>>31)==1);
 I16: imm16	is imm16 {export *:2 imm16;}
 
 
-:JSRa reg_s,(reg_d)	is kodas_s=0 & met_s=4 & reg_ss<7 & met_d=1 & reg_s & reg_d{
-tmp:2=reg_d;push(reg_s);reg_s=PC+2;PC=tmp;call[PC];
-}
-
+:JSRa reg_s,(reg_d)	is  kodas_s=0 & met_s=4 & reg_ss<7 &reg_dd!=7& met_d=1 & reg_s &reg_d {tmp:2=reg_d;push(reg_s);reg_s=PC+2;PC=tmp;call[PC];}
 :JSRb reg_s,#I16	is (kodas_s=0 & met_s=4 & reg_ss<7 & reg_d=7 & met_d=1)& reg_s ;I16 {push(PC+2); tmp=reg_s+I16; call [tmp];}
 :JSRc reg_s,#I16	is (kodas_s=0 & met_s=4 & reg_ss<7 & reg_d=7 & met_d=2)& reg_s ;I16 {push(PC+2); tmp=reg_s+I16; call [tmp];}
 :JSRd reg_s,@#I16	is (kodas_s=0 & met_s=4 & reg_ss<7 & reg_d=7 & met_d=3)& reg_s ;I16 {push(PC+2); tmp=I16+reg_s; call [*:2 tmp];}
