@@ -93,12 +93,12 @@ N(dd>ss);
 macro FLZ(register){PS[2,1]=(register==0);}
 macro FLV(register){V((register & 0xFFFF)==0xFFFF);}
 macro FLN(register){PS[3,1]=(register & 0x8000)!=0;}
-macro MemRead(dest,adresas) {
-   	ptr:2 = adresas;
-	dest = *:2 ptr;
-}
+#macro MemRead(dest,adresas) {
+#   	ptr:2 = adresas;
+#	dest = *:2 ptr;
+#}
 
-macro MemStore(adresas,val) {ptr:2 = adresas;*:2 ptr = val;}
+#macro MemStore(adresas,val) {ptr:2 = adresas;*:2 ptr = val;}
 
 macro push(val) {
     SP = SP - 2;
@@ -202,8 +202,6 @@ RELN:	reloc	is nnn	[reloc = inst_next-nnn*2;]		{tmp:2 = 0; tmp=reloc; export  tm
 
 ####################### VARIANTAI adresacijos #############################################
 
-
-
 # adresacijos metodai (mode)? arba
 # 0 - registras Rn ; =R
 # 1 - netiesioginis registras @Rn arba (Rn) - viduje registro reiksme; =peek(R)
@@ -225,7 +223,8 @@ OPS: reg_s" OK0b"			is met_s=0 & reg_ss!=7 & reg_s{tmp:2 =  reg_s; export tmp;}
 # Register contains the address of the operand
 # EA = Rn
 # operand = MEM[EA]
-OPS: "("reg_s") OK1"		is met_s=1 & reg_s {tmp:2 =0;  MemRead(tmp,reg_s); export tmp;}
+
+OPS: "("reg_s") OK1"		is met_s=1 & reg_s {tmp:2 =0; tmp=*:2 reg_s; export tmp;}
 
 # MODE2: (autoincrement)
 # EA = Rn
@@ -373,34 +372,41 @@ Z(r==0);CV();
 N((r>>31)==1);
 #C((r)>32767 or r<-32768);#???? kaip?
 }
-:DIV reg_s,OPD	is (kodas_s=7 &met_s=1 & reg_s) ...& OPD {OPD=OPD/reg_s;  FLZ(OPD); FLN(OPD);}
-:ASH reg_s,OPD	is (kodas_s=7 &met_s=2 & reg_s) ...& OPD {OPD=reg_s;  FLZ(OPD); FLN(OPD);}
-:ASHC reg_s,OPD	is (kodas_s=7 &met_s=3 & reg_s) ...& OPD {OPD=reg_s;  FLZ(OPD); FLN(OPD);}
+:DIV reg_s,OPD	is (kodas_s=7 &met_s=1 & reg_s) ...& OPD {
+#bibiene?
+OPD=OPD/reg_s;  FLZ(OPD); FLN(OPD);}
+:ASH reg_s,OPD	is (kodas_s=7 &met_s=2 & reg_s) ...& OPD {
+if((reg_s&0x8000)==0x8000)goto<a>;
+OPD=OPD<<(reg_s&0x3F);
+goto<b>;
+<a>
+OPD=OPD>>(reg_s&0x3F);
+<b>
+FLZ(OPD); FLN(OPD);}
+:ASHC reg_s,OPD	is (kodas_s=7 &met_s=3 & reg_s) ...& OPD {
+if((reg_s&0x8000)==0x8000)goto<a>;
+OPD=OPD<<(reg_s&0x3F);
+goto<b>;
+<a>
+OPD=OPD>>(reg_s&0x3F);
+<b>
+FLZ(OPD); FLN(OPD);}
 
 ##################################################################################
 
 :MOV OPS,OPD 	is (kodas_s=0x1)...& OPD & OPS {tmp:1=0;signn(OPS, tmp);N(tmp);FLZ(OPS); OPD = OPS; CV();}
 :MOVB OPS,OPD 	is (kodas_s=0x9)...& OPD & OPS {OPD=OPD & 0xFF00; OPD =OPD | (OPS & 0x00FF); FLZ(OPS & 0x00FF);}
-# N =src<0
-# Z =src==0
-# V =0
-# C no change
-
-
-:CMP OPS,OPD 	is (kodas_s=0x2)... & OPD & OPS { CMP_FLAGS(OPD,OPS); }
-:CMPB OPS,OPD 	is (kodas_s=0xA)... & OPD & OPS { CMP_FLAGS(OPD<<8,OPS<<8); FLZ((OPD&0xFF)==(OPS&0xFF));}
-:SUB OPS,OPD 	is (kodas_s=0xE)... & OPS & OPD { SUB_FLAGS(OPS,OPD); OPD=OPD-OPS;FLN(OPD);}
-
+:CMP OPS,OPD 	is (kodas_s=0x2)... & OPD & OPS {CMP_FLAGS(OPD,OPS);}
+:CMPB OPS,OPD 	is (kodas_s=0xA)... & OPD & OPS {CMP_FLAGS(OPD<<8,OPS<<8); FLZ((OPD&0xFF)==(OPS&0xFF));}
+:SUB OPS,OPD 	is (kodas_s=0xE)... & OPS & OPD {SUB_FLAGS(OPS,OPD); OPD=OPD-OPS;FLN(OPD);}
 :ADD OPS,OPD 	is (kodas_s=0x6)... & OPS & OPD {ADD_FLAGS(OPS,OPD);OPD=OPD+OPS;FLN(OPD);}
-
-
 
 :BIT OPS,OPD 	is (kodas_s=0x3)... & OPS & OPD {tmp:2=OPS&OPD;FLN(tmp);FLZ(tmp);CV();}
 :BITB OPS,OPD 	is (kodas_s=0xB)... & OPS & OPD {tmp:2=OPS&OPD;FLN(tmp<<8);FLZ(tmp&0xFF);CV();}
-:BIC OPS,OPD 	is (kodas_s=0x4)... & OPS & OPD { OPD=(~OPS) & OPD;FLZ(OPD);FLN(OPD); CV();} #bit clear dst=not(src) and (dst)
-:BICB OPS,OPD 	is (kodas_s=0xC)... & OPS & OPD { tmp=OPD&0xFF00;OPD=((~OPS)&0x00FF)|tmp;FLZ(OPD&0x00FF);FLN(OPD<<8); CV();}
-:BIS OPS,OPD 	is (kodas_s=0x5)... & OPS & OPD { OPD=OPD | OPS; FLN(OPD);FLZ(OPD);CV();}
-:BISB OPS,OPD 	is (kodas_s=0xD)... & OPS & OPD { OPD=OPD | (OPS&0xFF); FLN(OPD);FLZ(OPD);CV();}
+:BIC OPS,OPD 	is (kodas_s=0x4)... & OPS & OPD {OPD=(~OPS) & OPD;FLZ(OPD);FLN(OPD); CV();} #bit clear dst=not(src) and (dst)
+:BICB OPS,OPD 	is (kodas_s=0xC)... & OPS & OPD {tmp=OPD&0xFF00;OPD=((~OPS)&0x00FF)|tmp;FLZ(OPD&0x00FF);FLN(OPD<<8); CV();}
+:BIS OPS,OPD 	is (kodas_s=0x5)... & OPS & OPD {OPD=OPD | OPS; FLN(OPD);FLZ(OPD);CV();}
+:BISB OPS,OPD 	is (kodas_s=0xD)... & OPS & OPD {OPD=OPD | (OPS&0xFF); FLN(OPD);FLZ(OPD);CV();}
 :INC OPD		is (kodas_s=0 & met_s=5 &reg_s=2)... &OPD {V(OPD==0x7FFF);OPD=OPD+1; FLZ(OPD);FLN(OPD);}
 :INCB OPD		is (kodas_s=8 & met_s=5 &reg_s=2)... &OPD {V(OPD==0x7F);tmp=OPD & 0xFF00; OPD=((OPD+1)&0x00FF)|tmp; FLZ(OPD & 0xFF00); FLN(OPD<<8);}
 :CLR OPD		is (kodas_s=0 & met_s=5 &reg_s=0)... &OPD {OPD=0; CN(); SZ(); CV(); CC();}
@@ -455,12 +461,8 @@ N((r>>31)==1);
 :JMP REL16 "ok6"		is kodas_s=0 & met_s=0 & reg_s=1 & met_d=6 & reg_d=7 ; REL16{PC=REL16; goto [PC];}
 :JMP "@"REL16" ok7" 	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=7 & reg_d=7; REL16 {goto [REL16];}
 
-
-
-
 # JSR methods.
 I16: imm16	is imm16 {export *:2 imm16;}
-
 
 :JSRa reg_s,(reg_d)	is  kodas_s=0 & met_s=4 & reg_ss<7 &reg_dd!=7& met_d=1 & reg_s &reg_d {tmp:2=reg_d;push(reg_s);reg_s=PC+2;PC=tmp;call[PC];}
 :JSRb reg_s,#I16	is (kodas_s=0 & met_s=4 & reg_ss<7 & reg_d=7 & met_d=1)& reg_s ;I16 {push(PC+2); tmp=reg_s+I16; call [tmp];}
@@ -504,6 +506,5 @@ FRD: reg_d is reg_d			{ export *:1 reg_d; }
 #:WCPC ($MTPC$) = o32-o33
 #:WCPS ($MTPS$) = o34-o37
 #:???? = o30
-
 
 # programinis dugnas. (c)2026 http://www.vabolis.lt
