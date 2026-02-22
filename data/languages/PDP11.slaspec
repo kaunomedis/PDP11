@@ -21,7 +21,6 @@ define register offset=0x0006 size=2 [ R3 ];
 define register offset=0x0008 size=2 [ R4 ];
 define register offset=0x000A size=2 [ R5 ];
 define register offset=0x000C size=2 [ SP ]; #R6 , stekas mazejantis
-
 define register offset=0x000E size=2 [ PC ]; #R7
 define register offset=0x0020 size=2 [ PS ]; # ony one byte. Keep 2 to make SLEIGHT happy
 
@@ -38,7 +37,6 @@ define register offset=0x0020 size=2 [ PS ]; # ony one byte. Keep 2 to make SLEI
 # b2        - (Z) Zero flag
 # b1        - (D) Debug flag
 # b0        - (C) Carry flag
-
 
 macro C(a){PS[0,1]=a;}
 macro CC(){PS[0,1]=0;}
@@ -59,37 +57,9 @@ macro I(a){PS[6,1]=a;}
 macro CHKNZ(a){PS[3,1]=(a & 0x8000)!=0;PS[2,1]=(a==0);}
 macro V_NZ(){PS[5,1]=PS[0,1] ^ PS[3,1];}
 macro signn(check, result){result=(check & 0x8000)!=0;}
-
-macro ADD_FLAGS(ss,dd) {
-ts=(ss & 0x8000)!=0;
-td=(dd & 0x8000)!=0;
-tr=(((ss+dd) & 0x8000)!=0);
-Z(ss==dd);
-V((!(ts ^ td)) & (tr ^ td));
-C((ts & td)|(ts ^ td) & !tr);
-}
-macro SUB_FLAGS(ss,dd){
-ts=(ss & 0x8000)!=0;
-td=(dd & 0x8000)!=0;
-tr=(((ss-dd) & 0x8000)!=0);
-Z(ss==dd);
-V((ts ^ td) & (!(tr ^ td)));
-C((ts & !(td))|(!(ts ^ td) & tr));
-N(dd>ss);
-}
-
-macro CMP_FLAGS(ss,dd) {
-
-ts=(ss & 0x8000)!=0;
-td=(dd & 0x8000)!=0;
-tr=(((ss-dd) & 0x8000)!=0);
-Z(ss==dd);
-V((ts ^ td) & (!(tr ^ td)));
-C(((!ts) & td)|(!(ts ^ td) & tr));
-N(dd>ss);
-
-}
-
+macro ADD_FLAGS(ss,dd){ts=(ss & 0x8000)!=0;td=(dd & 0x8000)!=0;tr=(((ss+dd) & 0x8000)!=0);Z(ss==dd);V((!(ts ^ td)) & (tr ^ td));C((ts & td)|(ts ^ td) & !tr);}
+macro SUB_FLAGS(ss,dd){ts=(ss & 0x8000)!=0;td=(dd & 0x8000)!=0;tr=(((ss-dd) & 0x8000)!=0);Z(ss==dd);V((ts ^ td) & (!(tr ^ td)));C((ts & !(td))|(!(ts ^ td) & tr));N(dd>ss);}
+macro CMP_FLAGS(ss,dd){ts=(ss & 0x8000)!=0;td=(dd & 0x8000)!=0;tr=(((ss-dd) & 0x8000)!=0);Z(ss==dd);V((ts ^ td) & (!(tr ^ td)));C(((!ts) & td)|(!(ts ^ td) & tr));N(dd>ss);}
 macro FLZ(register){PS[2,1]=(register==0);}
 macro FLV(register){V((register & 0xFFFF)==0xFFFF);}
 macro FLN(register){PS[3,1]=(register & 0x8000)!=0;}
@@ -98,16 +68,8 @@ macro FLN(register){PS[3,1]=(register & 0x8000)!=0;}
 #	dest = *:2 ptr;
 #}
 
-#macro MemStore(adresas,val) {ptr:2 = adresas;*:2 ptr = val;}
-
-macro push(val) {
-    SP = SP - 2;
-    *:2 SP = val;
-}
-macro pop(val) {
-    val = *:2 SP;
-    SP = SP + 2;
-}
+macro push(val) {SP = SP - 2;*:2 SP = val;}
+macro pop(val)  {val = *:2 SP;SP = SP + 2;}
 
 #TOKENS
 
@@ -158,7 +120,7 @@ REL32L:	reloc 	is rell32l  	[reloc = inst_next + rell32l-2;]	{tmp:2 = 0; tmp=rel
 REL16:	reloc	is rell16   	[reloc = inst_next + rell16;]	{tmp:2 = 0; tmp=reloc; export  tmp; }
 RELN:	reloc	is nnn	[reloc = inst_next-nnn*2;]		{tmp:2 = 0; tmp=reloc; export  tmp; } 
 
-# ############# VEIKIANTYS 
+# ############# SIMPLE INSTRUCTIONS #################################### 
 :NOP		is imm16=0x0A0	{R0=R0;}
 :HALT		is imm16=0		{ tmp:2=0x28; PC=*:2 tmp; tmp=0x2A; PS=*:2 tmp; goto [PC];}
 :WAIT		is imm16=1		{ PC=PC; goto [PC];}
@@ -264,19 +226,19 @@ OPS: "-("reg_s") OK4b"		is byte=0 & met_s=4 & reg_s {reg_s=reg_s-2; export *:2 r
 # EA_ptr = Rn
 # EA = MEM[EA_ptr]
 # operand = MEM[EA]
-OPS: "@-("reg_s") OK5a"		is met_s=5 & reg_s {reg_s=reg_s-2; tmp:2 = *:2 reg_s; export *:2 tmp;}
+OPS: "@-("reg_s")_OK5a"		is met_s=5 & reg_s {reg_s=reg_s-2; tmp:2 = *:2 reg_s; export *:2 tmp;}
 
 # MODE6: (index)
 # EA = Rn + offset
 # operand = MEM[EA]
-OPS: imm16"("reg_s") OK6a"	is met_s=6 & reg_s		;imm16			{tmp:2 = imm16+reg_s; export *:2 tmp;}
-OPS: REL16"] OK6b"			is met_s=6 & reg_s=7 	;REL16			{tmp:2= REL16; export tmp;} #ar tikrai
-OPS: REL32L" OK6c"			is met_s=6 & met_d=6 & reg_s=7 ;REL32L	{tmp:2 = REL32L; export *:2 tmp;}
-OPS: REL32L" OK6d"			is met_s=6 & met_d=7 & reg_s=7 ;REL32L	{tmp:2 = REL32L; export *:2 tmp;}
-OPS: imm32L"("reg_s") OK6e"	is met_s=6 & met_d=6 & reg_s ;imm32L	{tmp:2 = imm32L+reg_s; export *:2 tmp;}
-OPS: imm32L"("reg_s")?OK6f"	is met_s=6 & met_d=7 & reg_s ;imm32L	{tmp:2 = imm32L+reg_s; export *:2 tmp;}
-OPS: REL32L" OK6g"			is met_s=6 & met_d=3 & reg_s=7;REL32L	{tmp:2 = REL32L; export *:2 tmp;}
-OPS: imm32L" OK6h"			is met_s=6 & met_d=3 & reg_d=7 & reg_s!=7;imm32L	{tmp:2 = imm32L; export *:2 tmp;}
+OPS: imm16"("reg_s")_OK6a"	is met_s=6 & reg_s		;imm16			{tmp:2 = imm16+reg_s; export *:2 tmp;}
+OPS: REL16"_OK6b"			is met_s=6 & reg_s=7 	;REL16			{tmp:2= REL16; export tmp;} #ar tikrai
+OPS: REL32L"_OK6c"			is met_s=6 & met_d=6 & reg_s=7 ;REL32L	{tmp:2 = REL32L; export *:2 tmp;}
+OPS: REL32L"_OK6d"			is met_s=6 & met_d=7 & reg_s=7 ;REL32L	{tmp:2 = REL32L; export *:2 tmp;}
+OPS: imm32L"("reg_s")_OK6e"	is met_s=6 & met_d=6 & reg_s ;imm32L	{tmp:2 = imm32L+reg_s; export *:2 tmp;}
+OPS: imm32L"("reg_s")_OK6f"	is met_s=6 & met_d=7 & reg_s ;imm32L	{tmp:2 = imm32L+reg_s; export *:2 tmp;}
+OPS: REL32L"_OK6g"			is met_s=6 & met_d=3 & reg_s=7;REL32L	{tmp:2 = REL32L; export *:2 tmp;}
+OPS: imm32L"_OK6h"			is met_s=6 & met_d=3 & reg_d=7 & reg_s!=7;imm32L	{tmp:2 = imm32L; export *:2 tmp;}
 
 # MODE7: (index deferred)
 # EA_ptr = Rn + offset
@@ -304,8 +266,8 @@ OPD: "("reg_d")+ OK2b"		is byte=0 & met_d=2 & reg_d {tmp:2=reg_d; reg_d=reg_d+2;
 OPD: "#"imm16" OK2c"		is byte=0 & met_d=2 & reg_d=7 & reg_d ;imm16{tmp:2 = imm16; reg_d=reg_d+2; export tmp;}
 OPD: "#"imm16" OK2d"		is byte=1 & met_d=2 & reg_d=7 & reg_d ;imm16{tmp:2 = imm16; reg_d=reg_d+2; export tmp;}
 
-OPD: "#"imm32H"OK2e"	is byte=0 & met_s=2 & reg_s=7 & met_d=2 & reg_d=7;imm32H {tmp:2 = imm32H; export tmp;}
-
+OPD: "#"imm32H"OK2ef"	is byte=0 & met_s=2 & reg_s=7 & met_d=2 & reg_d=7;imm32H {tmp:2 = imm32H; export tmp;}
+OPD: "#"imm32H"OK2ff"	is byte=0 & met_s=6           & met_d=2 & reg_d=7;imm32H {tmp:2 = imm32H; export tmp;}
 
 # MODE3: (autoincrement deferred)
 # EA_ptr = Rn
@@ -317,7 +279,12 @@ OPD: "@("reg_d")+ OK3b"		is met_d=3& reg_dd!=7 & (met_s=2 | met_s=3) &    reg_s!
 OPD: "@("reg_d")+ OK3c"		is met_d=3& reg_dd!=7 & (met_s=2 | met_s=3) &  reg_s=7 & reg_d 					{tmp:2=*:2 reg_d; reg_d=reg_d+2; export *:2 tmp;}
 OPD: "@("reg_d")+ OK3d"		is met_d=3& reg_dd!=7 & (met_s=6 | met_s=7) &  reg_d 							{tmp:2=*:2 reg_d; reg_d=reg_d+2; export *:2 tmp;}
 OPD: "@#"imm16" OK3e"		is met_d=3&  reg_dd=7 & (met_s=0 | met_s=1 | met_s=4 | met_s=5) & reg_d ;imm16 	{tmp:2 =imm16; export *:2 tmp;}
-OPD: "@("reg_d")+ OK3f"		is met_d=3&  reg_dd=7 & (met_s=2 | met_s=3) &   reg_s!=7 & reg_d 				{tmp:2=*:2 reg_d; reg_d=reg_d+2; export *:2 tmp;}
+
+OPD: "@#"imm16"_OK3f"		is met_d=3&  reg_dd=7 & (met_s=2 | met_s=3) &   reg_s!=7 & reg_d 	;imm16			{tmp:2=imm16; export *:2 tmp;}
+
+
+
+
 OPD: "@#"imm32H" OK3g"		is met_d=3&  reg_dd=7 & (met_s=2 | met_s=3) &   reg_s=7  & reg_d;imm32H 		{tmp:2 = imm32H; export *:2 tmp;}
 OPD: "@#"imm32H" OK3h"		is met_d=3&  reg_dd=7 & (met_s=6 | met_s=7) & reg_d=7  ; imm32H 				{tmp:2 = imm32H; export *:2 tmp;}
 
@@ -339,13 +306,21 @@ OPD: "@-("reg_d") OK5a"	is met_d=5 & reg_d 	{reg_d=reg_d-2; tmp:2 = *:2 reg_d; e
 # EA = Rn + offset
 # operand = MEM[EA]
 OPD: imm16"("reg_d") OK6a"	is met_d=6 & reg_d;imm16							{tmp:2 = imm16+reg_d;	export *:2 tmp;}
+
+
 OPD: REL16" OK6b"			is met_d=6 & reg_d=7 ;REL16							{tmp:2 = REL16;			export *:2 tmp;}
+
+OPD: REL32H" OK6i" 			is met_d=6 & met_s=2 & reg_d=7 & reg_s=7; REL32H {tmp:2=REL32H; export *:2 tmp;}
+
+
 OPD: REL32H" OK6c"			is met_d=6 & met_s=6 & reg_d=7 ;REL32H				{tmp:2 = REL32H;		export *:2 tmp;}
 OPD: REL32H" OK6d"			is met_d=6 & met_s=7 & reg_d=7 ;REL32H				{tmp:2 = REL32H;		export *:2 tmp;}
 OPD: imm32H"("reg_d") OK6e"	is met_d=6 & met_s=6 & reg_d ;imm32H				{tmp:2 = imm32H+reg_d;	export *:2 tmp;}
 OPD: imm32H"("reg_d")?OK6f"	is met_d=6 & met_s=7 & reg_d ;imm32H				{tmp:2 = imm32H+reg_d;	export *:2 tmp;}
-OPD: REL32H" OK6g"			is met_d=6 & met_s=3 & reg_d=7;REL32H				{tmp:2 = REL32H;		export *:2 tmp;}
-OPD: imm32H" OK6h"			is met_d=6 & met_s=3 & reg_s=7 & reg_d!=7;imm32H	{tmp:2 = imm32H;		export *:2 tmp;}
+OPD: REL32H" OK6g"			is met_d=6 & met_s=3 & reg_d=7 ;REL32H				{tmp:2 = REL32H;		export *:2 tmp;}
+OPD: imm32H(reg_d)"_OK6h"			is met_d=6 & (met_s=3 | met_s=2) & reg_s=7 & reg_dd!=7 & reg_d;imm32H	{tmp:2 = imm32H+reg_d;		export *:2 tmp;}
+
+
 
 # MODE7: (index deferred)
 # EA_ptr = Rn + offset
@@ -365,6 +340,24 @@ OPD: "@"REL32H"?OK7e"	is met_d=7 &         (met_s=6 | met_s=7) & reg_d=7				;REL
 
 
 :MUL reg_s,OPD	is (kodas_s=7 &met_s=0 & reg_s) ...& OPD {
+
+
+
+
+
+ # f1 = get_operand_w(inst);
+ # rno = (inst >> 6) & 7;
+ # f2 = REG(rno);
+ # prod = sxw(f1) * sxw(f2);
+ # if (prod == 0) SET_Z(); else CLR_Z();
+ # if (prod < 0) SET_N(); else CLR_N();
+ # if ((prod < -32768) || (prod > 32767)) SET_C(); else CLR_C();
+ # REG(rno) = (prod >> 16) & 0xffff;
+ # REG(rno|1) = prod & 0xffff;
+ # CLR_V();
+
+
+
 r:4=zext(OPD)*zext(reg_s); 
 OPD=r[0,15];
 reg_s=r[16,15];
@@ -373,6 +366,92 @@ N((r>>31)==1);
 #C((r)>32767 or r<-32768);#???? kaip?
 }
 :DIV reg_s,OPD	is (kodas_s=7 &met_s=1 & reg_s) ...& OPD {
+
+
+
+
+
+
+
+
+
+
+
+# divr = get_operand_w(inst);
+# if (divr == 0)
+#  { CLR_N();
+#    SET_Z();
+#    SET_V();
+#    SET_C();
+#    return;
+#  }
+# rno = (inst >> 6) & 6; /* "must be even", or would be ... & 7 */
+# if (rno & 1)
+#  { I_emhalt(0);
+#    return;
+#  }
+# CLR_C();
+# CLR_V();
+# divd = ((REG(rno) << 16) | REG(rno+1));
+# negq = 0;
+# negr = 0;
+# if (divd & 0x80000000)
+#  { if (divr & 0x8000)
+#     { divd = (- divd) & 0xffffffff;
+#       divr = (- divr) & 0xffff;
+#       negr = 1;
+#     }
+#    else
+#     { divd = (- divd) & 0xffffffff;
+#       negq = 1;
+#       negr = 1;
+#     }
+#  }
+# else
+#  { if (divr & 0x8000)
+#     { divr = (- divr) & 0xffff;
+#       negq = 1;
+#     }
+#  }
+# quo = divd / divr;
+# rem = divd % divr;
+# if ((quo&0x7fffffff) == 0) SET_Z(); else CLR_Z();
+# if (negq) SET_N(); else CLR_N();
+# if (quo & 0xffff8000)
+#  { /* the code inside this if is not supposed to make sense;
+#       it's just supposed to keep ekbbc1 happy. */
+#    SET_V();
+#    quo >>= 16;
+#    if (negq && !negr) quo ++;
+#    if (negr && !negq) rem ++;
+#    negq = 0;
+#    negr = 0;
+#    if (quo & 0x8000) SET_N(); else CLR_N(); /* is this right? */
+#  }
+# if (negq) quo = (- quo) & 0xffffffff;
+# if (negr) rem = (- rem) & 0xffff;
+# REG(rno) = quo & 0xffff;
+# REG(rno+1) = rem;
+#}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #bibiene?
 OPD=OPD/reg_s;  FLZ(OPD); FLN(OPD);}
 :ASH reg_s,OPD	is (kodas_s=7 &met_s=2 & reg_s) ...& OPD {

@@ -3,8 +3,8 @@
     <programcounter register="PC"/>
 	  <default_symbols>
     <symbol name="Bus_timeout" address="ram:0x0004"/>
-    <symbol name="Illegal_instruction" address="ram:0x0008"/>
-    <symbol name="bpt_trace" address="ram:0x000C"/>
+    <symbol name="Reserved_instruction" address="ram:0x0008"/>
+    <symbol name="BPT" address="ram:0x000C"/>
 	<symbol name="IOT" address="ram:0x0010"/>
 	<symbol name="power_failure" address="ram:0x0014"/>
 	<symbol name="EMT" address="ram:0x0018"/>
@@ -18,12 +18,62 @@
 
 	
 	<symbol name="parity_int" address="ram:0x004C"/>
+	<symbol name="SEL_TRAP" address="ram:0x0078"/>
 	<symbol name="programmed_int" address="ram:0x00A0"/>
 	<symbol name="FP_error" address="ram:0x00A4"/>
 	<symbol name="segmentation_violation" address="ram:0x00A8"/>
 	<symbol name="RXV11" address="ram:0x00B4" />
 	
 	<symbol name="CPU_ERR" address="ram:0xFFF6" entry="true"/>
+
+	<symbol name="TU58_RCSR" address="ram:0xFD40" entry="true"/>
+	<symbol name="TU58_RBUF" address="ram:0xFD42" entry="true"/>
+	<symbol name="TU58_XCSR" address="ram:0xFD44" entry="true"/>
+	<symbol name="TU58_XBUF" address="ram:0xFD46" entry="true"/>
+	
+	<symbol name="UDA50_IP" address="ram:0xF468" entry="true"/>
+	<symbol name="UDA50_SA" address="ram:0xFD6a" entry="true"/>
+	
+	<symbol name="UKNC_VIDEO8_ADR" address="ram:0xFDA0" entry="true"/>
+	<symbol name="UKNC_VIDEO8_DATA" address="ram:0xFDA2" entry="true"/>
+	<symbol name="UKNC_VIDEO8_DATA?" address="ram:0xFDA4" entry="true"/>
+	
+	<symbol name="KLESI_IP" address="ram:0xF940" entry="true"/>
+	<symbol name="KLESI_SA" address="ram:0xF942" entry="true"/>
+	
+	<symbol name="DZ11_CSR" address="ram:0xe040" entry="true"/>
+	<symbol name="DZ11_RBUF_LPR" address="ram:0xe042" entry="true"/>
+	<symbol name="DZ11_TCR" address="ram:0xe044" entry="true"/>
+	<symbol name="DZ11_MSR_TDR" address="ram:0xe046" entry="true"/>
+	
+
+	<symbol name="RL11_CSR" address="ram:0xF900" entry="true"/>
+	<symbol name="RL11_BA" address="ram:0xF902" entry="true"/>
+	<symbol name="RL11_DA" address="ram:0xF904" entry="true"/>
+	<symbol name="RL11_MPR" address="ram:0xF906" entry="true"/>
+	
+
+	<symbol name="PC11_PRS" address="ram:0xFf68" entry="true"/>
+	<symbol name="PC11_PRB" address="ram:0xFf6a" entry="true"/>
+	<symbol name="PC11_PPS" address="ram:0xFf6c" entry="true"/>
+	<symbol name="PC11_PPB" address="ram:0xFf6e" entry="true"/>
+
+
+	<symbol name="TM11_MTS" address="ram:0xF550" entry="true"/>
+	<symbol name="TM11_MTC" address="ram:0xF552" entry="true"/>
+	<symbol name="TM11_MTBRC" address="ram:0xF554" entry="true"/>
+	<symbol name="TM11_MTCMA" address="ram:0xF556" entry="true"/>
+	<symbol name="TM11_MTD" address="ram:0xF558" entry="true"/>
+	<symbol name="TM11_MTRD" address="ram:0xF55a" entry="true"/>
+
+	<symbol name="RX02_CS" address="ram:0xFe78" entry="true"/>
+	<symbol name="RX02_TA" address="ram:0xFe7a" entry="true"/>
+	<symbol name="RX02_SA" address="ram:0xFe7c" entry="true"/>
+	<symbol name="RX02_WC" address="ram:0xFe7e" entry="true"/>
+	<symbol name="RX02_BA" address="ram:0xFe80" entry="true"/>
+	<symbol name="RX02_DB" address="ram:0xFe82" entry="true"/>
+	<symbol name="RX02_ES" address="ram:0xFe84" entry="true"/>
+
 	
 	<symbol name="ODT_RCSR" address="ram:0xFF70" entry="true"/>
 	<symbol name="ODT_RBUF" address="ram:0xFF72" entry="true"/>
