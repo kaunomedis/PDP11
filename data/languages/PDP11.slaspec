@@ -238,7 +238,7 @@ OPS: REL32L"_OK6d"			is met_s=6 & met_d=7 & reg_s=7 ;REL32L	{tmp:2 = REL32L; exp
 OPS: imm32L"("reg_s")_OK6e"	is met_s=6 & met_d=6 & reg_s ;imm32L	{tmp:2 = imm32L+reg_s; export *:2 tmp;}
 OPS: imm32L"("reg_s")_OK6f"	is met_s=6 & met_d=7 & reg_s ;imm32L	{tmp:2 = imm32L+reg_s; export *:2 tmp;}
 OPS: REL32L"_OK6g"			is met_s=6 & met_d=3 & reg_s=7;REL32L	{tmp:2 = REL32L; export *:2 tmp;}
-OPS: imm32L"_OK6h"			is met_s=6 & met_d=3 & reg_d=7 & reg_s!=7;imm32L	{tmp:2 = imm32L; export *:2 tmp;}
+OPS: imm32L"("reg_s")_OK6h"			is met_s=6 & met_d=3 & reg_d=7 & reg_ss!=7 &reg_s;imm32L	{tmp:2 = imm32L; export *:2 tmp;}
 
 # MODE7: (index deferred)
 # EA_ptr = Rn + offset
@@ -287,6 +287,10 @@ OPD: "@#"imm16"_OK3f"		is met_d=3&  reg_dd=7 & (met_s=2 | met_s=3) &   reg_s!=7 
 
 OPD: "@#"imm32H" OK3g"		is met_d=3&  reg_dd=7 & (met_s=2 | met_s=3) &   reg_s=7  & reg_d;imm32H 		{tmp:2 = imm32H; export *:2 tmp;}
 OPD: "@#"imm32H" OK3h"		is met_d=3&  reg_dd=7 & (met_s=6 | met_s=7) & reg_d=7  ; imm32H 				{tmp:2 = imm32H; export *:2 tmp;}
+# ka daryti kai ne "move"?
+OPD: "@#"imm16" OK3h"		is kodas_s!=1 & met_d=3&  reg_dd=7 & (met_s=6 | met_s=7) & reg_d=7  ; imm16 				{tmp:2 = imm16; export *:2 tmp;}
+
+
 
 # MODE4: (autodecrement)
 # Rn = Rn - (is_byte ? 1 : 2)
