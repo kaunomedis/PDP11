@@ -126,7 +126,7 @@ RELN:	reloc	is nnn	[reloc = inst_next-nnn*2;]		{tmp:2 = 0; tmp=reloc; export  tm
 :EMHALT		is imm16=0x08 {R0=R0;}
 :NOP		is imm16=0x0A0	{R0=R0;}
 :HALT		is imm16=0		{ tmp:2=0x28; PC=*:2 tmp; tmp=0x2A; PS=*:2 tmp; goto [PC];}
-:WAIT		is imm16=1		{ PC=PC; goto [PC];}
+:WAIT		is imm16=1		{ PC=PC-2; goto [PC];}
 :CLC		is imm16=0x0A1 {CC();}
 :CLV		is imm16=0x0A2 {CV();}
 :CLVC is  imm16=0x0A3 {CC();CV();}
