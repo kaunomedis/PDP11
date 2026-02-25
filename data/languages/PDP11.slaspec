@@ -81,6 +81,7 @@ define token word_1 (16)
 	regai =(0,2)
 	
 	op_h =(8,15)
+	ac=(6,7)
 	rell = (0,7) signed
 	baitas = (0,7)
 	
@@ -121,19 +122,40 @@ REL16:	reloc	is rell16   	[reloc = inst_next + rell16;]	{tmp:2 = 0; tmp=reloc; e
 RELN:	reloc	is nnn	[reloc = inst_next-nnn*2;]		{tmp:2 = 0; tmp=reloc; export  tmp; } 
 
 # ############# SIMPLE INSTRUCTIONS #################################### 
+:MFPT		is imm16=0x07 {R0=R0;}
+:EMHALT		is imm16=0x08 {R0=R0;}
 :NOP		is imm16=0x0A0	{R0=R0;}
 :HALT		is imm16=0		{ tmp:2=0x28; PC=*:2 tmp; tmp=0x2A; PS=*:2 tmp; goto [PC];}
 :WAIT		is imm16=1		{ PC=PC; goto [PC];}
 :CLC		is imm16=0x0A1 {CC();}
 :CLV		is imm16=0x0A2 {CV();}
+:CLVC is  imm16=0x0A3 {CC();CV();}
 :CLZ		is imm16=0x0A4 {CZ();}
+:CLZC is  imm16=0x0A5 {CZ();CC();}
+:CLZV is  imm16=0x0A6 {CZ();CV();}
+:CLZVC is  imm16=0x0A7 {CZ();CV();CC();}
 :CLN		is imm16=0x0A8 {CN();}
 :CCC		is imm16=0x0AF {CC();CV();CZ();CN();}
 
 :SEC		is imm16=0x0b1 {SC();}
 :SEV		is imm16=0x0b2 {SV();}
+:SEVC		is imm16=0x0b3 {SV();SC();}
 :SEZ		is imm16=0x0b4 {SZ();}
+:SEZC		is imm16=0x0b5 {SZ();SC();}
+:SEZV		is imm16=0x0b6 {SZ();SV();}
+:SEZVC		is imm16=0x0b7 {SZ();SC();SV();}
+
+
 :SEN		is imm16=0x0b8 {SN();}
+:SENC		is imm16=0x0b9 {SN();SC();}
+:SENV		is imm16=0x0ba {SN();SV();}
+:SENVC		is imm16=0x0bb {SN();SV();SC();}
+:SENZ		is imm16=0x0bc {SN();SZ();}
+:SENZC		is imm16=0x0bd {SZ();SC();}
+:SENZV		is imm16=0x0be {SN();SV();SZ();}
+
+:CSM	is imm16=0xe40 {PC=PC;}
+
 :SCC		is imm16=0x0bF {SC();SV();SZ();SN();}
 :EMT "'"baitas"'"		is op_h=0x88 & baitas { push(PS); push(PC); PC=(0x18);PS=(0x1A); call [PC];} # NETEISYBE
 :TRAP		is op_h=0x89 {push(PS); push(PC); tmp:2=0x1c; PC=*:2 tmp; tmp=0x1e; PS=*:2 tmp; goto [PC]; call [PC];} # NETEISYBE
@@ -261,13 +283,19 @@ OPD: "("reg_d") OK1"	is met_d=1 & reg_d 		{tmp:2=reg_d; export *:2 tmp;}
 # operand = MEM[EA]
 # Rn = Rn + (is_byte ? 1 : 2)
 
-OPD: "("reg_d")+ OK2a"		is byte=1 & met_d=2 & reg_d {tmp:2=reg_d; reg_d=reg_d+1; export *:2 tmp; }
-OPD: "("reg_d")+ OK2b"		is byte=0 & met_d=2 & reg_d {tmp:2=reg_d; reg_d=reg_d+2; export *:2 tmp; }
-OPD: "#"imm16" OK2c"		is byte=0 & met_d=2 & reg_d=7 & reg_d ;imm16{tmp:2 = imm16; reg_d=reg_d+2; export tmp;}
-OPD: "#"imm16" OK2d"		is byte=1 & met_d=2 & reg_d=7 & reg_d ;imm16{tmp:2 = imm16; reg_d=reg_d+2; export tmp;}
+OPD: "("reg_d")+ OK2a"		is byte=1 &met_d=2 & reg_dd!=7 &reg_d {tmp:2=reg_d; reg_d=reg_d+1; export *:2 tmp; }
+OPD: "("reg_d")+ OK2b"		is byte=0 &met_d=2 & reg_dd!=7 &reg_d{tmp:2=reg_d; reg_d=reg_d+2; export *:2 tmp; }
+# kaip su nekorektiskom PC (R7) operacijom?
+OPD: "#"imm16" OK2c"		is byte=0 &reg_s!=7 & met_d=2 & reg_d=7 & reg_d ;imm16{tmp:2 = imm16; reg_d=reg_d+2; export tmp;}
+OPD: "#"imm16" OK2d"		is byte=1 &reg_s!=7 & met_d=2 & reg_d=7 & reg_d ;imm16{tmp:2 = imm16; reg_d=reg_d+1; export tmp;}
 
-OPD: "#"imm32H"OK2ef"	is byte=0 & met_s=2 & reg_s=7 & met_d=2 & reg_d=7;imm32H {tmp:2 = imm32H; export tmp;}
-OPD: "#"imm32H"OK2ff"	is byte=0 & met_s=6           & met_d=2 & reg_d=7;imm32H {tmp:2 = imm32H; export tmp;}
+OPD: "#"imm32H"OK2ef"	is byte=0 & met_s=2 & reg_s=7 & met_d=2 & reg_d=7;imm32H {tmp:2 = imm32H; PC=PC+2; export tmp;}
+OPD: "#"imm32H"OK2ff"	is byte=0 & met_s=6 &reg_s!=7 & met_d=2 & reg_d=7;imm32H {tmp:2 = imm32H; PC=PC+2; export tmp;}
+OPD: "#"imm32H"OK2ef"	is byte=1 & met_s=2 & reg_s=7 & met_d=2 & reg_d=7;imm32H {tmp:2 = imm32H; PC=PC+1; export tmp;}
+OPD: "#"imm32H"OK2ff"	is byte=1 & met_s=6 &reg_s!=7 & met_d=2 & reg_d=7;imm32H {tmp:2 = imm32H; PC=PC+1; export tmp;}
+
+OPD: "#"imm32H"OK2g" is met_d=2 & reg_s=7 & reg_d=7;imm32H {tmp:2 = imm32H; PC=PC+2; export tmp;}
+
 
 # MODE3: (autoincrement deferred)
 # EA_ptr = Rn
@@ -570,12 +598,60 @@ I16: imm16	is imm16 {export *:2 imm16;}
 
 :MARK nnn is kodas=0x34 &nnn {SP=PC+2*nnn;PC=R5;pop(R5);} # SP := PC + 2 * NN; PC := R5; R5 := (SP)+
 
+:SPL reg_dd is kodas=2 & metod=3 & reg_dd {PC=PC;} #set priority level?
+
 ######## FPU FPU FPU #########################
 FRD: reg_d is reg_d			{ export *:1 reg_d; }
 :FADD FRD	is fpu=0b0111101000000 & FRD {PC=PC;}
 :FSUB FRD	is fpu=0b0111101000001 & FRD {PC=PC;}
 :FMUL FRD	is fpu=0b0111101000010 & FRD {PC=PC;}
 :FDIV FRD	is fpu=0b0111101000011 & FRD {PC=PC;}
+
+############ nezinoma fpu
+:ldcfd OPD,"f1" is (op_h=0b11111111  &ac=0)... &OPD{PC=PC;}
+:ldcfd OPD,"f2" is (op_h=0b11111111  &ac=1)... &OPD{PC=PC;}
+:ldcfd OPD,"f3" is (op_h=0b11111111  &ac=2)... &OPD{PC=PC;}
+:divfd OPD,"f1" is (op_h=0b11111001  &ac=0)... &OPD{PC=PC;}
+:divfd OPD,"f2" is (op_h=0b11111001  &ac=1)... &OPD{PC=PC;}
+:divfd OPD,"f3" is (op_h=0b11111001  &ac=2)... &OPD{PC=PC;}
+:cmpfd OPD,"f1" is (op_h=0b11110111  &ac=0)... &OPD{PC=PC;}
+:cmpfd OPD,"f2" is (op_h=0b11110111  &ac=1)... &OPD{PC=PC;}
+:cmpfd OPD,"f3" is (op_h=0b11110111  &ac=2)... &OPD{PC=PC;}
+:ldcifd OPD,"f1" is (op_h=0b11111110  &ac=0)... &OPD{PC=PC;}
+:ldcifd OPD,"f2" is (op_h=0b11111110  &ac=1)... &OPD{PC=PC;}
+:ldcifd OPD,"f3" is (op_h=0b11111110  &ac=2)... &OPD{PC=PC;}
+:ldexp OPD,"f1" is (op_h=0b11111101  &ac=0)... &OPD{PC=PC;}
+:ldexp OPD,"f2" is (op_h=0b11111101  &ac=1)... &OPD{PC=PC;}
+:ldexp OPD,"f3" is (op_h=0b11111101  &ac=2)... &OPD{PC=PC;}
+:ldfd OPD,"f1" is (op_h=0b11110101  &ac=0)... &OPD{PC=PC;}
+:ldfd OPD,"f2" is (op_h=0b11110101  &ac=1)... &OPD{PC=PC;}
+:ldfd OPD,"f3" is (op_h=0b11110101  &ac=2)... &OPD{PC=PC;}
+:modfd OPD,"f1" is (op_h=0b11110011  &ac=0)... &OPD{PC=PC;}
+:modfd OPD,"f2" is (op_h=0b11110011  &ac=1)... &OPD{PC=PC;}
+:modfd OPD,"f3" is (op_h=0b11110011  &ac=2)... &OPD{PC=PC;}
+:mulfd OPD,"f1" is (op_h=0b11110010  &ac=0)... &OPD{PC=PC;}
+:mulfd OPD,"f2" is (op_h=0b11110010  &ac=1)... &OPD{PC=PC;}
+:mulfd OPD,"f3" is (op_h=0b11110010  &ac=2)... &OPD{PC=PC;}
+:negfd OPD,"f1" is (op_h=0b11000111  &ac=0)... &OPD{PC=PC;}
+:negfd OPD,"f2" is (op_h=0b11000111  &ac=1)... &OPD{PC=PC;}
+:negfd OPD,"f3" is (op_h=0b11000111  &ac=2)... &OPD{PC=PC;}
+:stcfd OPD,"f1" is (op_h=0b11111100  &ac=0)... &OPD{PC=PC;}
+:stcfd OPD,"f2" is (op_h=0b11111100  &ac=1)... &OPD{PC=PC;}
+:stcfd OPD,"f3" is (op_h=0b11111100  &ac=2)... &OPD{PC=PC;}
+:stfd OPD,"f1" is (op_h=0b11111000  &ac=0)... &OPD{PC=PC;}
+:stfd OPD,"f2" is (op_h=0b11111000  &ac=1)... &OPD{PC=PC;}
+:stfd OPD,"f3" is (op_h=0b11111000  &ac=2)... &OPD{PC=PC;}
+
+:ccfc is imm16=0xf000 {PC=PC;}
+:setf is imm16=0xf001 {PC=PC;}
+:seti is imm16=0xf002 {PC=PC;}
+
+:setd is imm16=0xf009 {PC=PC;}
+:setl is imm16=0xf00a {PC=PC;}
+
+
+
+
 
 ######## HALT MODE ############################
 
