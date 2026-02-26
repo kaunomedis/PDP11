@@ -571,7 +571,7 @@ FLZ(OPD); FLN(OPD);}
 # met_d=5
 :JMP REL16 "ok6"		is kodas_s=0 & met_s=0 & reg_s=1 & met_d=6 & reg_d=7 ; REL16{PC=REL16; goto [PC];}
 :JMP "@"REL16" ok7" 	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=7 & reg_d=7; REL16 {goto [REL16];}
-
+:JMP REL16(reg_d)	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=6 & reg_dd!=7 & reg_d; REL16 {goto [REL16];} #???
 # JSR methods.
 I16: imm16	is imm16 {export *:2 imm16;}
 
@@ -584,7 +584,7 @@ I16: imm16	is imm16 {export *:2 imm16;}
 :JSRg "PC?",OPD	is (kodas=0x27 & reg_d!=7)... & OPD {call OPD;}
 
 :"ILLEGAL CALL 0>"REL16	is (kodas=0x27 & met_d=0 & reg_d=7) ; REL16 {push(PC+2); call [REL16]; }
-:"ILLEGAL CALL 1>"REL16	is (kodas=0x27 & met_d=1 & reg_d=7) ; REL16 {push(PC+2); call [REL16]; }
+:jsr reg_s,(reg_d)	is (kodas=0x27 & met_d=1 & reg_dd=7 & reg_d & reg_s) {push(PC+2); }
 :CALL #I16				is (kodas=0x27 & met_d=2 & reg_d=7) ; I16 {push(PC+2);call [I16];}
 :CALL @#I16				is (kodas=0x27 & met_d=3 & reg_d=7) ; I16 {push(PC+2);call I16; }
 :"ILLEGAL CALL 4>"REL16	is (kodas=0x27 & met_d=4 & reg_d=7) ; REL16 {push(PC+2);call [REL16]; }
