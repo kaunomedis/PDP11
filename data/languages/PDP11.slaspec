@@ -84,6 +84,7 @@ define token word_1 (16)
 	ac=(6,7)
 	rell = (0,7) signed
 	baitas = (0,7)
+	eemt=(0,7)
 	
 	kodas_s = (12,15)
 	met_s=(9,11)
@@ -122,42 +123,53 @@ REL16:	reloc	is rell16   	[reloc = inst_next + rell16;]	{tmp:2 = 0; tmp=reloc; e
 RELN:	reloc	is nnn	[reloc = inst_next-nnn*2;]		{tmp:2 = 0; tmp=reloc; export  tmp; } 
 
 # ############# SIMPLE INSTRUCTIONS #################################### 
-:MFPT		is imm16=0x07 {R0=R0;}
-:EMHALT		is imm16=0x08 {R0=R0;}
+:MFPT		is imm16=0x07	{R0=R0;}
+:EMHALT		is imm16=0x08	{R0=R0;}
 :NOP		is imm16=0x0A0	{R0=R0;}
-:HALT		is imm16=0		{ tmp:2=0x28; PC=*:2 tmp; tmp=0x2A; PS=*:2 tmp; goto [PC];}
-:WAIT		is imm16=1		{ PC=PC-2; goto [PC];}
-:CLC		is imm16=0x0A1 {CC();}
-:CLV		is imm16=0x0A2 {CV();}
-:CLVC is  imm16=0x0A3 {CC();CV();}
-:CLZ		is imm16=0x0A4 {CZ();}
-:CLZC is  imm16=0x0A5 {CZ();CC();}
-:CLZV is  imm16=0x0A6 {CZ();CV();}
-:CLZVC is  imm16=0x0A7 {CZ();CV();CC();}
-:CLN		is imm16=0x0A8 {CN();}
-:CCC		is imm16=0x0AF {CC();CV();CZ();CN();}
+:HALT		is imm16=0		{tmp:2=0x28; PC=*:2 tmp; tmp=0x2A; PS=*:2 tmp; goto [PC];}
+:WAIT		is imm16=1		{PC=PC-2; goto [PC];}
+:CLC		is imm16=0x0A1	{CC();}
+:CLV		is imm16=0x0A2	{CV();}
+:CLVC		is imm16=0x0A3	{CC();CV();}
+:CLZ		is imm16=0x0A4	{CZ();}
+:CLZC		is imm16=0x0A5	{CZ();CC();}
+:CLZV		is imm16=0x0A6	{CZ();CV();}
+:CLZVC		is imm16=0x0A7	{CZ();CV();CC();}
+:CLN		is imm16=0x0A8	{CN();}
+:CCC		is imm16=0x0AF	{CC();CV();CZ();CN();}
 
-:SEC		is imm16=0x0b1 {SC();}
-:SEV		is imm16=0x0b2 {SV();}
-:SEVC		is imm16=0x0b3 {SV();SC();}
-:SEZ		is imm16=0x0b4 {SZ();}
-:SEZC		is imm16=0x0b5 {SZ();SC();}
-:SEZV		is imm16=0x0b6 {SZ();SV();}
-:SEZVC		is imm16=0x0b7 {SZ();SC();SV();}
+:SEC		is imm16=0x0b1	{SC();}
+:SEV		is imm16=0x0b2	{SV();}
+:SEVC		is imm16=0x0b3	{SV();SC();}
+:SEZ		is imm16=0x0b4	{SZ();}
+:SEZC		is imm16=0x0b5	{SZ();SC();}
+:SEZV		is imm16=0x0b6	{SZ();SV();}
+:SEZVC		is imm16=0x0b7	{SZ();SC();SV();}
 
+:SEN		is imm16=0x0b8	{SN();}
+:SENC		is imm16=0x0b9	{SN();SC();}
+:SENV		is imm16=0x0ba	{SN();SV();}
+:SENVC		is imm16=0x0bb	{SN();SV();SC();}
+:SENZ		is imm16=0x0bc	{SN();SZ();}
+:SENZC		is imm16=0x0bd	{SN();SZ();SC();}
+:SENZV		is imm16=0x0be	{SN();SV();SZ();}
 
-:SEN		is imm16=0x0b8 {SN();}
-:SENC		is imm16=0x0b9 {SN();SC();}
-:SENV		is imm16=0x0ba {SN();SV();}
-:SENVC		is imm16=0x0bb {SN();SV();SC();}
-:SENZ		is imm16=0x0bc {SN();SZ();}
-:SENZC		is imm16=0x0bd {SZ();SC();}
-:SENZV		is imm16=0x0be {SN();SV();SZ();}
-
-:CSM	is imm16=0xe40 {PC=PC;}
+:CSM		is imm16=0xe40	{PC=PC;}
 
 :SCC		is imm16=0x0bF {SC();SV();SZ();SN();}
-:EMT "'"baitas"'"		is op_h=0x88 & baitas { push(PS); push(PC); PC=(0x18);PS=(0x1A); call [PC];} # NETEISYBE
+:EMT "("baitas")"		is op_h=0x88 & baitas { push(PS); push(PC); PC=(0x18);PS=(0x1A); call [PC];} # NETEISYBE
+
+:EMT "("eemt") .PRINT"			is op_h=0x88 & baitas=0xE9 & eemt { push(PS); push(PC); PC=(0x18);PS=(0x1A); call [PC];} # NETEISYBE
+:EMT "("eemt") .EXIT"			is op_h=0x88 & baitas=0xE8 & eemt { push(PS); push(PC); PC=(0x18);PS=(0x1A); call [PC];} # NETEISYBE
+:EMT "("eemt") .TTY_IN"			is op_h=0x88 & baitas=0xE0 & eemt { push(PS); push(PC); PC=(0x18);PS=(0x1A); call [PC];} # NETEISYBE
+:EMT "("eemt") .TTY_OUT"		is op_h=0x88 & baitas=0xE1 & eemt { push(PS); push(PC); PC=(0x18);PS=(0x1A); call [PC];} # NETEISYBE
+:EMT "("eemt") .I/O page op"	is op_h=0x88 & baitas=0xFD & eemt { push(PS); push(PC); PC=(0x18);PS=(0x1A); call [PC];} # NETEISYBE
+
+
+
+
+
+
 :TRAP		is op_h=0x89 {push(PS); push(PC); tmp:2=0x1c; PC=*:2 tmp; tmp=0x1e; PS=*:2 tmp; goto [PC]; call [PC];} # NETEISYBE
 :IOT		is imm16=0x004 {push(PS); push(PC); PC=(0x10); PS=(0x12); call [PC];} # NETEISYBE
 :BPT		is imm16=0x003 {push(PS); push(PC); PC=(0x0C); PS=(0x0E); call [PC];} # NETEISYBE
@@ -165,19 +177,19 @@ RELN:	reloc	is nnn	[reloc = inst_next-nnn*2;]		{tmp:2 = 0; tmp=reloc; export  tm
 :RTT		is imm16=0x006 {pop(PC); pop(PS); return [PC];} # NETEISYBE
 :RESET		is imm16=0x005 {SP=SP;}
 
-:BR   REL8			is op_h=1 & REL8 {goto [REL8];}
-:BNE  REL8			is op_h=2 & REL8 {if PS[2,1] goto inst_next; goto [REL8];} # Z=0
-:BEQ  REL8			is op_h=3 & REL8 {if !PS[2,1] goto inst_next; goto [REL8];} # Z=1
+:BR   REL8			is op_h=1 & REL8	{goto [REL8];}
+:BNE  REL8			is op_h=2 & REL8	{if PS[2,1] goto inst_next; goto [REL8];} # Z=0
+:BEQ  REL8			is op_h=3 & REL8	{if !PS[2,1] goto inst_next; goto [REL8];} # Z=1
 :BPL  REL8			is op_h=0x80 & REL8 {if PS[3,1] goto inst_next; goto [REL8];} # N=0 sign
 :BMI  REL8			is op_h=0x81 & REL8 {if !PS[3,1] goto inst_next; goto [REL8];} # N=1
 :BVC  REL8			is op_h=0x84 & REL8 {if PS[5,1] goto inst_next; goto [REL8];} # V=0 overflow
 :BVS  REL8			is op_h=0x85 & REL8 {if !PS[5,1] goto inst_next; goto [REL8];} # V=1
 :BCC  REL8			is op_h=0x86 & REL8 {if PS[0,1] goto inst_next; goto [REL8];} # C=0 carry
 :BCS  REL8			is op_h=0x87 & REL8 {if !PS[0,1] goto inst_next; goto [REL8];} # C=1
-:BGE  REL8			is op_h=4 & REL8 {if (PS[3,1] ^ PS[5,1]) goto inst_next; goto [REL8];} # N xor V =0
-:BLT  REL8			is op_h=5 & REL8 {if !(PS[3,1] ^ PS[5,1]) goto inst_next; goto [REL8];} # N xor V =1
-:BGT  REL8			is op_h=6 & REL8 {if ((PS[3,1] ^ PS[5,1])|PS[2,1]) goto inst_next; goto [REL8];} # (N xor V) or Z =0
-:BLE  REL8			is op_h=7 & REL8 {if !((PS[3,1] ^ PS[5,1])|PS[2,1]) goto inst_next; goto [REL8];} # (N xor V) or Z =0
+:BGE  REL8			is op_h=4 & REL8	{if (PS[3,1] ^ PS[5,1]) goto inst_next; goto [REL8];} # N xor V =0
+:BLT  REL8			is op_h=5 & REL8	{if !(PS[3,1] ^ PS[5,1]) goto inst_next; goto [REL8];} # N xor V =1
+:BGT  REL8			is op_h=6 & REL8	{if ((PS[3,1] ^ PS[5,1])|PS[2,1]) goto inst_next; goto [REL8];} # (N xor V) or Z =0
+:BLE  REL8			is op_h=7 & REL8	{if !((PS[3,1] ^ PS[5,1])|PS[2,1]) goto inst_next; goto [REL8];} # (N xor V) or Z =0
 :BHI  REL8			is op_h=0x82 & REL8 {if !(!PS[0,1] | !PS[2,1]) goto inst_next; goto [REL8];} # C or Z =0
 :BLOS REL8			is op_h=0x83 & REL8 {if !(PS[0,1] | PS[2,1]) goto inst_next; goto [REL8];} # C or Z =1
 
@@ -275,7 +287,7 @@ OPS: "@"imm32L"?OK7d"		is met_s=7 &         (met_d=6 | met_d=7) & reg_ss!=7	&reg
 OPS: "@"REL32L"?OK7e"		is met_s=7 &         (met_d=6 | met_d=7) & reg_s=7				;REL32L			{tmp:2 = REL32L; export *:2 tmp;}
 
 # DESTINATION DESTINATION DESTINATION DESTINATION DESTINATION DESTINATION DESTINATION DESTINATION DESTINATION DESTINATION DESTINATION DESTINATION DESTINATION DESTINATION
-OPD: reg_d" OK0"	is met_d=0 & reg_d 			{export reg_d;}
+OPD: reg_d" OK0"		is met_d=0 & reg_d 		{export reg_d;}
 OPD: "("reg_d") OK1"	is met_d=1 & reg_d 		{tmp:2=reg_d; export *:2 tmp;}
 
 # MODE2: (autoincrement)
@@ -310,15 +322,10 @@ OPD: "@#"imm16" OK3e"		is met_d=3&  reg_dd=7 & (met_s=0 | met_s=1 | met_s=4 | me
 
 OPD: "@#"imm16"_OK3f"		is met_d=3&  reg_dd=7 & (met_s=2 | met_s=3) &   reg_s!=7 & reg_d 	;imm16			{tmp:2=imm16; export *:2 tmp;}
 
-
-
-
 OPD: "@#"imm32H" OK3g"		is met_d=3&  reg_dd=7 & (met_s=2 | met_s=3) &   reg_s=7  & reg_d;imm32H 		{tmp:2 = imm32H; export *:2 tmp;}
 OPD: "@#"imm32H" OK3h"		is met_d=3&  reg_dd=7 & (met_s=6 | met_s=7) & reg_d=7  ; imm32H 				{tmp:2 = imm32H; export *:2 tmp;}
 # ka daryti kai ne "move"?
 OPD: "@#"imm16" OK3h"		is kodas_s!=1 & met_d=3&  reg_dd=7 & (met_s=6 | met_s=7) & reg_d=7  ; imm16 				{tmp:2 = imm16; export *:2 tmp;}
-
-
 
 # MODE4: (autodecrement)
 # Rn = Rn - (is_byte ? 1 : 2)
@@ -370,12 +377,7 @@ OPD: "@"REL32H"?OK7e"	is met_d=7 &         (met_s=6 | met_s=7) & reg_d=7				;REL
 :XOR reg_s,OPD	is (kodas_s=7 &met_s=4 & reg_s) ...& OPD {OPD=OPD^reg_s; FLZ(OPD);FLN(OPD);CV();}
 :SOB reg_s,RELN	is kodas_s=7 &met_s=7 & reg_s & RELN &nnn {reg_s=reg_s-1;if (reg_s==0) goto inst_next;goto [RELN];} # SOB RRR,NNN NNN : R := R – 1; IF (R != 0) THEN PC := PC – 2 * NN
 
-
 :MUL reg_s,OPD	is (kodas_s=7 &met_s=0 & reg_s) ...& OPD {
-
-
-
-
 
  # f1 = get_operand_w(inst);
  # rno = (inst >> 6) & 7;
@@ -398,15 +400,6 @@ N((r>>31)==1);
 #C((r)>32767 or r<-32768);#???? kaip?
 }
 :DIV reg_s,OPD	is (kodas_s=7 &met_s=1 & reg_s) ...& OPD {
-
-
-
-
-
-
-
-
-
 
 
 # divr = get_operand_w(inst);
@@ -465,21 +458,6 @@ N((r>>31)==1);
 # REG(rno) = quo & 0xffff;
 # REG(rno+1) = rem;
 #}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -571,6 +549,11 @@ FLZ(OPD); FLN(OPD);}
 # met_d=5
 :JMP REL16 "ok6"		is kodas_s=0 & met_s=0 & reg_s=1 & met_d=6 & reg_d=7 ; REL16{PC=REL16; goto [PC];}
 :JMP "@"REL16" ok7" 	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=7 & reg_d=7; REL16 {goto [REL16];}
+
+:JMP imm16(reg_d)"ok7b" 	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=7 & reg_dd!=7 &reg_d; imm16 {tmp:2=imm16+reg_d;goto [tmp];}
+
+
+
 :JMP REL16(reg_d)	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=6 & reg_dd!=7 & reg_d; REL16 {goto [REL16];} #???
 # JSR methods.
 I16: imm16	is imm16 {export *:2 imm16;}
@@ -584,7 +567,7 @@ I16: imm16	is imm16 {export *:2 imm16;}
 :JSRg "PC?",OPD	is (kodas=0x27 & reg_d!=7)... & OPD {call OPD;}
 
 :"ILLEGAL CALL 0>"REL16	is (kodas=0x27 & met_d=0 & reg_d=7) ; REL16 {push(PC+2); call [REL16]; }
-:jsr reg_s,(reg_d)	is (kodas=0x27 & met_d=1 & reg_dd=7 & reg_d & reg_s) {push(PC+2); }
+:jsr reg_s,(reg_d)		is (kodas=0x27 & met_d=1 & reg_dd=7 & reg_d & reg_s) {push(PC+2); }
 :CALL #I16				is (kodas=0x27 & met_d=2 & reg_d=7) ; I16 {push(PC+2);call [I16];}
 :CALL @#I16				is (kodas=0x27 & met_d=3 & reg_d=7) ; I16 {push(PC+2);call I16; }
 :"ILLEGAL CALL 4>"REL16	is (kodas=0x27 & met_d=4 & reg_d=7) ; REL16 {push(PC+2);call [REL16]; }
@@ -608,39 +591,39 @@ FRD: reg_d is reg_d			{ export *:1 reg_d; }
 :FDIV FRD	is fpu=0b0111101000011 & FRD {PC=PC;}
 
 ############ nezinoma fpu
-:ldcfd OPD,"f1" is (op_h=0b11111111  &ac=0)... &OPD{PC=PC;}
-:ldcfd OPD,"f2" is (op_h=0b11111111  &ac=1)... &OPD{PC=PC;}
-:ldcfd OPD,"f3" is (op_h=0b11111111  &ac=2)... &OPD{PC=PC;}
-:divfd OPD,"f1" is (op_h=0b11111001  &ac=0)... &OPD{PC=PC;}
-:divfd OPD,"f2" is (op_h=0b11111001  &ac=1)... &OPD{PC=PC;}
-:divfd OPD,"f3" is (op_h=0b11111001  &ac=2)... &OPD{PC=PC;}
-:cmpfd OPD,"f1" is (op_h=0b11110111  &ac=0)... &OPD{PC=PC;}
-:cmpfd OPD,"f2" is (op_h=0b11110111  &ac=1)... &OPD{PC=PC;}
-:cmpfd OPD,"f3" is (op_h=0b11110111  &ac=2)... &OPD{PC=PC;}
-:ldcifd OPD,"f1" is (op_h=0b11111110  &ac=0)... &OPD{PC=PC;}
-:ldcifd OPD,"f2" is (op_h=0b11111110  &ac=1)... &OPD{PC=PC;}
-:ldcifd OPD,"f3" is (op_h=0b11111110  &ac=2)... &OPD{PC=PC;}
-:ldexp OPD,"f1" is (op_h=0b11111101  &ac=0)... &OPD{PC=PC;}
-:ldexp OPD,"f2" is (op_h=0b11111101  &ac=1)... &OPD{PC=PC;}
-:ldexp OPD,"f3" is (op_h=0b11111101  &ac=2)... &OPD{PC=PC;}
-:ldfd OPD,"f1" is (op_h=0b11110101  &ac=0)... &OPD{PC=PC;}
-:ldfd OPD,"f2" is (op_h=0b11110101  &ac=1)... &OPD{PC=PC;}
-:ldfd OPD,"f3" is (op_h=0b11110101  &ac=2)... &OPD{PC=PC;}
-:modfd OPD,"f1" is (op_h=0b11110011  &ac=0)... &OPD{PC=PC;}
-:modfd OPD,"f2" is (op_h=0b11110011  &ac=1)... &OPD{PC=PC;}
-:modfd OPD,"f3" is (op_h=0b11110011  &ac=2)... &OPD{PC=PC;}
-:mulfd OPD,"f1" is (op_h=0b11110010  &ac=0)... &OPD{PC=PC;}
-:mulfd OPD,"f2" is (op_h=0b11110010  &ac=1)... &OPD{PC=PC;}
-:mulfd OPD,"f3" is (op_h=0b11110010  &ac=2)... &OPD{PC=PC;}
-:negfd OPD,"f1" is (op_h=0b11000111  &ac=0)... &OPD{PC=PC;}
-:negfd OPD,"f2" is (op_h=0b11000111  &ac=1)... &OPD{PC=PC;}
-:negfd OPD,"f3" is (op_h=0b11000111  &ac=2)... &OPD{PC=PC;}
-:stcfd OPD,"f1" is (op_h=0b11111100  &ac=0)... &OPD{PC=PC;}
-:stcfd OPD,"f2" is (op_h=0b11111100  &ac=1)... &OPD{PC=PC;}
-:stcfd OPD,"f3" is (op_h=0b11111100  &ac=2)... &OPD{PC=PC;}
-:stfd OPD,"f1" is (op_h=0b11111000  &ac=0)... &OPD{PC=PC;}
-:stfd OPD,"f2" is (op_h=0b11111000  &ac=1)... &OPD{PC=PC;}
-:stfd OPD,"f3" is (op_h=0b11111000  &ac=2)... &OPD{PC=PC;}
+:ldcfd OPD,"f1"		is (op_h=0b11111111  &ac=0)... &OPD{PC=PC;}
+:ldcfd OPD,"f2"		is (op_h=0b11111111  &ac=1)... &OPD{PC=PC;}
+:ldcfd OPD,"f3"		is (op_h=0b11111111  &ac=2)... &OPD{PC=PC;}
+:divfd OPD,"f1"		is (op_h=0b11111001  &ac=0)... &OPD{PC=PC;}
+:divfd OPD,"f2"		is (op_h=0b11111001  &ac=1)... &OPD{PC=PC;}
+:divfd OPD,"f3"		is (op_h=0b11111001  &ac=2)... &OPD{PC=PC;}
+:cmpfd OPD,"f1"		is (op_h=0b11110111  &ac=0)... &OPD{PC=PC;}
+:cmpfd OPD,"f2"		is (op_h=0b11110111  &ac=1)... &OPD{PC=PC;}
+:cmpfd OPD,"f3"		is (op_h=0b11110111  &ac=2)... &OPD{PC=PC;}
+:ldcifd OPD,"f1"	is (op_h=0b11111110  &ac=0)... &OPD{PC=PC;}
+:ldcifd OPD,"f2"	is (op_h=0b11111110  &ac=1)... &OPD{PC=PC;}
+:ldcifd OPD,"f3"	is (op_h=0b11111110  &ac=2)... &OPD{PC=PC;}
+:ldexp OPD,"f1"		is (op_h=0b11111101  &ac=0)... &OPD{PC=PC;}
+:ldexp OPD,"f2"		is (op_h=0b11111101  &ac=1)... &OPD{PC=PC;}
+:ldexp OPD,"f3"		is (op_h=0b11111101  &ac=2)... &OPD{PC=PC;}
+:ldfd OPD,"f1"		is (op_h=0b11110101  &ac=0)... &OPD{PC=PC;}
+:ldfd OPD,"f2"		is (op_h=0b11110101  &ac=1)... &OPD{PC=PC;}
+:ldfd OPD,"f3"		is (op_h=0b11110101  &ac=2)... &OPD{PC=PC;}
+:modfd OPD,"f1"		is (op_h=0b11110011  &ac=0)... &OPD{PC=PC;}
+:modfd OPD,"f2"		is (op_h=0b11110011  &ac=1)... &OPD{PC=PC;}
+:modfd OPD,"f3"		is (op_h=0b11110011  &ac=2)... &OPD{PC=PC;}
+:mulfd OPD,"f1"		is (op_h=0b11110010  &ac=0)... &OPD{PC=PC;}
+:mulfd OPD,"f2"		is (op_h=0b11110010  &ac=1)... &OPD{PC=PC;}
+:mulfd OPD,"f3"		is (op_h=0b11110010  &ac=2)... &OPD{PC=PC;}
+:negfd OPD,"f1"		is (op_h=0b11000111  &ac=0)... &OPD{PC=PC;}
+:negfd OPD,"f2"		is (op_h=0b11000111  &ac=1)... &OPD{PC=PC;}
+:negfd OPD,"f3"		is (op_h=0b11000111  &ac=2)... &OPD{PC=PC;}
+:stcfd OPD,"f1"		is (op_h=0b11111100  &ac=0)... &OPD{PC=PC;}
+:stcfd OPD,"f2"		is (op_h=0b11111100  &ac=1)... &OPD{PC=PC;}
+:stcfd OPD,"f3"		is (op_h=0b11111100  &ac=2)... &OPD{PC=PC;}
+:stfd OPD,"f1"		is (op_h=0b11111000  &ac=0)... &OPD{PC=PC;}
+:stfd OPD,"f2"		is (op_h=0b11111000  &ac=1)... &OPD{PC=PC;}
+:stfd OPD,"f3"		is (op_h=0b11111000  &ac=2)... &OPD{PC=PC;}
 
 :ccfc is imm16=0xf000 {PC=PC;}
 :setf is imm16=0xf001 {PC=PC;}
