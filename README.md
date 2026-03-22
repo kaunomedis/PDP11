@@ -44,11 +44,11 @@ Bug reports, test cases, documentation improvements, and pull requests are appre
 
 MIT License.
 
-
+<img src="20260120a.png">
 
 Processor language module for DEC PDP11 CPU.
 
-As for 2026.02.07 passed debugger the official DEC CPU test file "AC-E664G-MC_CXCPAG0-Processor-test_Sep78".
+As for 2026.03.22 passed debugger the official DEC CPU test file "AC-E664G-MC_CXCPAG0-Processor-test_Sep78".
 
 Note: extra symbols near disassembled mnemonics are for debug purposes.
 

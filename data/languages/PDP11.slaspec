@@ -22,7 +22,7 @@ define register offset=0x0008 size=2 [ R4 ];
 define register offset=0x000A size=2 [ R5 ];
 define register offset=0x000C size=2 [ SP ]; #R6 , stekas mazejantis
 define register offset=0x000E size=2 [ PC ]; #R7
-define register offset=0x0020 size=2 [ PS ]; # STATUS & INT LEVEL
+define register offset=0x0020 size=2 [ PS ]; # STATUS FLAGS & INT LEVEL
 
 # Flag Register Contents (PS)
 #
@@ -46,6 +46,7 @@ V = PS[5,1]
 O = PS[5,1]
 B = PS[4,1]
 N = PS[3,1]
+S = PS[3,1]
 Z = PS[2,1]
 D = PS[1,1]
 C = PS[0,1]
@@ -54,17 +55,13 @@ C = PS[0,1]
 
 macro CHKNZ(a){N=(a & 0x8000)!=0;Z=(a==0);}
 macro V_NZ(){V=C ^ N;}
-macro signn(check, result){result=(check & 0x8000)!=0;}
+
 macro ADD_FLAGS(ss,dd){ts=(ss & 0x8000)!=0;td=(dd & 0x8000)!=0;tr=(((ss+dd) & 0x8000)!=0);Z=(ss==dd);V=((!(ts ^ td)) & (tr ^ td));C=((ts & td)|(ts ^ td) & !tr);}
 macro SUB_FLAGS(ss,dd){ts=(ss & 0x8000)!=0;td=(dd & 0x8000)!=0;tr=(((ss-dd) & 0x8000)!=0);Z=(ss==dd);V=((ts ^ td) & (!(tr ^ td)));C=((ts & !(td))|(!(ts ^ td) & tr));N=(dd>ss);}
 macro CMP_FLAGS(ss,dd){ts=(ss & 0x8000)!=0;td=(dd & 0x8000)!=0;tr=(((ss-dd) & 0x8000)!=0);Z=(ss==dd);V=((ts ^ td) & (!(tr ^ td)));C=(((!ts) & td)|(!(ts ^ td) & tr));N=(dd>ss);}
 macro FLZ(register){Z=(register==0);}
 macro FLV(register){V=((register & 0xFFFF)==0xFFFF);}
 macro FLN(register){N=(register & 0x8000)!=0;}
-#macro MemRead(dest,adresas) {
-#   	ptr:2 = adresas;
-#	dest = *:2 ptr;
-#}
 
 macro push(val) {SP = SP - 2;*:2 SP = val;}
 macro pop(val)  {val = *:2 SP;SP = SP + 2;}
@@ -172,20 +169,20 @@ RELN:	reloc	is nnn	[reloc = inst_next-nnn*2;]		{tmp:2 = 0; tmp=reloc; export  tm
 :RESET		is imm16=0x005	{SP=SP;}
 
 :BR   REL8			is op_h=1 & REL8	{goto [REL8];}
-:BNE  REL8			is op_h=2 & REL8	{if Z		goto inst_next; goto [REL8];} # Z=0
+:BNE  REL8			is op_h=2 & REL8	{if Z	goto inst_next; goto [REL8];} # Z=0
 :BEQ  REL8			is op_h=3 & REL8	{if !Z	goto inst_next; goto [REL8];} # Z=1
-:BPL  REL8			is op_h=0x80 & REL8 {if N		goto inst_next; goto [REL8];} # N=0 sign
+:BPL  REL8			is op_h=0x80 & REL8 {if N	goto inst_next; goto [REL8];} # N=0 sign
 :BMI  REL8			is op_h=0x81 & REL8 {if !N	goto inst_next; goto [REL8];} # N=1
-:BVC  REL8			is op_h=0x84 & REL8 {if V		goto inst_next; goto [REL8];} # V=0 overflow
+:BVC  REL8			is op_h=0x84 & REL8 {if V	goto inst_next; goto [REL8];} # V=0 overflow
 :BVS  REL8			is op_h=0x85 & REL8 {if !V	goto inst_next; goto [REL8];} # V=1
-:BCC  REL8			is op_h=0x86 & REL8 {if C		goto inst_next; goto [REL8];} # C=0 carry
+:BCC  REL8			is op_h=0x86 & REL8 {if C	goto inst_next; goto [REL8];} # C=0 carry
 :BCS  REL8			is op_h=0x87 & REL8 {if !C	goto inst_next; goto [REL8];} # C=1
 :BGE  REL8			is op_h=4 & REL8	{if (N ^ V)		goto inst_next; goto [REL8];} # N xor V =0
 :BLT  REL8			is op_h=5 & REL8	{if !(N ^ V)	goto inst_next; goto [REL8];} # N xor V =1
 :BGT  REL8			is op_h=6 & REL8	{if ((N ^ V)|Z)	goto inst_next; goto [REL8];} # (N xor V) or Z =0
-:BLE  REL8			is op_h=7 & REL8	{if !((N ^ V)|Z)	goto inst_next; goto [REL8];} # (N xor V) or Z =0
-:BHI  REL8			is op_h=0x82 & REL8 {if !(!C | !Z)			goto inst_next; goto [REL8];} # C or Z =0
-:BLOS REL8			is op_h=0x83 & REL8 {if !(C | Z)			goto inst_next; goto [REL8];} # C or Z =1
+:BLE  REL8			is op_h=7 & REL8	{if !((N ^ V)|Z)goto inst_next; goto [REL8];} # (N xor V) or Z =0
+:BHI  REL8			is op_h=0x82 & REL8 {if !(!C | !Z)	goto inst_next; goto [REL8];} # C or Z =0
+:BLOS REL8			is op_h=0x83 & REL8 {if !(C | Z)	goto inst_next; goto [REL8];} # C or Z =1
 
 # is manualo
 # file:///C:/Users/User/Downloads/ghidra_12.0_PUBLIC_20251205/ghidra_12.0_PUBLIC/docs/languages/html/sleigh_constructors.html#sleigh_sections_constructor
@@ -478,7 +475,7 @@ FLZ(OPD); FLN(OPD);}
 
 ##################################################################################
 
-:MOV OPS,OPD 	is (kodas_s=0x1)...& OPD & OPS {tmp:1=0;signn(OPS, tmp);N=tmp;FLZ(OPS); OPD = OPS; V=0;}
+:MOV OPS,OPD 	is (kodas_s=0x1)...& OPD & OPS {N=((OPS & 0x8000)!=0);FLZ(OPS); OPD = OPS; V=0;}
 :MOVB OPS,OPD 	is (kodas_s=0x9)...& OPD & OPS {OPD=OPD & 0xFF00; OPD =OPD | (OPS & 0x00FF); FLZ(OPS & 0x00FF);}
 :CMP OPS,OPD 	is (kodas_s=0x2)... & OPD & OPS {CMP_FLAGS(OPD,OPS);}
 :CMPB OPS,OPD 	is (kodas_s=0xA)... & OPD & OPS {CMP_FLAGS(OPD<<8,OPS<<8); FLZ((OPD&0xFF)==(OPS&0xFF));}
@@ -549,7 +546,7 @@ FLZ(OPD); FLN(OPD);}
 :JMP REL16 "ok6"		is kodas_s=0 & met_s=0 & reg_s=1 & met_d=6 & reg_d=7 ; REL16{PC=REL16; goto [PC];}
 :JMP "@"REL16" ok7" 	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=7 & reg_d=7; REL16 {goto [REL16];}
 
-:JMP imm16(reg_d)"ok7b" 	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=7 & reg_dd!=7 &reg_d; imm16 {tmp:2=imm16+reg_d;goto [tmp];}
+:JMP imm16(reg_d)"ok7b" is kodas_s=0 & met_s=0 & reg_s=1 & met_d=7 & reg_dd!=7 &reg_d; imm16 {tmp:2=imm16+reg_d;goto [tmp];}
 
 
 
