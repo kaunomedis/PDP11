@@ -85,15 +85,18 @@ define token word_1 (16)
 	met_s=(9,11)
 	reg_s=(6,8)
 	reg_ss=(6,8)
+	reg_lo=(6,8)
 	met_d=(3,5)
 	reg_d=(0,2)
 	reg_dd=(0,2)
 	nnn=(0,5)
 	fpu=(3,15)
+	
 ;
 
 attach variables [ reg_s] [ R0 R1 R2 R3 R4 R5 SP PC];
 attach variables [ reg_d] [ R0 R1 R2 R3 R4 R5 SP PC];
+attach variables [ reg_lo ] [ R1 R1 R3 R3 R5 R5 SP PC];
 
 # next word with data or first opcode
 define token data_word (16)
@@ -369,7 +372,20 @@ OPD: "@"REL32H"?OK7e"		is met_d=7 &         (met_s=6 | met_s=7) & reg_d=7							
 :XOR reg_s,OPD	is (kodas_s=7 &met_s=4 & reg_s) ...& OPD {OPD=OPD^reg_s; FLZ(OPD);FLN(OPD);V=0;}
 :SOB reg_s,RELN	is kodas_s=7 &met_s=7 & reg_s & RELN &nnn {reg_s=reg_s-1;if (reg_s==0) goto inst_next;goto [RELN];} # SOB RRR,NNN NNN : R := R – 1; IF (R != 0) THEN PC := PC – 2 * NN
 
-:MUL reg_s,OPD	is (kodas_s=7 &met_s=0 & reg_s) ...& OPD {
+
+
+
+:MUL reg_s,OPD  is (kodas_s=7 & met_s=0 & reg_s & reg_lo) ... & OPD  {
+    prod:4 = sext(reg_s) * sext(OPD);
+    reg_s  = prod(2);                 # high 16 bits -> R
+    reg_lo = prod(0);                 # low  16 bits -> R+1
+    Z = (prod == 0);
+    N = (prod s< 0);
+    V = 0;
+    C = (prod s< -32768) || (prod s> 32767);
+}
+
+#:MUL reg_s,OPD	is (kodas_s=7 &met_s=0 & reg_s) ... & OPD {
 
  # f1 = get_operand_w(inst);
  # rno = (inst >> 6) & 7;
@@ -384,16 +400,33 @@ OPD: "@"REL32H"?OK7e"		is met_d=7 &         (met_s=6 | met_s=7) & reg_d=7							
 
 
 
-r:4=zext(OPD)*zext(reg_s); 
-OPD=r[0,15];
-reg_s=r[16,15];
-Z=(r==0);V=0;
-N=((r>>31)==1);
+#r:4=zext(OPD)*zext(reg_s); 
+#OPD=r[0,15];
+#reg_s=r[16,15];
+#Z=(r==0);V=0;
+#N=((r>>31)==1);
 #C((r)>32767 or r<-32768);#???? kaip?
+#}
+
+:DIV reg_s,OPD  is (kodas_s=7 & met_s=1 & reg_s & reg_lo) ... & OPD  {
+    dividend:4 = (zext(reg_s) << 16) | zext(reg_lo);
+    divisor:4  = sext(OPD);
+    if (divisor != 0) goto <ok>;
+        V = 1; C = 1;                 # divide by zero: abort, per J11
+        goto <done>;
+    <ok>
+    quot:4 = dividend s/ divisor;
+    rem:4  = dividend s% divisor;
+    reg_s  = quot(0);                 # quotient  -> R
+    reg_lo = rem(0);                  # remainder -> R+1
+    N = (quot s< 0);
+    Z = (quot == 0);
+    V = 0;
+    C = 0;
+    <done>
 }
-:DIV reg_s,OPD	is (kodas_s=7 &met_s=1 & reg_s) ...& OPD {
 
-
+#:DIV reg_s,OPD	is (kodas_s=7 &met_s=1 & reg_s) ...& OPD {
 # divr = get_operand_w(inst);
 # if (divr == 0)
 #  { CLR_N();
@@ -450,12 +483,9 @@ N=((r>>31)==1);
 # REG(rno) = quo & 0xffff;
 # REG(rno+1) = rem;
 #}
-
-
-
-
 #bibiene?
-OPD=OPD/reg_s;  FLZ(OPD); FLN(OPD);}
+#OPD=OPD/reg_s;  FLZ(OPD); FLN(OPD);}
+
 :ASH reg_s,OPD	is (kodas_s=7 &met_s=2 & reg_s) ...& OPD {
 if((reg_s&0x8000)==0x8000)goto<a>;
 OPD=OPD<<(reg_s&0x3F);
@@ -464,6 +494,7 @@ goto<b>;
 OPD=OPD>>(reg_s&0x3F);
 <b>
 FLZ(OPD); FLN(OPD);}
+
 :ASHC reg_s,OPD	is (kodas_s=7 &met_s=3 & reg_s) ...& OPD {
 if((reg_s&0x8000)==0x8000)goto<a>;
 OPD=OPD<<(reg_s&0x3F);
