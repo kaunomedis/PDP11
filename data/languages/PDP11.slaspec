@@ -85,10 +85,14 @@ define token word_1 (16)
 	met_s=(9,11)
 	reg_s=(6,8)
 	reg_ss=(6,8)
-	reg_lo=(6,8)
+	reg_lo=(6,8)	
+	
 	met_d=(3,5)
+	
 	reg_d=(0,2)
 	reg_dd=(0,2)
+
+	
 	nnn=(0,5)
 	fpu=(3,15)
 	
@@ -96,7 +100,7 @@ define token word_1 (16)
 
 attach variables [ reg_s] [ R0 R1 R2 R3 R4 R5 SP PC];
 attach variables [ reg_d] [ R0 R1 R2 R3 R4 R5 SP PC];
-attach variables [ reg_lo ] [ R1 R1 R3 R3 R5 R5 SP PC];
+attach variables [ reg_lo ] [ R1 R1 R3 R3 R5 R5 PC PC];
 
 # next word with data or first opcode
 define token data_word (16)
@@ -375,40 +379,22 @@ OPD: "@"REL32H"?OK7e"		is met_d=7 &         (met_s=6 | met_s=7) & reg_d=7							
 
 
 
-:MUL reg_s,OPD  is (kodas_s=7 & met_s=0 & reg_s & reg_lo) ... & OPD  {
+:MUL OPD,reg_s  is (kodas_s=7 & met_s=0 & reg_s & reg_lo) ... & OPD  { ### kodel susikeite OPD ir OPS?
     prod:4 = sext(reg_s) * sext(OPD);
+#	tmp = reg_s;
     reg_s  = prod(2);                 # high 16 bits -> R
     reg_lo = prod(0);                 # low  16 bits -> R+1
     Z = (prod == 0);
     N = (prod s< 0);
     V = 0;
     C = (prod s< -32768) || (prod s> 32767);
+#	if (tmp != 7) goto <exxx>;
+#	goto [PC];
+#	<exxx>
+
 }
 
-#:MUL reg_s,OPD	is (kodas_s=7 &met_s=0 & reg_s) ... & OPD {
-
- # f1 = get_operand_w(inst);
- # rno = (inst >> 6) & 7;
- # f2 = REG(rno);
- # prod = sxw(f1) * sxw(f2);
- # if (prod == 0) SET_Z(); else CLR_Z();
- # if (prod < 0) SET_N(); else CLR_N();
- # if ((prod < -32768) || (prod > 32767)) SET_C(); else CLR_C();
- # REG(rno) = (prod >> 16) & 0xffff;
- # REG(rno|1) = prod & 0xffff;
- # CLR_V();
-
-
-
-#r:4=zext(OPD)*zext(reg_s); 
-#OPD=r[0,15];
-#reg_s=r[16,15];
-#Z=(r==0);V=0;
-#N=((r>>31)==1);
-#C((r)>32767 or r<-32768);#???? kaip?
-#}
-
-:DIV reg_s,OPD  is (kodas_s=7 & met_s=1 & reg_s & reg_lo) ... & OPD  {
+:DIV OPD,reg_s  is (kodas_s=7 & met_s=1 & reg_s & reg_lo) ... & OPD  {
     dividend:4 = (zext(reg_s) << 16) | zext(reg_lo);
     divisor:4  = sext(OPD);
     if (divisor != 0) goto <ok>;
