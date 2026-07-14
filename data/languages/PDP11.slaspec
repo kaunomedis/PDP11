@@ -537,7 +537,7 @@ FLZ(OPD); FLN(OPD);}
 :TSTB OPD		is (kodas_s=8 & met_s=5 &reg_s=7)... &OPD {FLZ(OPD & 0x00FF); V=0; C=0; FLN(OPD<<8);}
 :SXT OPD		is (kodas_s=0 & met_s=6 &reg_s=7)... &OPD {tmp=0xFFFF;if (N) goto <b>;tmp=0;<b>OPD=tmp;}
 :SWAB OPD		is (kodas_s=0 & met_s=0 &reg_s=3)... &OPD {tmp=OPD>>8; OPD=(OPD<<8)|tmp;FLN(OPD<<8);FLZ(OPD&0xFF);V=0;C=0;}
-:MFPS OPD		is (kodas_s=8 & met_s=6 &reg_s=7)... &OPD {tmp=OPD&0xFF00;OPD=PS&0xFF|tmp;FLZ(OPD&0xFF);V=0;N=((OPD&0x80)==0x80);}
+:MFPS OPD		is (kodas_s=8 & met_s=6 &reg_s=7)... &OPD {tmp=sext(PS[0,8]);OPD=PS&0xFF|tmp;FLZ(OPD&0xFF);V=0;N=((OPD&0x80)==0x80);}
 :MTPS OPD		is (kodas_s=8 & met_s=6 &reg_s=4)... &OPD {tmp=OPD&0b01010101;PS=PS&(~0b01010101)|tmp;}
 ############################################################################################
 
