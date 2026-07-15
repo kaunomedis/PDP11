@@ -26,29 +26,35 @@ define register offset=0x0020 size=2 [ PS ]; # STATUS FLAGS & INT LEVEL
 
 # Flag Register Contents (PS)
 #
-# b15         - Reserved area
-# b14:b12     - Processor interrupt priority level
-# b11:b8     - Reserved area
-# b7        - (U) Stack pointer select flag
-# b6         - (I) Interrupt enable flag
-# b5         - (O)(V) Overflow flag
-# b4        - (B) Register bank select flag
-# b3         - (S)(N) Sign flag
+# b15:14    - Current mode: 00-kernel, 01-supervisor, 10-illegal, 11-user
+# b13:b12   - Previous mode
+# b11		- register set
+# b10:b9	- unused
+# b8   		- Reserved area
+# b7        - (I) Interrupt prio 
+# b6        - (I) Interrupt prio
+# b5        - (I) Interrupt prio 
+# b4        - (T) trace
+# b3        - (S)(N) Sign flag
 # b2        - (Z) Zero flag
-# b1        - (D) Debug flag
+# b1        - (O)(V) Overflow flag 
 # b0        - (C) Carry flag
 
 define bitrange
-SPLevel=PS[12,3]
-U = PS[7,1]
-I = PS[6,1]
-V = PS[5,1]
-O = PS[5,1]
-B = PS[4,1]
+SPLevel=PS[5,3]
+
+# U = PS[7,1]
+# I = PS[6,1]
+# D = PS[5,1]
+
+
+# B = PS[4,1]
+
 N = PS[3,1]
 S = PS[3,1]
 Z = PS[2,1]
-D = PS[1,1]
+V = PS[1,1]
+O = PS[1,1]
 C = PS[0,1]
 ;
 
