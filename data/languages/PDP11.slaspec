@@ -555,9 +555,9 @@ FLZ(OPD); FLN(OPD);}
 
 
 
+:MTPS OPD		is (kodas_s=8 & met_s=6 & reg_s=4)... &OPD {PS=(PS&0xFF10)|(OPD&0xEF);}
 
-
-:MTPS OPD		is (kodas_s=8 & met_s=6 &reg_s=4)... &OPD {tmp=OPD&0b01010101;PS=PS&(~0b01010101)|tmp;}
+#:MTPS OPD		is (kodas_s=8 & met_s=6 & reg_s=4)... &OPD {tmp=OPD&0b01010101;PS=PS&(~0b01010101)|tmp;}
 ############################################################################################
 
 # Jumpai (PC registras, R7)
