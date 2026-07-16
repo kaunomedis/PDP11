@@ -508,10 +508,60 @@ FLN(reg_s); FLZ(reg_s);
 }
 
 
-:ASHC OPD,reg_s	is (kodas_s=7 &met_s=3 & reg_s) ...& OPD {
-#need to do this.
-}
+:ASHC OPD,reg_s	is (kodas_s=7 & met_s=3 & reg_s & reg_lo & reg_ss) ... & OPD {
+cnt:2 = OPD & 0x3F;
+mag:2 = 0;
+rot:2 = 0;
+cbit:2 = 0;
+old:4 = (zext(reg_s)<<16) | zext(reg_lo);
+comb:4 = old;
+oldw:2 = reg_s;
+oddreg:2 = reg_ss;
 
+if (cnt==0) goto <zero>;
+if ((cnt & 0x20)!=0) goto <right>;
+
+# ---- LEFT shift: normal 32-bit arithmetic shift ----
+mag = cnt;
+C = (((old << (mag-1)) & 0x80000000)!=0);
+comb = old << mag;
+goto <finish32>;
+
+<right>
+mag = (0x40 - cnt) & 0x3F;
+if ((oddreg & 1)!=0) goto <right_odd>;
+
+# ---- RIGHT shift, even register pair: normal 32-bit arithmetic shift ----
+C = (((old s>> (mag-1)) & 1)!=0);
+comb = old s>> mag;
+goto <finish32>;
+
+<right_odd>
+# ---- RIGHT shift, odd register: becomes a 16-bit rotate of that single register ----
+rot = mag & 0xF;
+cbit = (mag-1) & 0xF;
+C = (((oldw >> cbit) & 1)!=0);
+reg_s = (oldw >> rot) | (oldw << (16-rot));
+N = (reg_s s< 0);
+Z = (reg_s == 0);
+V = (((oldw ^ reg_s) & 0x8000)!=0);
+goto <end>;
+
+<zero>
+N = (old s< 0);
+Z = (old == 0);
+V = 0;
+goto <end>;
+
+<finish32>
+reg_s  = comb(2);
+reg_lo = comb(0);
+N = (comb s< 0);
+Z = (comb == 0);
+V = (((old ^ comb) & 0x80000000)!=0);
+
+<end>
+}
 ##################################################################################
 
 :MOV OPS,OPD 	is (kodas_s=0x1)...& OPD & OPS {N=((OPS & 0x8000)!=0);FLZ(OPS); OPD = OPS; V=0;}
