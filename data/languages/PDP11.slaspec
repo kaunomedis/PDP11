@@ -478,7 +478,7 @@ OPD: "@"REL32H"?OK7e"		is met_d=7 &         (met_s=6 | met_s=7) & reg_d=7							
 #bibiene?
 #OPD=OPD/reg_s;  FLZ(OPD); FLN(OPD);}
 
-:ASH reg_s,OPD	is (kodas_s=7 &met_s=2 & reg_s) ...& OPD {
+:ASH OPD,reg_s	is (kodas_s=7 &met_s=2 & reg_s) ...& OPD {
 if((reg_s&0x8000)==0x8000)goto<a>;
 OPD=OPD<<(reg_s&0x3F);
 goto<b>;
