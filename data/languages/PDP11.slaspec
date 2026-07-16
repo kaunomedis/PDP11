@@ -508,14 +508,9 @@ FLN(reg_s); FLZ(reg_s);
 }
 
 
-:ASHC reg_s,OPD	is (kodas_s=7 &met_s=3 & reg_s) ...& OPD {
-if((reg_s&0x8000)==0x8000)goto<a>;
-OPD=OPD<<(reg_s&0x3F);
-goto<b>;
-<a>
-OPD=OPD>>(reg_s&0x3F);
-<b>
-FLZ(OPD); FLN(OPD);}
+:ASHC OPD,reg_s	is (kodas_s=7 &met_s=3 & reg_s) ...& OPD {
+#need to do this.
+}
 
 ##################################################################################
 
