@@ -479,13 +479,34 @@ OPD: "@"REL32H"?OK7e"		is met_d=7 &         (met_s=6 | met_s=7) & reg_d=7							
 #OPD=OPD/reg_s;  FLZ(OPD); FLN(OPD);}
 
 :ASH OPD,reg_s	is (kodas_s=7 &met_s=2 & reg_s) ...& OPD {
-if((reg_s&0x8000)==0x8000)goto<a>;
-OPD=OPD<<(reg_s&0x3F);
-goto<b>;
-<a>
-OPD=OPD>>(reg_s&0x3F);
-<b>
-FLZ(OPD); FLN(OPD);}
+cnt:2 = OPD & 0x3F;
+old:2 = reg_s;
+mag:2 = 0;
+if (cnt==0) goto <zero>;
+if ((cnt & 0x20)!=0) goto <right>;
+
+mag = cnt;
+C = (((old << (mag-1)) & 0x8000)!=0);
+reg_s = reg_s << mag;
+goto <done>;
+
+<right>
+mag = (0x40 - cnt) & 0x3F;
+C = (((old s>> (mag-1)) & 1)!=0);
+reg_s = reg_s s>> mag;
+goto <done>;
+
+<zero>
+V=0;
+goto <flags>;
+
+<done>
+V = (((old ^ reg_s) & 0x8000)!=0);
+
+<flags>
+FLN(reg_s); FLZ(reg_s);
+}
+
 
 :ASHC reg_s,OPD	is (kodas_s=7 &met_s=3 & reg_s) ...& OPD {
 if((reg_s&0x8000)==0x8000)goto<a>;
