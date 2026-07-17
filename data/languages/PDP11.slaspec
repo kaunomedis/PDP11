@@ -197,9 +197,6 @@ RELN:	reloc	is nnn	[reloc = inst_next-nnn*2;]		{tmp:2 = 0; tmp=reloc; export  tm
 :BHI  REL8			is op_h=0x82 & REL8 {if !(!C | !Z)	goto inst_next; goto [REL8];} # C or Z =0
 :BLOS REL8			is op_h=0x83 & REL8 {if !(C | Z)	goto inst_next; goto [REL8];} # C or Z =1
 
-# is manualo
-# file:///C:/Users/User/Downloads/ghidra_12.0_PUBLIC_20251205/ghidra_12.0_PUBLIC/docs/languages/html/sleigh_constructors.html#sleigh_sections_constructor
-
 ####################### VARIANTAI adresacijos #############################################
 
 # adresacijos metodai (mode)? arba
@@ -382,9 +379,6 @@ OPD: "@"REL32H"?OK7e"		is met_d=7 &         (met_s=6 | met_s=7) & reg_d=7							
 :XOR reg_s,OPD	is (kodas_s=7 &met_s=4 & reg_s) ...& OPD {OPD=OPD^reg_s; FLZ(OPD);FLN(OPD);V=0;}
 :SOB reg_s,RELN	is kodas_s=7 &met_s=7 & reg_s & RELN &nnn {reg_s=reg_s-1;if (reg_s==0) goto inst_next;goto [RELN];} # SOB RRR,NNN NNN : R := R – 1; IF (R != 0) THEN PC := PC – 2 * NN
 
-
-
-
 :MUL OPD,reg_s  is (kodas_s=7 & met_s=0 & reg_s & reg_lo) ... & OPD  { ### kodel susikeite OPD ir OPS?
     prod:4 = sext(reg_s) * sext(OPD);
 #	tmp = reg_s;
@@ -397,7 +391,6 @@ OPD: "@"REL32H"?OK7e"		is met_d=7 &         (met_s=6 | met_s=7) & reg_d=7							
 #	if (tmp != 7) goto <exxx>;
 #	goto [PC];
 #	<exxx>
-
 }
 
 :DIV OPD,reg_s  is (kodas_s=7 & met_s=1 & reg_s & reg_lo) ... & OPD  {
@@ -417,66 +410,6 @@ OPD: "@"REL32H"?OK7e"		is met_d=7 &         (met_s=6 | met_s=7) & reg_d=7							
     C = 0;
     <done>
 }
-
-#:DIV reg_s,OPD	is (kodas_s=7 &met_s=1 & reg_s) ...& OPD {
-# divr = get_operand_w(inst);
-# if (divr == 0)
-#  { CLR_N();
-#    SET_Z();
-#    SET_V();
-#    SET_C();
-#    return;
-#  }
-# rno = (inst >> 6) & 6; /* "must be even", or would be ... & 7 */
-# if (rno & 1)
-#  { I_emhalt(0);
-#    return;
-#  }
-# CLR_C();
-# CLR_V();
-# divd = ((REG(rno) << 16) | REG(rno+1));
-# negq = 0;
-# negr = 0;
-# if (divd & 0x80000000)
-#  { if (divr & 0x8000)
-#     { divd = (- divd) & 0xffffffff;
-#       divr = (- divr) & 0xffff;
-#       negr = 1;
-#     }
-#    else
-#     { divd = (- divd) & 0xffffffff;
-#       negq = 1;
-#       negr = 1;
-#     }
-#  }
-# else
-#  { if (divr & 0x8000)
-#     { divr = (- divr) & 0xffff;
-#       negq = 1;
-#     }
-#  }
-# quo = divd / divr;
-# rem = divd % divr;
-# if ((quo&0x7fffffff) == 0) SET_Z(); else CLR_Z();
-# if (negq) SET_N(); else CLR_N();
-# if (quo & 0xffff8000)
-#  { /* the code inside this if is not supposed to make sense;
-#       it's just supposed to keep ekbbc1 happy. */
-#    SET_V();
-#    quo >>= 16;
-#    if (negq && !negr) quo ++;
-#    if (negr && !negq) rem ++;
-#    negq = 0;
-#    negr = 0;
-#    if (quo & 0x8000) SET_N(); else CLR_N(); /* is this right? */
-#  }
-# if (negq) quo = (- quo) & 0xffffffff;
-# if (negr) rem = (- rem) & 0xffff;
-# REG(rno) = quo & 0xffff;
-# REG(rno+1) = rem;
-#}
-#bibiene?
-#OPD=OPD/reg_s;  FLZ(OPD); FLN(OPD);}
 
 :ASH OPD,reg_s	is (kodas_s=7 &met_s=2 & reg_s) ...& OPD {
 cnt:2 = OPD & 0x3F;
@@ -609,21 +542,11 @@ V = (((old ^ comb) & 0x80000000)!=0);
 :TSTB OPD		is (kodas_s=8 & met_s=5 &reg_s=7)... &OPD {FLZ(OPD & 0x00FF); V=0; C=0; FLN(OPD<<8);}
 :SXT OPD		is (kodas_s=0 & met_s=6 &reg_s=7)... &OPD {tmp=0xFFFF;if (N) goto <b>;tmp=0;<b>OPD=tmp;}
 :SWAB OPD		is (kodas_s=0 & met_s=0 &reg_s=3)... &OPD {tmp=OPD>>8; OPD=(OPD<<8)|tmp;FLN(OPD<<8);FLZ(OPD&0xFF);V=0;C=0;}
-#:MFPS OPD		is (kodas_s=8 & met_s=6 &reg_s=7)... &OPD {tmp=sext(PS[0,8]);OPD=PS&0xFF|tmp;FLZ(OPD&0xFF);V=0;N=((OPD&0x80)==0x80);}
 
 :MFPS OPD		is (kodas_s=8 & met_s=6 & reg_s=7 & met_d=0)... &OPD {tmp=sext(PS[0,8]);OPD=PS&0xFF|tmp;FLZ(OPD&0xFF);V=0;N=((OPD&0x80)==0x80);}
 :MFPS OPD		is (kodas_s=8 & met_s=6 & reg_s=7 & met_d!=0)... &OPD {OPD=(OPD&0xFF00)|(PS&0xFF);FLZ(PS&0xFF);V=0;N=((PS&0x80)==0x80);}
 
-
-
-
-
-
-
-
 :MTPS OPD		is (kodas_s=8 & met_s=6 & reg_s=4)... &OPD {PS=(PS&0xFF10)|(OPD&0xEF);}
-
-#:MTPS OPD		is (kodas_s=8 & met_s=6 & reg_s=4)... &OPD {tmp=OPD&0b01010101;PS=PS&(~0b01010101)|tmp;}
 ############################################################################################
 
 # Jumpai (PC registras, R7)
@@ -730,10 +653,6 @@ FRD: reg_d is reg_d			{ export *:1 reg_d; }
 
 :setd is imm16=0xf009 {PC=PC;}
 :setl is imm16=0xf00a {PC=PC;}
-
-
-
-
 
 ######## HALT MODE ############################
 
