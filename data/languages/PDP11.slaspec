@@ -284,6 +284,9 @@ OPS: imm32L"("reg_s")_OK6e"	is met_s=6 & met_d=6 & reg_s						;imm32L	{tmp:2 = i
 OPS: imm32L"("reg_s")_OK6f"	is met_s=6 & met_d=7 & reg_s						;imm32L	{tmp:2 = imm32L+reg_s; export *:2 tmp;}
 OPS: REL32L"_OK6g"			is met_s=6 & met_d=3 & reg_s=7						;REL32L	{tmp:2 = REL32L; export *:2 tmp;}
 OPS: imm32L"("reg_s")_OK6h"	is met_s=6 & met_d=3 & reg_d=7 & reg_ss!=7 &reg_s	;imm32L	{tmp:2 = imm32L; export *:2 tmp;}
+OPS: REL32L"_OK6j" is met_s=6 & reg_s=7 & met_d=2 & reg_d=7 ;REL32L {tmp:2 = REL32L; export *:2 tmp;}
+
+
 
 # MODE7: (index deferred)
 # EA_ptr = Rn + offset
@@ -508,7 +511,12 @@ V = (((old ^ comb) & 0x80000000)!=0);
 ##################################################################################
 
 :MOV OPS,OPD 	is (kodas_s=0x1)...& OPD & OPS {N=((OPS & 0x8000)!=0);FLZ(OPS); OPD = OPS; V=0;}
-:MOVB OPS,OPD 	is (kodas_s=0x9)...& OPD & OPS {OPD=OPD & 0xFF00; OPD =OPD | (OPS & 0x00FF); FLZ(OPS & 0x00FF);}
+#:MOVB OPS,OPD 	is (kodas_s=0x9)...& OPD & OPS {OPD=OPD & 0xFF00; OPD =OPD | (OPS & 0x00FF); FLZ(OPS & 0x00FF);}
+
+:MOVB OPS,OPD 	is (kodas_s=0x9 & met_d=0)...  & OPD & OPS {OPD=sext(OPS[0,8]); FLZ(OPS&0xFF); N=((OPS&0x80)!=0); V=0;}
+:MOVB OPS,OPD 	is (kodas_s=0x9 & met_d!=0)... & OPD & OPS {OPD=(OPD&0xFF00)|(OPS&0xFF); FLZ(OPS&0xFF); N=((OPS&0x80)!=0); V=0;}
+
+
 :CMP OPS,OPD 	is (kodas_s=0x2)... & OPD & OPS {CMP_FLAGS(OPS,OPD);}
 #:CMPB OPS,OPD 	is (kodas_s=0xA)... & OPD & OPS {CMP_FLAGS(OPD<<8,OPS<<8); FLZ((OPD&0xFF)==(OPS&0xFF));}
 :CMPB OPS,OPD 	is (kodas_s=0xA)... & OPD & OPS {CMP_FLAGS(OPS<<8,OPD<<8); Z=((OPD&0xFF)==(OPS&0xFF));}
