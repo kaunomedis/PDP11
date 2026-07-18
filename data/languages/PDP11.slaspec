@@ -64,7 +64,10 @@ macro V_NZ(){V=C ^ N;}
 
 macro ADD_FLAGS(ss,dd){ts=(ss & 0x8000)!=0;td=(dd & 0x8000)!=0;tr=(((ss+dd) & 0x8000)!=0);Z=(ss==dd);V=((!(ts ^ td)) & (tr ^ td));C=((ts & td)|(ts ^ td) & !tr);}
 macro SUB_FLAGS(ss,dd){ts=(ss & 0x8000)!=0;td=(dd & 0x8000)!=0;tr=(((ss-dd) & 0x8000)!=0);Z=(ss==dd);V=((ts ^ td) & (!(tr ^ td)));C=((ts & !(td))|(!(ts ^ td) & tr));N=(dd>ss);}
-macro CMP_FLAGS(ss,dd){ts=(ss & 0x8000)!=0;td=(dd & 0x8000)!=0;tr=(((ss-dd) & 0x8000)!=0);Z=(ss==dd);V=((ts ^ td) & (!(tr ^ td)));C=(((!ts) & td)|(!(ts ^ td) & tr));N=(dd>ss);}
+#macro CMP_FLAGS(ss,dd){ts=(ss & 0x8000)!=0;td=(dd & 0x8000)!=0;tr=(((ss-dd) & 0x8000)!=0);Z=(ss==dd);V=((ts ^ td) & (!(tr ^ td)));C=(((!ts) & td)|(!(ts ^ td) & tr));N=(dd>ss);}
+
+macro CMP_FLAGS(ss,dd){ts=(ss & 0x8000)!=0;td=(dd & 0x8000)!=0;tr=(((ss-dd) & 0x8000)!=0);Z=(ss==dd);V=((ts ^ td) & (!(tr ^ td)));C=(((!ts) & td)|(!(ts ^ td) & tr));N=tr;}
+
 macro FLZ(register){Z=(register==0);}
 macro FLV(register){V=((register & 0xFFFF)==0xFFFF);}
 macro FLN(register){N=(register & 0x8000)!=0;}
