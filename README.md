@@ -48,7 +48,16 @@ MIT License.
 
 Processor language module for DEC PDP11 CPU.
 
-As for 2026.03.22 passed debugger the official DEC CPU test file "AC-E664G-MC_CXCPAG0-Processor-test_Sep78".
+As for 2026.07.18:
+
+Debugger passed:
+D0HA-PB
+
+Failed:
+"AC-E664G-MC_CXCPAG0-Processor-test_Sep78".- possible CPU_PIRQ value is wrong.
+
+
+
 
 Note: extra symbols near disassembled mnemonics are for debug purposes.
 
