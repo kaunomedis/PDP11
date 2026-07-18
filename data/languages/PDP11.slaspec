@@ -244,10 +244,14 @@ OPS: "@("reg_s")+ OK3a"		is met_s=3& reg_ss!=7 & (met_d=0 | met_d=1 | met_d=4 | 
 OPS: "@("reg_s")+ OK3b"		is met_s=3& reg_ss!=7 & (met_d=2 | met_d=3) & reg_d!=7        		& reg_s		{tmp:2 = *:2 reg_s; tmp2=*:2 tmp; reg_s=reg_s+2; export tmp2;}
 OPS: "@("reg_s")+ OK3c"		is met_s=3& reg_ss!=7 & (met_d=2 | met_d=3) & reg_d=7				& reg_s		{tmp:2 = *:2 reg_s; tmp2=*:2 tmp; reg_s=reg_s+2; export tmp2;}
 OPS: "@("reg_s")+ OK3d"		is met_s=3& reg_ss!=7 & (met_d=6 | met_d=7)							& reg_s		{tmp:2 = *:2 reg_s; tmp2=*:2 tmp; reg_s=reg_s+2; export tmp2;}
-OPS: "@#"imm16" OK3e"		is met_s=3&  reg_ss=7 & (met_d=0 | met_d=1 | met_d=4 | met_d=5)		& reg_s	;imm16	{tmp:2 =imm16; export tmp;}
-OPS: "@("reg_s")+ OK3f"		is met_s=3&  reg_ss=7 & (met_d=2 | met_d=3) & reg_d!=7				& reg_s			{tmp:2 = *:2 reg_s; tmp2=*:2 tmp; reg_s=reg_s+2; export tmp2;}
-OPS: "@#"imm32L" OK3g"		is met_s=3&  reg_ss=7 & (met_d=2 | met_d=3) & reg_d=7				& reg_s	;imm32L	{tmp:2 = imm32L; export tmp;}
-OPS: "@#"imm32L" OK3h"		is met_s=3&  reg_ss=7 & (met_d=6 | met_d=7)							& reg_s	;imm32L	{tmp:2 = imm32L; export tmp;}
+OPS: "@#"imm16" OK3e"		is met_s=3&  reg_ss=7 & (met_d=0 | met_d=1 | met_d=4 | met_d=5)		& reg_s	;imm16	{tmp:2 =imm16; export *:2 tmp;}
+# OPS: "@("reg_s")+ OK3f"		is met_s=3&  reg_ss=7 & (met_d=2 | met_d=3) & reg_d!=7				& reg_s			{tmp:2 = *:2 reg_s; tmp2=*:2 tmp; reg_s=reg_s+2; export tmp2;}
+
+OPS: "@#"imm16" OK3f"  is met_s=3 & reg_ss=7 & (met_d=2 | met_d=3) & reg_d!=7 & reg_s ;imm16  {tmp:2=imm16; export *:2 tmp;}
+
+
+OPS: "@#"imm32L" OK3g"		is met_s=3&  reg_ss=7 & (met_d=2 | met_d=3) & reg_d=7				& reg_s	;imm32L	{tmp:2 = imm32L; export *:2 tmp;}
+OPS: "@#"imm32L" OK3h"		is met_s=3&  reg_ss=7 & (met_d=6 | met_d=7)							& reg_s	;imm32L	{tmp:2 = imm32L; export *:2 tmp;}
 
 # MODE4: (autodecrement)
 # Rn = Rn - (is_byte ? 1 : 2)
