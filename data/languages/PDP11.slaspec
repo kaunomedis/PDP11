@@ -197,7 +197,7 @@ RELN:	reloc	is nnn	[reloc = inst_next-nnn*2;]		{tmp:2 = 0; tmp=reloc; export  tm
 :BLT  REL8			is op_h=5 & REL8	{if !(N ^ V)	goto inst_next; goto [REL8];} # N xor V =1
 :BGT  REL8			is op_h=6 & REL8	{if ((N ^ V)|Z)	goto inst_next; goto [REL8];} # (N xor V) or Z =0
 :BLE  REL8			is op_h=7 & REL8	{if !((N ^ V)|Z)goto inst_next; goto [REL8];} # (N xor V) or Z =0
-:BHI  REL8			is op_h=0x82 & REL8 {if !(!C | !Z)	goto inst_next; goto [REL8];} # C or Z =0
+:BHI  REL8			is op_h=0x82 & REL8 {if !(!C & !Z)	goto inst_next; goto [REL8];} # C and Z =0
 :BLOS REL8			is op_h=0x83 & REL8 {if !(C | Z)	goto inst_next; goto [REL8];} # C or Z =1
 
 ####################### VARIANTAI adresacijos #############################################

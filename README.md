@@ -51,11 +51,19 @@ Processor language module for DEC PDP11 CPU.
 As for 2026.07.18:
 
 Debugger passed:
-D0HA-PB
+D0HA-PB (move)
+D0AA-PB (branch)
+D0BA-PB (conditional branch)
+D0FA-PB (compare equality)
+D0GA-PB (compare non equality)
 
 Failed:
 "AC-E664G-MC_CXCPAG0-Processor-test_Sep78".- possible CPU_PIRQ value is wrong.
+D0CA-PB (unary)
+D0DA-PB (unary and binary)
 
+D0EA-PB (rotary/shift) - not all decompiled
+D0IA-PB (bis, bix, bit)
 
 
 
