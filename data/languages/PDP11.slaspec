@@ -528,7 +528,10 @@ V = (((old ^ comb) & 0x80000000)!=0);
 :DEC OPD		is (kodas_s=0 & met_s=5 &reg_s=3)... &OPD {V=(OPD==0x8000);OPD=OPD-1;FLZ(OPD);FLN(OPD);}
 :DECB OPD		is (kodas_s=8 & met_s=5 &reg_s=3)... &OPD {tmp0:2=OPD&0xFF00;OPD=OPD&0xFF;V=(OPD==0x80);OPD=(OPD-1)&0xFF;FLZ(OPD);FLN(OPD<<8);OPD=OPD|tmp0;}
 
-:NEG OPD		is (kodas_s=0 & met_s=5 &reg_s=4)... &OPD {OPD=-OPD; FLZ(OPD); FLV(OPD);FLN(OPD);C=(OPD!=0);}
+#:NEG OPD		is (kodas_s=0 & met_s=5 &reg_s=4)... &OPD {OPD=-OPD; FLZ(OPD); FLV(OPD);FLN(OPD);C=(OPD!=0);}
+:NEG OPD 	is (kodas_s=0 & met_s=5 &reg_s=4)... &OPD {OPD=-OPD; FLZ(OPD); V=(OPD==0x8000); FLN(OPD); C=(OPD!=0);}
+
+
 
 :NEGB OPD		is (kodas_s=8 & met_s=5 &reg_s=4)... &OPD {tmp0=OPD&0xFF00;OPD=(0-OPD)&0xFF;V=(OPD==0x80);FLZ(OPD);FLN(OPD<<8);C=(OPD!=0);OPD=OPD|tmp0;}
 :ADC OPD		is (kodas_s=0 & met_s=5 &reg_s=5)... &OPD {tmp:2=OPD+(PS&1);V=1;if((OPD==0x7FFF)&((PS&1)==1))goto<a>;V=0;<a>C=1;if((OPD==0xFFFF)&((PS&1)==1))goto<b>;C=0;<b>OPD=tmp;FLZ(OPD);FLN(OPD);}
