@@ -515,7 +515,11 @@ V = (((old ^ comb) & 0x80000000)!=0);
 :BIS OPS,OPD 	is (kodas_s=0x5)... & OPS & OPD {OPD=OPD | OPS; FLN(OPD);FLZ(OPD);V=0;}
 :BISB OPS,OPD 	is (kodas_s=0xD)... & OPS & OPD {OPD=OPD | (OPS&0xFF); FLN(OPD);FLZ(OPD);V=0;}
 :INC OPD		is (kodas_s=0 & met_s=5 &reg_s=2)... &OPD {V=(OPD==0x7FFF);OPD=OPD+1; FLZ(OPD);FLN(OPD);}
-:INCB OPD		is (kodas_s=8 & met_s=5 &reg_s=2)... &OPD {V=(OPD==0x7F);tmp=OPD & 0xFF00; OPD=((OPD+1)&0x00FF)|tmp; FLZ(OPD & 0xFF00); FLN(OPD<<8);}
+#:INCB OPD		is (kodas_s=8 & met_s=5 &reg_s=2)... &OPD {V=(OPD==0x7F);tmp=OPD & 0xFF00; OPD=((OPD+1)&0x00FF)|tmp; FLZ(OPD & 0xFF00); FLN(OPD<<8);}
+:INCB OPD 	is (kodas_s=8 & met_s=5 &reg_s=2)... &OPD {V=((OPD&0xFF)==0x7F);tmp=OPD & 0xFF00; OPD=((OPD+1)&0x00FF)|tmp; FLZ(OPD & 0x00FF); FLN(OPD<<8);}
+
+
+
 :CLR OPD		is (kodas_s=0 & met_s=5 &reg_s=0)... &OPD {OPD=0; N=0; Z=1; V=0; C=0;}
 :CLRB OPD		is (kodas_s=8 & met_s=5 &reg_s=0)... &OPD {OPD=OPD & 0xFF00; N=0; Z=1; V=0; C=0;}
 
