@@ -516,7 +516,9 @@ V = (((old ^ comb) & 0x80000000)!=0);
 :BIT OPS,OPD 	is (kodas_s=0x3)... & OPS & OPD {tmp:2=OPS&OPD;FLN(tmp);FLZ(tmp);V=0;}
 :BITB OPS,OPD 	is (kodas_s=0xB)... & OPS & OPD {tmp:2=OPS&OPD;FLN(tmp<<8);FLZ(tmp&0xFF);V=0;}
 :BIC OPS,OPD 	is (kodas_s=0x4)... & OPS & OPD {OPD=(~OPS) & OPD;FLZ(OPD);FLN(OPD); V=0;} #bit clear dst=not(src) and (dst)
-:BICB OPS,OPD 	is (kodas_s=0xC)... & OPS & OPD {tmp=OPD&0xFF00;OPD=((~OPS)&0x00FF)|tmp;FLZ(OPD&0x00FF);FLN(OPD<<8); V=0;}
+#:BICB OPS,OPD 	is (kodas_s=0xC)... & OPS & OPD {tmp=OPD&0xFF00;OPD=((~OPS)&0x00FF)|tmp;FLZ(OPD&0x00FF);FLN(OPD<<8); V=0;}
+:BICB OPS,OPD 	is (kodas_s=0xC)... & OPS & OPD {tmp=OPD&0xFF00;OPD=((~OPS)&(OPD&0xFF))|tmp;FLZ(OPD&0x00FF);FLN(OPD<<8); V=0;}
+
 :BIS OPS,OPD 	is (kodas_s=0x5)... & OPS & OPD {OPD=OPD | OPS; FLN(OPD);FLZ(OPD);V=0;}
 :BISB OPS,OPD 	is (kodas_s=0xD)... & OPS & OPD {OPD=OPD | (OPS&0xFF); FLN(OPD);FLZ(OPD);V=0;}
 :INC OPD		is (kodas_s=0 & met_s=5 &reg_s=2)... &OPD {V=(OPD==0x7FFF);OPD=OPD+1; FLZ(OPD);FLN(OPD);}

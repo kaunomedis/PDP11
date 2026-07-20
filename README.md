@@ -58,9 +58,10 @@ As for 2026.07.18:
 - D0GA-PB (compare non equality)
 - D0CA-PB (unary)
 - D0DA-PB (unary and binary)
+- "AC-E664G-MC_CXCPAG0-Processor-test_Sep78"
 
 ## Debuger Failed:
-- "AC-E664G-MC_CXCPAG0-Processor-test_Sep78".- possible CPU_PIRQ value is wrong.
+
 - D0EA-PB (rotary/shift) - not all decompiled
 - D0IA-PB (bis, bix, bit)
 
