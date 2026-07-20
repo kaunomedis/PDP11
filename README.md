@@ -48,7 +48,7 @@ MIT License.
 
 Processor language module for DEC PDP11 CPU.
 
-As for 2026.07.18:
+As for 2026.07.20:
 
 ## Debugger passed:
 - D0HA-PB (move)
@@ -59,11 +59,11 @@ As for 2026.07.18:
 - D0CA-PB (unary)
 - D0DA-PB (unary and binary)
 - "AC-E664G-MC_CXCPAG0-Processor-test_Sep78"
+- D0IA-PB (bis, bix, bit)
 
 ## Debuger Failed:
-
 - D0EA-PB (rotary/shift) - not all decompiled
-- D0IA-PB (bis, bix, bit)
+
 
 
 
