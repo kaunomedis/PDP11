@@ -5,7 +5,6 @@
 # Freeware & etc. Please leave copyright note                 #
 ###############################################################
 
-# WARNING! ALL STUFF in {} is untested.
 
 define endian=little;
 define alignment=2;

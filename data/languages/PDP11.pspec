@@ -96,6 +96,6 @@
 	
 	  </default_symbols>
   <default_memory_blocks>
-    <memory_block name="IOSPACE" start_address="ram:0xE000" mode="rw" length="0x1FFF" initialized="false"/>
+    <memory_block name="IOSPACE" start_address="ram:0xE000" mode="rw" length="0x2000" initialized="false"/>
   </default_memory_blocks>
 </processor_spec>
