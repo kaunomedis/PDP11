@@ -60,9 +60,10 @@ As for 2026.07.20:
 - D0DA-PB (unary and binary)
 - "AC-E664G-MC_CXCPAG0-Processor-test_Sep78"
 - D0IA-PB (bis, bix, bit)
+- D0EA-PB (rotary/shift)
 
 ## Debuger Failed:
-- D0EA-PB (rotary/shift) - not all decompiled
+
 
 
 
