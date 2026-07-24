@@ -61,9 +61,11 @@ As for 2026.07.20:
 - "AC-E664G-MC_CXCPAG0-Processor-test_Sep78"
 - D0IA-PB (bis, bix, bit)
 - D0EA-PB (rotary/shift)
+- D0JA-PB (ADD)
+- D0KA-PB (SUBTRACT)
 
 ## Debuger Failed:
-
+- D0LA-PB (JMP)
 
 
 

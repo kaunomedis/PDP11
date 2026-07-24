@@ -662,7 +662,9 @@ FLZ(OPDD);FLN(OPDD<<8);V_NZ();}
 # JSR methods.
 I16: imm16	is imm16 {export *:2 imm16;}
 
-:JSRa reg_s,(reg_d)	is  kodas_s=0 & met_s=4 & reg_ss<7 &reg_dd!=7& met_d=1 & reg_s &reg_d {tmp:2=reg_d;push(reg_s);reg_s=PC+2;PC=tmp;call[PC];}
+
+:JSR reg_s,reg_d is kodas_s=0 & met_s=4 & reg_ss<7 & reg_dd<7 & met_d=0 & reg_s & reg_d {tmp:2=reg_d;push(reg_s);reg_s=PC+2;PC=tmp;call[PC];}
+:JSRa reg_s,(reg_d)	is  kodas_s=0 & met_s=4 & reg_ss<7 &reg_dd!=7& met_d=1 & reg_s &reg_d {tmp:2=*reg_d;push(reg_s);reg_s=PC+2;PC=tmp;call[PC];}
 :JSRb reg_s,#I16	is (kodas_s=0 & met_s=4 & reg_ss<7 & reg_d=7 & met_d=1)& reg_s ;I16 {push(PC+2); tmp=reg_s+I16; call [tmp];}
 :JSRc reg_s,#I16	is (kodas_s=0 & met_s=4 & reg_ss<7 & reg_d=7 & met_d=2)& reg_s ;I16 {push(PC+2); tmp=reg_s+I16; call [tmp];}
 :JSRd reg_s,@#I16	is (kodas_s=0 & met_s=4 & reg_ss<7 & reg_d=7 & met_d=3)& reg_s ;I16 {push(PC+2); tmp=I16+reg_s; call [*:2 tmp];}
