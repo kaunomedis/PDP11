@@ -322,16 +322,19 @@ OPDD: "#"imm16" OK2c" is byte=0 & met_d=2 & reg_dd=7 & reg_d ;imm16 {tmp:2 = imm
 OPDD: "#"imm16" OK2d" is byte=1 & met_d=2 & reg_dd=7 & reg_d ;imm16 {tmp:2 = imm16; reg_d=reg_d+1; export tmp;}
 
 # kaip su nekorektiskom PC (R7) operacijom?
-OPD: "#"imm16" OK2g"	is byte=0 &reg_s!=7 & met_d=2 & reg_d=7 & reg_d	;imm16 {tmp:2 = imm16; reg_d=reg_d+2; export tmp;}
-OPD: "#"imm16" OK2h"	is byte=1 &reg_s!=7 & met_d=2 & reg_d=7 & reg_d	;imm16 {tmp:2 = imm16; reg_d=reg_d+1; export tmp;}
+OPD: "#"imm16" OK2e"	is byte=0 &reg_s!=7 & met_d=2 & reg_d=7 & reg_d	;imm16 {tmp:2 = imm16; reg_d=reg_d+2; export tmp;}
+OPD: "#"imm16" OK2f"	is byte=1 &reg_s!=7 & met_d=2 & reg_d=7 & reg_d	;imm16 {tmp:2 = imm16; reg_d=reg_d+1; export tmp;}
 
-OPD: "#"imm32H"OK2ef"	is byte=0 & met_s=2 & reg_s=7 & met_d=2 & reg_d=7	;imm32H {tmp:2 = imm32H; PC=PC+2; export tmp;}
-OPD: "#"imm32H"OK2ff"	is byte=0 & met_s=6 &reg_s!=7 & met_d=2 & reg_d=7	;imm32H {tmp:2 = imm32H; PC=PC+2; export tmp;}
-OPD: "#"imm32H"OK2ef"	is byte=1 & met_s=2 & reg_s=7 & met_d=2 & reg_d=7	;imm32H {tmp:2 = imm32H; PC=PC+1; export tmp;}
-OPD: "#"imm32H"OK2ff"	is byte=1 & met_s=6 &reg_s!=7 & met_d=2 & reg_d=7	;imm32H {tmp:2 = imm32H; PC=PC+1; export tmp;}
+OPD: "#"imm32H"OK2g"	is byte=0 & met_s=2 & reg_s=7 & met_d=2 & reg_d=7	;imm32H {tmp:2 = imm32H; PC=PC+2; export tmp;}
+OPD: "#"imm32H"OK2h"	is byte=0 & met_s=6 &reg_s!=7 & met_d=2 & reg_d=7	;imm32H {tmp:2 = imm32H; PC=PC+2; export tmp;}
+OPD: "#"imm32H"OK2i"	is byte=1 & met_s=2 & reg_s=7 & met_d=2 & reg_d=7	;imm32H {tmp:2 = imm32H; PC=PC+1; export tmp;}
+OPD: "#"imm32H"OK2j"	is byte=1 & met_s=6 &reg_s!=7 & met_d=2 & reg_d=7	;imm32H {tmp:2 = imm32H; PC=PC+1; export tmp;}
 
-OPD: "#"imm32H"OK2g" 	is met_d=2 & reg_s=7 & reg_d=7;imm32H {tmp:2 = imm32H; PC=PC+2; export tmp;}
-OPD: "#"imm16"OK2h" 	is met_s=0 & met_d=2 & reg_s=7 & reg_d=7;imm16 {tmp:2 = imm16; PC=PC+2; export tmp;}
+OPD: "#"imm32H"OK2k" 	is met_d=2 & reg_s=7 & reg_d=7;imm32H {tmp:2 = imm32H; PC=PC+2; export tmp;}
+OPD: "#"imm16"OK2l" 	is met_d=2 & met_s=0 & reg_s=7 & reg_d=7;imm16 {tmp:2 = imm16; PC=PC+2; export tmp;}
+
+OPD: "#"imm32H" OK2m"	is byte=0 & met_s=7 &reg_s!=7 & met_d=2 & reg_d=7 & reg_d	;imm32H {tmp:2 = imm32H; reg_d=reg_d+2; export tmp;}
+OPD: "#"imm32H" OK2n"	is byte=1 & met_s=7 &reg_s!=7 & met_d=2 & reg_d=7 & reg_d	;imm32H {tmp:2 = imm32H; reg_d=reg_d+1; export tmp;}
 
 
 # MODE3: (autoincrement deferred)
