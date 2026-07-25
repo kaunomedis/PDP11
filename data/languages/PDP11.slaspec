@@ -660,10 +660,35 @@ FLZ(OPDD);FLN(OPDD<<8);V_NZ();}
 
 :JMP REL16(reg_d)	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=6 & reg_dd!=7 & reg_d; REL16 {goto [REL16];} #???
 # JSR methods.
-I16: imm16	is imm16 {export *:2 imm16;}
+#I16: imm16	is imm16 {export *:2 imm16;}
+OPJ: reg_d" OPJ1"        is met_d=1 & reg_d                  {export reg_d;}
+                                          # mode 1 (Rn): EA=Rn, zero deref
 
-:jsr reg_s,OPDD is (kodas_s=0 & met_s=4 & reg_s) ... & OPDD {push(reg_s);reg_s=PC+2;PC=OPDD;call[PC];}
+OPJ: "("reg_d")+ OPJ2"   is met_d=2 & reg_dd!=7 & reg_d       {tmp:2=reg_d; reg_d=reg_d+2; export tmp;}
+                                          # mode 2 (Rn)+: EA=Rn (pre-increment value), zero deref
+OPJ: "#"imm16" OPJ2i"    is met_d=2 & reg_dd=7 & reg_d ;imm16 {tmp:2=imm16; reg_d=reg_d+2; export tmp;}
+                                          # mode 2, reg=PC: "JMP #imm" -> EA=imm16 literally
 
+OPJ: "@("reg_d")+ OPJ3"  is met_d=3 & reg_d                   {tmp:2=*:2 reg_d; reg_d=reg_d+2; export tmp;}
+                                          # mode 3 @(Rn)+: EA=MEM[Rn], one deref (intrinsic)
+
+OPJ: "-("reg_d") OPJ4"   is met_d=4 & reg_d                   {reg_d=reg_d-2; export reg_d;}
+                                          # mode 4 -(Rn): EA=Rn (post-decrement), zero deref
+
+OPJ: "@-("reg_d") OPJ5"  is met_d=5 & reg_d                   {reg_d=reg_d-2; tmp:2=*:2 reg_d; export tmp;}
+                                          # mode 5 @-(Rn): EA=MEM[Rn], one deref (intrinsic)
+
+OPJ: imm16"("reg_d") OPJ6" is met_d=6 & reg_dd!=7 & reg_d ;imm16 {tmp:2=imm16+reg_d; export tmp;}
+                                          # mode 6 X(Rn): EA=Rn+X, zero deref
+OPJ: REL16" OPJ6r"       is met_d=6 & reg_d=7 ;REL16          {tmp:2=REL16; export tmp;}
+                                          # mode 6, reg=PC: "JMP label" -> EA=resolved address directly
+
+OPJ: "@"imm16"("reg_d") OPJ7" is met_d=7 & reg_dd!=7 & reg_d ;imm16 {tmp:2=imm16+reg_d; tmp2:2=*:2 tmp; export tmp2;}
+                                          # mode 7 @X(Rn): EA=MEM[Rn+X], one deref (intrinsic)
+OPJ: "@"REL16" OPJ7r"    is met_d=7 & reg_d=7 ;REL16           {tmp:2=REL16; tmp2:2=*:2 tmp; export tmp2;}
+                                          # mode 7, reg=PC: "JMP @label" -> EA=MEM[resolved address]
+
+#:jsr reg_s,OPDD is (kodas_s=0 & met_s=4 & reg_s) ... & OPDD {push(reg_s);reg_s=PC+2;PC=OPDD;call[PC];}
 #:JSR reg_s,reg_d is kodas_s=0 & met_s=4 & reg_ss<7 & reg_dd<7 & met_d=0 & reg_s & reg_d {tmp:2=reg_d;push(reg_s);reg_s=PC+2;PC=tmp;call[PC];}
 #:JSRa reg_s,(reg_d)	is  kodas_s=0 & met_s=4 & reg_ss<7 &reg_dd!=7& met_d=1 & reg_s &reg_d {tmp:2=*reg_d;push(reg_s);reg_s=PC+2;PC=tmp;call[PC];}
 #:JSRb reg_s,#I16	is (kodas_s=0 & met_s=4 & reg_ss<7 & reg_d=7 & met_d=1)& reg_s ;I16 {push(PC+2); tmp=reg_s+I16; call [tmp];}
@@ -671,20 +696,47 @@ I16: imm16	is imm16 {export *:2 imm16;}
 #:JSRd reg_s,@#I16	is (kodas_s=0 & met_s=4 & reg_ss<7 & reg_d=7 & met_d=3)& reg_s ;I16 {push(PC+2); tmp=I16+reg_s; call [*:2 tmp];}
 #:JSRe reg_s,REL16	is (kodas_s=0 & met_s=4 & reg_ss<7 & reg_d=7 & met_d=6)& reg_s ;REL16 {push(PC+2); tmp=reg_s+REL16; call [*:2 tmp];}
 #:JSRf reg_s,@REL16	is (kodas_s=0 & met_s=4 & reg_ss<7 & reg_d=7 & met_d=7)& reg_s ;REL16 {push(PC+2); tmp=reg_s+REL16; call [*:2 tmp];}
-
 #:JSR reg_s,"@"I16"("reg_d")" is (kodas_s=0 & met_s=4 & reg_ss<7 & reg_dd=6 & met_d=7) & reg_s & reg_d; I16 {tmp:2=*reg_d+I16;push(reg_s);reg_s=PC+2;PC=tmp;call[PC];}
 ## 0x087C: jsr	r1,@0x21C0(sp)	[0x087E 0x21C0]
-
 #:JSRg "PC?",OPD	is (kodas=0x27 & reg_d!=7)... & OPD {call OPD;}
+#
+#:"ILLEGAL CALL 0>"REL16	is (kodas=0x27 & met_d=0 & reg_d=7) ; REL16 {push(PC+2); call [REL16]; }
+#:jsr reg_s,(reg_d)		is (kodas=0x27 & met_d=1 & reg_dd=7 & reg_d & reg_s) {push(PC+2); }
+#:CALL #I16				is (kodas=0x27 & met_d=2 & reg_d=7) ; I16 {push(PC+2);call [I16];}
+#:CALL @#I16				is (kodas=0x27 & met_d=3 & reg_d=7) ; I16 {push(PC+2);call I16; }
+#:"ILLEGAL CALL 4>"REL16	is (kodas=0x27 & met_d=4 & reg_d=7) ; REL16 {push(PC+2);call [REL16]; }
+#:"ILLEGAL CALL 5>"REL16	is (kodas=0x27 & met_d=5 & reg_d=7) ; REL16 {push(PC+2);call [REL16]; }
+#:CALL REL16				is (kodas=0x27 & met_d=6 & reg_d=7) ; REL16 {push(PC+2); call [REL16]; }
+#:CALL "@"REL16			is (kodas=0x27 & met_d=7 & reg_d=7) ; REL16 {push(PC+2); call [REL16]; }
 
-:"ILLEGAL CALL 0>"REL16	is (kodas=0x27 & met_d=0 & reg_d=7) ; REL16 {push(PC+2); call [REL16]; }
-:jsr reg_s,(reg_d)		is (kodas=0x27 & met_d=1 & reg_dd=7 & reg_d & reg_s) {push(PC+2); }
-:CALL #I16				is (kodas=0x27 & met_d=2 & reg_d=7) ; I16 {push(PC+2);call [I16];}
-:CALL @#I16				is (kodas=0x27 & met_d=3 & reg_d=7) ; I16 {push(PC+2);call I16; }
-:"ILLEGAL CALL 4>"REL16	is (kodas=0x27 & met_d=4 & reg_d=7) ; REL16 {push(PC+2);call [REL16]; }
-:"ILLEGAL CALL 5>"REL16	is (kodas=0x27 & met_d=5 & reg_d=7) ; REL16 {push(PC+2);call [REL16]; }
-:CALL REL16				is (kodas=0x27 & met_d=6 & reg_d=7) ; REL16 {push(PC+2); call [REL16]; }
-:CALL "@"REL16			is (kodas=0x27 & met_d=7 & reg_d=7) ; REL16 {push(PC+2); call [REL16]; }
+
+
+:JSR reg_s,OPJ is (kodas_s=0 & met_s=4 & reg_s) ... & OPJ {push(reg_s); reg_s=PC+2; PC=OPJ; call[PC];}
+:CALL OPJ is (kodas_s=0 & met_s=4 & reg_s=7) ... & OPJ {push(PC+2); PC=OPJ; call[PC];}
+
+#:JMP OPJ       is (kodas_s=0 & met_s=0 & reg_s=1)... & OPJ {PC=OPJ; goto[PC];}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ###### workspace?
 :MFPD OPDD is kodas=0x35... & OPDD {PC=PC;} #Move from previous D space: -(SP) <- Src
