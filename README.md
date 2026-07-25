@@ -70,7 +70,7 @@ As for 2026.07.20:
 
 
 
-Note: extra symbols near disassembled mnemonics are for debug purposes.
+*Note: extra symbols near disassembled mnemonics are for debug purposes.*
 
 &copy;2026 by Vabolis. https://www.vabolis.lt
 
