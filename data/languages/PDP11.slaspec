@@ -662,15 +662,20 @@ FLZ(OPDD);FLN(OPDD<<8);V_NZ();}
 # JSR methods.
 I16: imm16	is imm16 {export *:2 imm16;}
 
+:jsr reg_s,OPDD is (kodas_s=0 & met_s=4 & reg_s) ... & OPDD {push(reg_s);reg_s=PC+2;PC=OPDD;call[PC];}
 
-:JSR reg_s,reg_d is kodas_s=0 & met_s=4 & reg_ss<7 & reg_dd<7 & met_d=0 & reg_s & reg_d {tmp:2=reg_d;push(reg_s);reg_s=PC+2;PC=tmp;call[PC];}
-:JSRa reg_s,(reg_d)	is  kodas_s=0 & met_s=4 & reg_ss<7 &reg_dd!=7& met_d=1 & reg_s &reg_d {tmp:2=*reg_d;push(reg_s);reg_s=PC+2;PC=tmp;call[PC];}
-:JSRb reg_s,#I16	is (kodas_s=0 & met_s=4 & reg_ss<7 & reg_d=7 & met_d=1)& reg_s ;I16 {push(PC+2); tmp=reg_s+I16; call [tmp];}
-:JSRc reg_s,#I16	is (kodas_s=0 & met_s=4 & reg_ss<7 & reg_d=7 & met_d=2)& reg_s ;I16 {push(PC+2); tmp=reg_s+I16; call [tmp];}
-:JSRd reg_s,@#I16	is (kodas_s=0 & met_s=4 & reg_ss<7 & reg_d=7 & met_d=3)& reg_s ;I16 {push(PC+2); tmp=I16+reg_s; call [*:2 tmp];}
-:JSRe reg_s,REL16	is (kodas_s=0 & met_s=4 & reg_ss<7 & reg_d=7 & met_d=6)& reg_s ;REL16 {push(PC+2); tmp=reg_s+REL16; call [*:2 tmp];}
-:JSRf reg_s,@REL16	is (kodas_s=0 & met_s=4 & reg_ss<7 & reg_d=7 & met_d=7)& reg_s ;REL16 {push(PC+2); tmp=reg_s+REL16; call [*:2 tmp];}
-:JSRg "PC?",OPD	is (kodas=0x27 & reg_d!=7)... & OPD {call OPD;}
+#:JSR reg_s,reg_d is kodas_s=0 & met_s=4 & reg_ss<7 & reg_dd<7 & met_d=0 & reg_s & reg_d {tmp:2=reg_d;push(reg_s);reg_s=PC+2;PC=tmp;call[PC];}
+#:JSRa reg_s,(reg_d)	is  kodas_s=0 & met_s=4 & reg_ss<7 &reg_dd!=7& met_d=1 & reg_s &reg_d {tmp:2=*reg_d;push(reg_s);reg_s=PC+2;PC=tmp;call[PC];}
+#:JSRb reg_s,#I16	is (kodas_s=0 & met_s=4 & reg_ss<7 & reg_d=7 & met_d=1)& reg_s ;I16 {push(PC+2); tmp=reg_s+I16; call [tmp];}
+#:JSRc reg_s,#I16	is (kodas_s=0 & met_s=4 & reg_ss<7 & reg_d=7 & met_d=2)& reg_s ;I16 {push(PC+2); tmp=reg_s+I16; call [tmp];}
+#:JSRd reg_s,@#I16	is (kodas_s=0 & met_s=4 & reg_ss<7 & reg_d=7 & met_d=3)& reg_s ;I16 {push(PC+2); tmp=I16+reg_s; call [*:2 tmp];}
+#:JSRe reg_s,REL16	is (kodas_s=0 & met_s=4 & reg_ss<7 & reg_d=7 & met_d=6)& reg_s ;REL16 {push(PC+2); tmp=reg_s+REL16; call [*:2 tmp];}
+#:JSRf reg_s,@REL16	is (kodas_s=0 & met_s=4 & reg_ss<7 & reg_d=7 & met_d=7)& reg_s ;REL16 {push(PC+2); tmp=reg_s+REL16; call [*:2 tmp];}
+
+#:JSR reg_s,"@"I16"("reg_d")" is (kodas_s=0 & met_s=4 & reg_ss<7 & reg_dd=6 & met_d=7) & reg_s & reg_d; I16 {tmp:2=*reg_d+I16;push(reg_s);reg_s=PC+2;PC=tmp;call[PC];}
+## 0x087C: jsr	r1,@0x21C0(sp)	[0x087E 0x21C0]
+
+#:JSRg "PC?",OPD	is (kodas=0x27 & reg_d!=7)... & OPD {call OPD;}
 
 :"ILLEGAL CALL 0>"REL16	is (kodas=0x27 & met_d=0 & reg_d=7) ; REL16 {push(PC+2); call [REL16]; }
 :jsr reg_s,(reg_d)		is (kodas=0x27 & met_d=1 & reg_dd=7 & reg_d & reg_s) {push(PC+2); }
@@ -681,6 +686,15 @@ I16: imm16	is imm16 {export *:2 imm16;}
 :CALL REL16				is (kodas=0x27 & met_d=6 & reg_d=7) ; REL16 {push(PC+2); call [REL16]; }
 :CALL "@"REL16			is (kodas=0x27 & met_d=7 & reg_d=7) ; REL16 {push(PC+2); call [REL16]; }
 
+###### workspace?
+:MFPD OPDD is kodas=0x35... & OPDD {PC=PC;} #Move from previous D space: -(SP) <- Src
+#:MTPD #Move to previous D space: Dest <- (SP)+
+
+#:MFPI #Move from previous I space: -(SP) <- Src
+:MTPI OPDD is kodas=0x36... & OPDD {PC=PC;} #Move to previous I space: Dest ? (SP)+
+
+:tstset OPDD is kodas=0x3A... & OPDD {PC=PC;} #unknown
+:wrtlck OPDD is kodas=0x3E... & OPDD {PC=PC;} #unknown
 ###### RETURN
 :RETURN		is imm16=0x87 {pop(PC);return [PC];}
 :RTS reg_d	is kodas=2 & metod=0 & regai<7 &reg_d {PC=reg_d;pop(reg_d);return [PC];}
