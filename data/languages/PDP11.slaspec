@@ -609,9 +609,31 @@ OPJ: "@"REL16" okJ7r"    	is met_d=7 & reg_d=7 ;REL16				{tmp:2=REL16; tmp2:2=*:
 #:JSR reg_s,OPJ		is (kodas_s=0 & met_s=4 & reg_s) ... & OPJ		{push(reg_s); reg_s=PC+2; PC=OPJ; call[PC];}
 #:CALL OPJ			is (kodas_s=0 & met_s=4 & reg_s=7) ... & OPJ	{push(PC+2); PC=OPJ; call[PC];}
 
-:JSR reg_s,OPJ is (kodas_s=0 & met_s=4 & reg_s) ... & OPJ {push(reg_s); reg_s=inst_next; PC=OPJ; call[PC];}
+#:JSR reg_s,OPJ is (kodas_s=0 & met_s=4 & reg_s) ... & OPJ {push(reg_s); reg_s=inst_next; PC=OPJ; call[PC];}
+:JSR reg_s,OPJ is (kodas_s=0 & met_s=4 & reg_s) ... & OPJ {
+    tmp:2=OPJ;
+    push(reg_s);
+    reg_s=inst_next;
+    PC=tmp;
+    call[PC];
+}
+
+
+
+
+
 #:CALL OPJ      is (kodas_s=0 & met_s=4 & reg_s=7) ... & OPJ {push(inst_next); PC=OPJ; call[PC];}
-:CALL OPJ is (kodas_s=0 & met_s=4 & reg_s=7) ... & OPJ {tmpaddr:2=inst_next; push(tmpaddr); PC=OPJ; call[PC];}
+#:CALL OPJ		is (kodas_s=0 & met_s=4 & reg_s=7) ... & OPJ {tmpaddr:2=inst_next; push(tmpaddr); PC=OPJ; call[PC];}
+
+:CALL OPJ is (kodas_s=0 & met_s=4 & reg_s=7) ... & OPJ {
+    tmp:2=OPJ;
+    tmpaddr:2=inst_next;
+    push(tmpaddr);
+    PC=tmp;
+    call[PC];
+}
+
+
 
 
 #:JMP OPJ       is (kodas_s=0 & met_s=0 & reg_s=1)... & OPJ {PC=OPJ; goto[PC];} #NEVEIKIA
