@@ -739,14 +739,23 @@ OPJ: "@"REL16" OPJ7r"    is met_d=7 & reg_d=7 ;REL16           {tmp:2=REL16; tmp
 
 
 ###### workspace?
-:MFPD OPDD is kodas=0x35... & OPDD {PC=PC;} #Move from previous D space: -(SP) <- Src
+#:MFPD OPDD is kodas=0x35... & OPDD {PC=PC;} #Move from previous D space: -(SP) <- Src
 #:MTPD #Move to previous D space: Dest <- (SP)+
 
-#:MFPI #Move from previous I space: -(SP) <- Src
-:MTPI OPDD is kodas=0x36... & OPDD {PC=PC;} #Move to previous I space: Dest ? (SP)+
+#:MFPI OPDD is kodas=0x35 ... & OPDD {push(OPDD); N=((OPDD&0x8000)!=0); Z=(OPDD==0); V=0;}
+:MFPD OPDD is kodas=0x35 ... & OPDD {push(OPDD); N=((OPDD&0x8000)!=0); Z=(OPDD==0); V=0;}
 
-:tstset OPDD is kodas=0x3A... & OPDD {PC=PC;} #unknown
-:wrtlck OPDD is kodas=0x3E... & OPDD {PC=PC;} #unknown
+#:MTPI OPDD is kodas=0x36 ... & OPDD {tmpv:2=0; pop(tmpv); OPDD=tmpv; N=((tmpv&0x8000)!=0); Z=(tmpv==0); V=0;}
+:MTPD OPDD is kodas=0x36 ... & OPDD {tmpv:2=0; pop(tmpv); OPDD=tmpv; N=((tmpv&0x8000)!=0); Z=(tmpv==0); V=0;}
+
+#:MFPI #Move from previous I space: -(SP) <- Src
+#:MTPI OPDD is kodas=0x36... & OPDD {PC=PC;} #Move to previous I space: Dest <- (SP)+
+
+
+:tstset OPDD is kodas=0x3A... & OPDD {tmpv:2=OPDD; N=((tmpv&0x8000)!=0); Z=(tmpv==0); V=0; C=((tmpv&1)!=0); OPDD=1; R0=tmpv;}
+:wrtlck OPDD is kodas=0x3E... & OPDD {OPDD=R0; N=((R0&0x8000)!=0); Z=(R0==0); V=0;}
+
+
 ###### RETURN
 :RETURN		is imm16=0x87 {pop(PC);return [PC];}
 :RTS reg_d	is kodas=2 & metod=0 & regai<7 &reg_d {PC=reg_d;pop(reg_d);return [PC];}
