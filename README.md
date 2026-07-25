@@ -51,16 +51,16 @@ Processor language module for DEC PDP11 CPU.
 As for 2026.07.20:
 
 ## Debugger passed:
-- D0HA-PB (move)
+- "AC-E664G-MC_CXCPAG0-Processor-test_Sep78"
 - D0AA-PB (branch)
 - D0BA-PB (conditional branch)
-- D0FA-PB (compare equality)
-- D0GA-PB (compare non equality)
 - D0CA-PB (unary)
 - D0DA-PB (unary and binary)
-- "AC-E664G-MC_CXCPAG0-Processor-test_Sep78"
-- D0IA-PB (bis, bix, bit)
 - D0EA-PB (rotary/shift)
+- D0FA-PB (compare equality)
+- D0GA-PB (compare non equality)
+- D0HA-PB (move)
+- D0IA-PB (bis, bix, bit)
 - D0JA-PB (ADD)
 - D0KA-PB (SUBTRACT)
 
@@ -72,6 +72,6 @@ As for 2026.07.20:
 
 Note: extra symbols near disassembled mnemonics are for debug purposes.
 
-(c)2026 by Vabolis. https://www.vabolis.lt
+&copy;2026 by Vabolis. https://www.vabolis.lt
 
 
