@@ -23,6 +23,10 @@ define register offset=0x000C size=2 [ SP ]; #R6 , stekas mazejantis
 define register offset=0x000E size=2 [ PC ]; #R7
 define register offset=0x0020 size=2 [ PS ]; # STATUS FLAGS & INT LEVEL
 
+
+
+
+
 # Flag Register Contents (PS)
 #
 # b15:14    - Current mode: 00-kernel, 01-supervisor, 10-illegal, 11-user
@@ -591,6 +595,9 @@ V = (((old ^ comb) & 0x80000000)!=0);
 
 # JSR methods.
 # met_d=0 - neegzistuoja?
+
+OPJ: reg_d" okJ0"			is met_d=0 & reg_d						{export reg_d;}
+
 OPJ: reg_d" okJ1"        	is met_d=1 & reg_d						{export reg_d;}										# mode 1 (Rn): EA=Rn, zero deref
 OPJ: "("reg_d")+ okJ2"   	is met_d=2 & reg_dd!=7 & reg_d			{tmp:2=reg_d; reg_d=reg_d+2; export tmp;}			# mode 2 (Rn)+: EA=Rn (pre-increment value), zero deref
 OPJ: "#"imm16" okJ2i"    	is met_d=2 & reg_dd=7 & reg_d ;imm16	{tmp:2=imm16; reg_d=reg_d+2; export tmp;}			# mode 2, reg=PC: "JMP #imm" -> EA=imm16 literally
@@ -657,6 +664,15 @@ OPJ: "@"REL16" okJ7r"    	is met_d=7 & reg_d=7 ;REL16				{tmp:2=REL16; tmp2:2=*:
 :SPL reg_dd is kodas=2 & metod=3 & reg_dd {PC=PC; SPLevel=reg_dd;} #set priority level?
 
 ######## FPU FPU FPU #########################
+define register offset=0x0030 size=2 [ F0 ];
+define register offset=0x0032 size=2 [ F1 ];
+define register offset=0x0034 size=2 [ F2 ];
+define register offset=0x0036 size=2 [ F3 ];
+attach variables [ ac ] [ F0 F1 F2 F3 ];
+
+
+
+
 FRD: reg_d is reg_d			{ export *:1 reg_d; }
 :FADD FRD	is fpu=0b0111101000000 & FRD {PC=PC;}
 :FSUB FRD	is fpu=0b0111101000001 & FRD {PC=PC;}
@@ -705,6 +721,9 @@ FRD: reg_d is reg_d			{ export *:1 reg_d; }
 
 :setd is imm16=0xf009 {PC=PC;}
 :setl is imm16=0xf00a {PC=PC;}
+
+:stexp	ac,reg_d	is op_h=0b11111010 &reg_d &ac {PC=PC;}
+:ldexp	reg_d,ac	is op_h=0b11111101 &reg_d &ac {PC=PC;}
 
 ######## HALT MODE ############################
 
