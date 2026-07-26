@@ -138,7 +138,10 @@ REL8:	reloc	is rell			[reloc = inst_next + 2 * rell;]	{ tmp:2 = 0; tmp=reloc; ex
 # relative values from extra bytes.
 REL32H:	reloc 	is rell32h  	[reloc = inst_next + rell32h;]	{ tmp:2 = 0; tmp=reloc; export  tmp; } 
 REL32L:	reloc 	is rell32l  	[reloc = inst_next + rell32l-2;]	{tmp:2 = 0; tmp=reloc; export  tmp; } 
-REL16:	reloc	is rell16   	[reloc = inst_next + rell16;]	{tmp:2 = 0; tmp=reloc; export  tmp; }
+#REL16:	reloc	is rell16   	[reloc = inst_next + rell16;]	{tmp:2 = 0; tmp=reloc; export  tmp; }
+REL16: reloc is rell16 [reloc = (inst_next + rell16) & 0xffff;] {tmp:2 = 0; tmp=reloc; export tmp;}
+# patikrinti ^^^ ar neisdarko skaiciavimu.
+
 RELN:	reloc	is nnn	[reloc = inst_next-nnn*2;]		{tmp:2 = 0; tmp=reloc; export  tmp; } 
 
 # ############# SIMPLE INSTRUCTIONS #################################### 
