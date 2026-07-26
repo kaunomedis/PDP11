@@ -176,18 +176,18 @@ RELN:	reloc	is nnn	[reloc = inst_next-nnn*2;]		{tmp:2 = 0; tmp=reloc; export  tm
 :CSM		is imm16=0xe40	{PC=PC;}
 
 :SCC		is imm16=0x0bF {C=1;V=1;Z=1;N=1;}
-:EMT "[#"baitas"]"		is op_h=0x88 & baitas { push(PS); push(PC); PC=(0x18);PS=(0x1A); call [PC];} # NETEISYBE
+:EMT "[#"baitas"]"		is op_h=0x88 & baitas { push(PS); push(PC);tmp:2=0x18; PC=*:2 tmp; tmp=0x1A; PS=*:2 tmp; call [PC];}
 
-:EMT "[#"eemt"] .PRINT"			is op_h=0x88 & baitas=0xE9 & eemt { push(PS); push(PC); PC=(0x18);PS=(0x1A); call [PC];} # NETEISYBE
-:EMT "[#"eemt"] .EXIT"			is op_h=0x88 & baitas=0xE8 & eemt { push(PS); push(PC); PC=(0x18);PS=(0x1A); call [PC];} # NETEISYBE
-:EMT "[#"eemt"] .TTY_IN"		is op_h=0x88 & baitas=0xE0 & eemt { push(PS); push(PC); PC=(0x18);PS=(0x1A); call [PC];} # NETEISYBE
-:EMT "[#"eemt"] .TTY_OUT"		is op_h=0x88 & baitas=0xE1 & eemt { push(PS); push(PC); PC=(0x18);PS=(0x1A); call [PC];} # NETEISYBE
-:EMT "[#"eemt"] .I/O page op"	is op_h=0x88 & baitas=0xFD & eemt { push(PS); push(PC); PC=(0x18);PS=(0x1A); call [PC];} # NETEISYBE
+:EMT "[#"eemt"] .PRINT"			is op_h=0x88 & baitas=0xE9 & eemt { push(PS); push(PC);tmp:2=0x18; PC=*:2 tmp; tmp=0x1A; PS=*:2 tmp; call [PC];}
+:EMT "[#"eemt"] .EXIT"			is op_h=0x88 & baitas=0xE8 & eemt { push(PS); push(PC);tmp:2=0x18; PC=*:2 tmp; tmp=0x1A; PS=*:2 tmp; call [PC];}
+:EMT "[#"eemt"] .TTY_IN"		is op_h=0x88 & baitas=0xE0 & eemt { push(PS); push(PC);tmp:2=0x18; PC=*:2 tmp; tmp=0x1A; PS=*:2 tmp; call [PC];}
+:EMT "[#"eemt"] .TTY_OUT"		is op_h=0x88 & baitas=0xE1 & eemt { push(PS); push(PC);tmp:2=0x18; PC=*:2 tmp; tmp=0x1A; PS=*:2 tmp; call [PC];}
+:EMT "[#"eemt"] .I/O page op"	is op_h=0x88 & baitas=0xFD & eemt { push(PS); push(PC);tmp:2=0x18; PC=*:2 tmp; tmp=0x1A; PS=*:2 tmp; call [PC];}
 
 
 :TRAP		is op_h=0x89	{push(PS); push(PC); tmp:2=0x1c; PC=*:2 tmp; tmp=0x1e; PS=*:2 tmp; call [PC];} # NETEISYBE
-:IOT		is imm16=0x004	{push(PS); push(PC); PC=(0x10); PS=(0x12); call [PC];} # NETEISYBE
-:BPT		is imm16=0x003	{push(PS); push(PC); PC=(0x0C); PS=(0x0E); call [PC];} # NETEISYBE
+:IOT		is imm16=0x004	{push(PS); push(PC); push(PS); push(PC);tmp:2=0x10; PC=*:2 tmp; tmp=0x12; PS=*:2 tmp; call [PC];}
+:BPT		is imm16=0x003	{push(PS); push(PC); push(PS); push(PC);tmp:2=0x0C; PC=*:2 tmp; tmp=0x0E; PS=*:2 tmp; call [PC];}
 :RTI		is imm16=0x002	{pop(PC); pop(PS); return [PC];} # NETEISYBE
 :RTT		is imm16=0x006	{pop(PC); pop(PS); return [PC];} # NETEISYBE
 :RESET		is imm16=0x005	{SP=SP;}
