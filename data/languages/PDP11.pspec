@@ -3,26 +3,39 @@
     <programcounter register="PC"/>
 	  <default_symbols>
     <symbol name="Bus_timeout" address="ram:0x0004"/>
+	<symbol name="Bus_timeout_PS" address="ram:0x0006"/>
     <symbol name="Reserved_instruction" address="ram:0x0008"/>
+	<symbol name="Reserved_instruction_PS" address="ram:0x000a"/>
     <symbol name="BPT" address="ram:0x000C"/>
+	<symbol name="BPT_PS" address="ram:0x000e"/>
 	<symbol name="IOT" address="ram:0x0010"/>
+	<symbol name="IOT_PS" address="ram:0x0012"/>
 	<symbol name="power_failure" address="ram:0x0014"/>
+	<symbol name="power_failure_PS" address="ram:0x0016"/>
 	<symbol name="EMT" address="ram:0x0018"/>
-	<symbol name="TRAP_int" address="ram:0x001C" />
-	
+	<symbol name="EMT_PS" address="ram:0x001a"/>
+	<symbol name="TRAP" address="ram:0x001C" />
+	<symbol name="TRAP_PS" address="ram:0x001e" />
 	<symbol name="???_int" address="ram:0x0020" />
-	
+	<symbol name="???_int_PS" address="ram:0x0022" />
 	<symbol name="ODT_IN" address="ram:0x0030" />
+	<symbol name="ODT_IN_PS" address="ram:0x0032" />
 	<symbol name="ODT_OUT" address="ram:0x0034" />
+	<symbol name="ODT_OUT_PS" address="ram:0x0036" />
 	<symbol name="EVENT_int" address="ram:0x0040" />
-
-	
+	<symbol name="EVENT_int_PS" address="ram:0x0042" />
 	<symbol name="parity_int" address="ram:0x004C"/>
+	<symbol name="parity_int_PS" address="ram:0x004e"/>
 	<symbol name="SEL_TRAP" address="ram:0x0078"/>
+	<symbol name="SEL_TRAP_PS" address="ram:0x007a"/>
 	<symbol name="programmed_int" address="ram:0x00A0"/>
+	<symbol name="programmed_int_PS" address="ram:0x00A2"/>
 	<symbol name="FP_error" address="ram:0x00A4"/>
+	<symbol name="FP_error_PS" address="ram:0x00A6"/>
 	<symbol name="segmentation_violation" address="ram:0x00A8"/>
+	<symbol name="segmentation_violation_PS" address="ram:0x00Aa"/>
 	<symbol name="RXV11" address="ram:0x00B4" />
+	<symbol name="RXV11_PS" address="ram:0x00B6" />
 	
 	<symbol name="CPU_ERR" address="ram:0xFFF6" entry="true"/>
 
@@ -87,12 +100,20 @@
 	<symbol name="ODT_RBUF" address="ram:0xFF72" entry="true"/>
 	<symbol name="ODT_XCSR" address="ram:0xFF74" entry="true"/>
 	<symbol name="ODT_XBUF" address="ram:0xFF76" entry="true"/>
+	<symbol name="FPANEL_SWITCH" address="ram:0xFF78" entry="true"/>
 
 	<symbol name="CPU_DEBUG" address="ram:0xFFD4" entry="true"/>
 	
 	<symbol name="CPU_PSW" address="ram:0xFFFE" entry="true"/>
 	<symbol name="CPU_PIRQ" address="ram:0xFFFA" entry="true"/>
 	<symbol name="CPU_R0" address="ram:0xFFC0" entry="true"/>
+	<symbol name="CPU_R1" address="ram:0xFFC2" entry="true"/>
+	<symbol name="CPU_R2" address="ram:0xFFC4" entry="true"/>
+	<symbol name="CPU_R3" address="ram:0xFFC6" entry="true"/>
+	<symbol name="CPU_R4" address="ram:0xFFC8" entry="true"/>
+	<symbol name="CPU_R5" address="ram:0xFFCA" entry="true"/>
+	<symbol name="CPU_SP" address="ram:0xFFCC" entry="true"/>
+	<symbol name="CPU_PC" address="ram:0xFFCE" entry="true"/>
 	
 	  </default_symbols>
   <default_memory_blocks>
