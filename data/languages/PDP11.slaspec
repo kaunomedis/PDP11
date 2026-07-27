@@ -584,17 +584,17 @@ V = (((old ^ comb) & 0x80000000)!=0);
 # 7 - @X   111 111 = 3f
 
 # JMP - jumps. Some of these make no sense, but are legal. Or semi-legal.
-:JMP ""reg_d" ok0" 		is kodas_s=0 & met_s=0 & reg_s=1 & met_d=0 & reg_d {PC=reg_d; goto reg_d;} #OK
-:JMP "("reg_d") ok1" 	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=1 & reg_d {PC=reg_d; goto [PC];} #OK
-:JMP "#"imm16" ok2a"	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=2 & reg_d=7; imm16 {PC=imm16; goto [PC];}
-:JMP "("reg_d")+ ok2b"	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=2 & reg_dd!=7 & reg_d { PC=reg_d; reg_d=reg_d+2; goto [PC];}
-:JMP "@#"imm16" ok3"	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=3 & reg_d=7; imm16 {PC=imm16; goto [PC];}
-:JMP "@("reg_d")+ ok3b"	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=3 & reg_dd!=7 & reg_d {reg_d=reg_d+2; PC=reg_d-2; goto [PC];}
-:JMP "-("reg_d") ok4" 	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=4 & reg_d {reg_d=reg_d-2; PC=reg_d; goto [PC];}
-:JMP REL16 "ok6"		is kodas_s=0 & met_s=0 & reg_s=1 & met_d=6 & reg_d=7 ; REL16{PC=REL16; goto [PC];}
-:JMP REL16(reg_d)"ok7z"	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=6 & reg_dd!=7 & reg_d; REL16 {goto [REL16];}
-:JMP "@"REL16" ok7" 	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=7 & reg_d=7; REL16 {goto [REL16];}
-:JMP imm16(reg_d)"ok7b" is kodas_s=0 & met_s=0 & reg_s=1 & met_d=7 & reg_dd!=7 &reg_d; imm16 {tmp:2=imm16+reg_d;goto [tmp];}
+#:JMP ""reg_d" ok0" 		is kodas_s=0 & met_s=0 & reg_s=1 & met_d=0 & reg_d {PC=reg_d; goto reg_d;} #OK
+#:JMP "("reg_d") ok1" 	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=1 & reg_d {PC=reg_d; goto [PC];} #OK
+#:JMP "#"imm16" ok2a"	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=2 & reg_d=7; imm16 {PC=imm16; goto [PC];}
+#:JMP "("reg_d")+ ok2b"	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=2 & reg_dd!=7 & reg_d { PC=reg_d; reg_d=reg_d+2; goto [PC];}
+#:JMP "@#"imm16" ok3"	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=3 & reg_d=7; imm16 {PC=imm16; goto [PC];}
+#:JMP "@("reg_d")+ ok3b"	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=3 & reg_dd!=7 & reg_d {reg_d=reg_d+2; PC=reg_d-2; goto [PC];}
+#:JMP "-("reg_d") ok4" 	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=4 & reg_d {reg_d=reg_d-2; PC=reg_d; goto [PC];}
+#:JMP REL16 "ok6"		is kodas_s=0 & met_s=0 & reg_s=1 & met_d=6 & reg_d=7 ; REL16{PC=REL16; goto [PC];}
+#:JMP REL16(reg_d)"ok7z"	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=6 & reg_dd!=7 & reg_d; REL16 {goto [REL16];}
+#:JMP "@"REL16" ok7" 	is kodas_s=0 & met_s=0 & reg_s=1 & met_d=7 & reg_d=7; REL16 {goto [REL16];}
+#:JMP imm16(reg_d)"ok7b" is kodas_s=0 & met_s=0 & reg_s=1 & met_d=7 & reg_dd!=7 &reg_d; imm16 {tmp:2=imm16+reg_d;goto [tmp];}
 
 # JSR methods.
 # met_d=0 - neegzistuoja?
@@ -646,7 +646,7 @@ OPJ: "@"REL16" okJ7r"    	is met_d=7 & reg_d=7 ;REL16				{tmp:2=REL16; tmp2:2=*:
 
 
 
-#:JMP OPJ       is (kodas_s=0 & met_s=0 & reg_s=1)... & OPJ {PC=OPJ; goto[PC];} #NEVEIKIA
+:JMP OPJ       is (kodas_s=0 & met_s=0 & reg_s=1)... & OPJ {PC=OPJ; goto[PC];} #NEVEIKIA
 
 ###### workspace & multiprocessor
 

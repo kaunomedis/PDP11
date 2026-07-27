@@ -63,10 +63,11 @@ As for 2026.07.20:
 - D0IA-PB (bis, bix, bit)
 - D0JA-PB (ADD)
 - D0KA-PB (SUBTRACT)
+- D0LA-PB (JMP)
 - D0MA-PB (JSR/CALL/RETURN/RTI)
 
 ## Debuger Failed:
-- D0LA-PB (JMP)
+- D0NA-PB (TRAP/EMT) - possible wrong tape for this CPU.
 
 
 
