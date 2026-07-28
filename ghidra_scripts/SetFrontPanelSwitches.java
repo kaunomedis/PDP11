@@ -10,6 +10,7 @@ import ghidra.program.model.mem.*;
 import ghidra.program.model.address.*;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.*;
 
 public class SetFrontPanelSwitches extends GhidraScript {
     public void run() throws Exception {
@@ -20,6 +21,8 @@ public class SetFrontPanelSwitches extends GhidraScript {
         frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         frame.setAlwaysOnTop(true);
 
+        JLabel header = new JLabel("PDP-11 Front Panel Switch Register (ram:0xFF78)", SwingConstants.CENTER);
+
         JCheckBox[] bits = new JCheckBox[16];
         JPanel switchPanel = new JPanel(new GridLayout(16, 1));
         for (int i = 15; i >= 0; i--) {
@@ -27,8 +30,27 @@ public class SetFrontPanelSwitches extends GhidraScript {
             switchPanel.add(bits[i]);
         }
 
-        JLabel status = new JLabel("Not written yet.");
+        JLabel preview = new JLabel(" ", SwingConstants.CENTER);
         JButton writeButton = new JButton("Write to Memory");
+
+        Runnable updatePreview = () -> {
+            short value = 0;
+            for (int i = 0; i < 16; i++) {
+                if (bits[i].isSelected()) {
+                    value |= (1 << i);
+                }
+            }
+            int uval = value & 0xFFFF;
+            String hex = String.format("%04X", uval);
+            String oct = String.format("%06o", uval);
+            String octSpaced = oct.substring(0, 3) + " " + oct.substring(3, 6);
+            preview.setText(String.format("HEX:%s OCTAL:%s, not written", hex, octSpaced));
+        };
+
+        for (int i = 0; i < 16; i++) {
+            final int idx = i;
+            bits[i].addItemListener(e -> updatePreview.run());
+        }
 
         writeButton.addActionListener(e -> {
             short value = 0;
@@ -37,6 +59,7 @@ public class SetFrontPanelSwitches extends GhidraScript {
                     value |= (1 << i);
                 }
             }
+            int uval = value & 0xFFFF;
             try {
                 int txId = currentProgram.startTransaction("Set FPANEL_SWITCH");
                 try {
@@ -44,19 +67,29 @@ public class SetFrontPanelSwitches extends GhidraScript {
                 } finally {
                     currentProgram.endTransaction(txId, true);
                 }
-                status.setText(String.format("Written: 0x%04X", value & 0xFFFF));
+                String hex = String.format("%04X", uval);
+                String oct = String.format("%06o", uval);
+                String octSpaced = oct.substring(0, 3) + " " + oct.substring(3, 6);
+                preview.setText(String.format("HEX:%s OCTAL:%s, written", hex, octSpaced));
             } catch (Exception ex) {
-                status.setText("Error: " + ex.getMessage());
+                preview.setText("Error: " + ex.getMessage());
             }
         });
 
+        updatePreview.run();
+
+        JPanel bottom = new JPanel(new GridLayout(2, 1));
+        bottom.add(writeButton);
+        bottom.add(preview);
+
         JPanel content = new JPanel(new BorderLayout());
+        content.add(header, BorderLayout.NORTH);
         content.add(switchPanel, BorderLayout.CENTER);
-        content.add(writeButton, BorderLayout.SOUTH);
-        content.add(status, BorderLayout.NORTH);
+        content.add(bottom, BorderLayout.SOUTH);
 
         frame.setContentPane(content);
         frame.pack();
+        frame.setMinimumSize(new Dimension(320, frame.getHeight()));
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
     }
