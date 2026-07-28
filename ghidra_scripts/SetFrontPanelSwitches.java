@@ -1,23 +1,12 @@
-//TODO write a description for this script
+//PDP11 computer front panel Swithes
 //@author 
-//@category _NEW_
+//@category PDP11 Hardware
 //@keybinding 
 //@menupath 
 //@toolbar 
 //@runtime Java
 import ghidra.app.script.GhidraScript;
-import ghidra.program.model.lang.protorules.*;
 import ghidra.program.model.mem.*;
-import ghidra.program.model.lang.*;
-import ghidra.program.model.pcode.*;
-import ghidra.program.model.data.ISF.*;
-import ghidra.program.model.util.*;
-import ghidra.program.model.reloc.*;
-import ghidra.program.model.data.*;
-import ghidra.program.model.block.*;
-import ghidra.program.model.symbol.*;
-import ghidra.program.model.scalar.*;
-import ghidra.program.model.listing.*;
 import ghidra.program.model.address.*;
 import javax.swing.*;
 import java.awt.*;
@@ -25,39 +14,50 @@ import java.awt.*;
 public class SetFrontPanelSwitches extends GhidraScript {
     public void run() throws Exception {
         Address switchAddr = getAddressFactory().getAddress("ram:0xFF78"); // FPANEL_SWITCH
+        Memory mem = currentProgram.getMemory();
+
+        JFrame frame = new JFrame("Front Panel Switch Register (FPANEL_SWITCH)");
+        frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        frame.setAlwaysOnTop(true);
 
         JCheckBox[] bits = new JCheckBox[16];
-        JPanel panel = new JPanel(new GridLayout(16, 1));
+        JPanel switchPanel = new JPanel(new GridLayout(16, 1));
         for (int i = 15; i >= 0; i--) {
             bits[i] = new JCheckBox("Bit " + i);
-            panel.add(bits[i]);
+            switchPanel.add(bits[i]);
         }
 
-        int result = JOptionPane.showConfirmDialog(
-            null, panel, "Front Panel Switch Register (FPANEL_SWITCH)",
-            JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE
-        );
+        JLabel status = new JLabel("Not written yet.");
+        JButton writeButton = new JButton("Write to Memory");
 
-        if (result != JOptionPane.OK_OPTION) {
-            println("Cancelled - no change made.");
-            return;
-        }
-
-        short value = 0;
-        for (int i = 0; i < 16; i++) {
-            if (bits[i].isSelected()) {
-                value |= (1 << i);
+        writeButton.addActionListener(e -> {
+            short value = 0;
+            for (int i = 0; i < 16; i++) {
+                if (bits[i].isSelected()) {
+                    value |= (1 << i);
+                }
             }
-        }
+            try {
+                int txId = currentProgram.startTransaction("Set FPANEL_SWITCH");
+                try {
+                    mem.setShort(switchAddr, value);
+                } finally {
+                    currentProgram.endTransaction(txId, true);
+                }
+                status.setText(String.format("Written: 0x%04X", value & 0xFFFF));
+            } catch (Exception ex) {
+                status.setText("Error: " + ex.getMessage());
+            }
+        });
 
-        Memory mem = currentProgram.getMemory();
-        int transactionId = currentProgram.startTransaction("Set FPANEL_SWITCH");
-        try {
-            mem.setShort(switchAddr, value);
-        } finally {
-            currentProgram.endTransaction(transactionId, true);
-        }
+        JPanel content = new JPanel(new BorderLayout());
+        content.add(switchPanel, BorderLayout.CENTER);
+        content.add(writeButton, BorderLayout.SOUTH);
+        content.add(status, BorderLayout.NORTH);
 
-        println(String.format("FPANEL_SWITCH set to 0x%04X", value & 0xFFFF));
+        frame.setContentPane(content);
+        frame.pack();
+        frame.setLocationRelativeTo(null);
+        frame.setVisible(true);
     }
 }
