@@ -8,11 +8,12 @@
 
 import ghidra.app.script.GhidraScript;
 import ghidra.debug.flatapi.FlatDebuggerAPI;
-import ghidra.program.model.mem.*;
-import ghidra.program.model.address.*;
-import ghidra.program.model.listing.Program;
+import ghidra.trace.model.Trace;
+import ghidra.trace.model.memory.TraceMemoryManager;
+import ghidra.program.model.address.Address;
 import javax.swing.*;
 import java.awt.*;
+import java.nio.ByteBuffer;
 
 public class ODT_console extends GhidraScript implements FlatDebuggerAPI {
 
@@ -48,27 +49,32 @@ public class ODT_console extends GhidraScript implements FlatDebuggerAPI {
 
         while (windowOpen && !monitor.isCancelled()) {
             try {
-                Program liveView = getCurrentView();
-                if (liveView != null) {
-                    Memory mem = liveView.getMemory();
-                    Address xcsrAddr = liveView.getAddressFactory().getAddress("ram:0xFF74");
-                    Address xbufAddr = liveView.getAddressFactory().getAddress("ram:0xFF76");
+                Trace trace = getCurrentTrace();
+                if (trace != null) {
+                    long snap = getCurrentSnap(); // re-fetched fresh every loop
+                    TraceMemoryManager memMgr = trace.getMemoryManager();
+                    Address xcsrAddr = trace.getBaseAddressFactory().getAddress("ram:0xFF74");
+                    Address xbufAddr = trace.getBaseAddressFactory().getAddress("ram:0xFF76");
 
-                    byte xcsrVal = mem.getByte(xcsrAddr);
+                    byte[] xcsrBuf = new byte[1];
+                    memMgr.getBytes(snap, xcsrAddr, ByteBuffer.wrap(xcsrBuf));
+                    byte xcsrVal = xcsrBuf[0];
+
                     if ((xcsrVal & 0x80) != 0 && (lastXcsr & 0x80) == 0) {
-                        byte xbufLow = mem.getByte(xbufAddr);
-                        char c = (char) (xbufLow & 0x7F);
+                        byte[] xbufBuf = new byte[1];
+                        memMgr.getBytes(snap, xbufAddr, ByteBuffer.wrap(xbufBuf));
+                        char c = (char) (xbufBuf[0] & 0x7F);
                         String toAppend = (c == 7) ? "[BELL]" : String.valueOf(c);
                         SwingUtilities.invokeLater(() -> {
                             screen.append(toAppend);
                             screen.setCaretPosition(screen.getDocument().getLength());
                         });
-                        String hex = String.format("Last char: 0x%02X", xbufLow & 0xFF);
+                        String hex = String.format("Last char: 0x%02X", xbufBuf[0] & 0xFF);
                         SwingUtilities.invokeLater(() -> status.setText(hex));
                     }
                     lastXcsr = xcsrVal;
                 } else {
-                    SwingUtilities.invokeLater(() -> status.setText("No active view."));
+                    SwingUtilities.invokeLater(() -> status.setText("No active trace."));
                 }
             } catch (Exception ex) {
                 String msg = ex.getMessage();
