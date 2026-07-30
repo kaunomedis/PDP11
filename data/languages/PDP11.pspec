@@ -2,6 +2,8 @@
 <processor_spec>
     <programcounter register="PC"/>
 	  <default_symbols>
+    <symbol name="RESERVED" address="ram:0x0000"/>
+	<symbol name="RESERVED_PS" address="ram:0x0002"/>
     <symbol name="Bus_timeout" address="ram:0x0004"/>
 	<symbol name="Bus_timeout_PS" address="ram:0x0006"/>
     <symbol name="Reserved_instruction" address="ram:0x0008"/>
@@ -16,26 +18,71 @@
 	<symbol name="EMT_PS" address="ram:0x001a"/>
 	<symbol name="TRAP" address="ram:0x001C" />
 	<symbol name="TRAP_PS" address="ram:0x001e" />
-	<symbol name="???_int" address="ram:0x0020" />
-	<symbol name="???_int_PS" address="ram:0x0022" />
+	<symbol name="SYSTEM0_int" address="ram:0x0020" />
+	<symbol name="SYSTEM0_int_PS" address="ram:0x0022" />
+	<symbol name="SYSTEM1_int" address="ram:0x0024" />
+	<symbol name="SYSTEM1_int_PS" address="ram:0x0024" />
+
+	<symbol name="SYSTEM2_int" address="ram:0x0028" />
+	<symbol name="SYSTEM2_int_PS" address="ram:0x002a" />
+	<symbol name="SYSTEM3_int" address="ram:0x002c" />
+	<symbol name="SYSTEM3_int_PS" address="ram:0x002e" />
+
+	
 	<symbol name="ODT_IN" address="ram:0x0030" />
 	<symbol name="ODT_IN_PS" address="ram:0x0032" />
 	<symbol name="ODT_OUT" address="ram:0x0034" />
 	<symbol name="ODT_OUT_PS" address="ram:0x0036" />
+	
+	<symbol name="PC11_IN" address="ram:0x0038" />
+	<symbol name="PC11_IN_PS" address="ram:0x003a" />
+	<symbol name="PC11_OUT" address="ram:0x003c" />
+	<symbol name="PC11_OUT_PS" address="ram:0x003c" />
+	
 	<symbol name="EVENT_int" address="ram:0x0040" />
 	<symbol name="EVENT_int_PS" address="ram:0x0042" />
 	<symbol name="parity_int" address="ram:0x004C"/>
 	<symbol name="parity_int_PS" address="ram:0x004e"/>
 	<symbol name="SEL_TRAP" address="ram:0x0078"/>
 	<symbol name="SEL_TRAP_PS" address="ram:0x007a"/>
-	<symbol name="programmed_int" address="ram:0x00A0"/>
-	<symbol name="programmed_int_PS" address="ram:0x00A2"/>
-	<symbol name="FP_error" address="ram:0x00A4"/>
-	<symbol name="FP_error_PS" address="ram:0x00A6"/>
+	
+	<symbol name="LP11_LPRINTER" address="ram:0x0080" entry="true"/>
+	<symbol name="LP11_LPRINTER_PS" address="ram:0x0082" entry="true"/>
+	<symbol name="RF11_DISK" address="ram:0x0084" entry="true"/>
+	<symbol name="RF11_DISK_PS" address="ram:0x0086" entry="true"/>	
+	<symbol name="RC11_DISK" address="ram:0x0088" entry="true"/>
+	<symbol name="RC11_DISK_PS" address="ram:0x008a" entry="true"/>	
+	<symbol name="TC11_TAPE" address="ram:0x008c" entry="true"/>
+	<symbol name="TC11_TAPE_PS" address="ram:0x008e" entry="true"/>	
+	<symbol name="RK11_DISK" address="ram:0x0090" entry="true"/>
+	<symbol name="RK11_DISK_PS" address="ram:0x0092" entry="true"/>	
+	<symbol name="TM11_TAPE" address="ram:0x0094" entry="true"/>
+	<symbol name="TM11_TAPE_PS" address="ram:0x0096" entry="true"/>	
+	<symbol name="CR11_CARD" address="ram:0x0098" entry="true"/>
+	<symbol name="CR11_CARD_PS" address="ram:0x009a" entry="true"/>	
+	<symbol name="UDC11" address="ram:0x009c" entry="true"/>
+	<symbol name="UDC11_PS" address="ram:0x009e" entry="true"/>	
+	
+	<symbol name="PIRQ" address="ram:0x00A0"/>
+	<symbol name="PIRQ_PS" address="ram:0x00A2"/>
+	<symbol name="FPU_error" address="ram:0x00A4"/>
+	<symbol name="FPU_error_PS" address="ram:0x00A6"/>
 	<symbol name="segmentation_violation" address="ram:0x00A8"/>
 	<symbol name="segmentation_violation_PS" address="ram:0x00Aa"/>
+	<symbol name="RP11_DISKPACK" address="ram:0x00Ac"/>
+	<symbol name="RP11_DISKPACK_PS" address="ram:0x00Ae"/>	
+	
 	<symbol name="RXV11" address="ram:0x00B4" />
 	<symbol name="RXV11_PS" address="ram:0x00B6" />
+
+	<symbol name="USER_RES0" address="ram:0x00B8" />
+	<symbol name="USER_RES0_PS" address="ram:0x00Ba" />
+	<symbol name="USER_RES1" address="ram:0x00Bc" />
+	<symbol name="USER_RES1_PS" address="ram:0x00Be" />
+
+	
+	<symbol name="FLOATING_VECTORS_START" address="ram:0x00C0"/>
+	<symbol name="FLOATING_VECTORS_START_PS" address="ram:0x00C2"/>
 	
 	<symbol name="CPU_ERR" address="ram:0xFFF6" entry="true"/>
 
@@ -46,6 +93,8 @@
 	
 	<symbol name="UDA50_IP" address="ram:0xF468" entry="true"/>
 	<symbol name="UDA50_SA" address="ram:0xFD6a" entry="true"/>
+
+
 	
 	<symbol name="UKNC_VIDEO8_ADR" address="ram:0xFDA0" entry="true"/>
 	<symbol name="UKNC_VIDEO8_DATA" address="ram:0xFDA2" entry="true"/>
