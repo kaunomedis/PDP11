@@ -593,7 +593,7 @@ OPJ: "@"REL16" okJ7r"    	is met_d=7 & reg_d=7 ;REL16				{tmp:2=REL16; tmp2:2=*:
 :EMT "[#"eemt"] .TTY_OUT"		is op_h=0x88 & baitas=0xE1 & eemt 	{ push(PS); tmp:2=inst_next; push(tmp); tmp=0x18; PC=*:2 tmp; tmp=0x1A; PS=*:2 tmp; call [PC];}
 :EMT "[#"eemt"] .I/O page op"	is op_h=0x88 & baitas=0xFD & eemt 	{ push(PS); tmp:2=inst_next; push(tmp); tmp=0x18; PC=*:2 tmp; tmp=0x1A; PS=*:2 tmp; call [PC];}
 
-:TRAP		is op_h=0x89	{push(PS); tmp:2=inst_next; push(tmp); tmp=0x1c; PC=*:2 tmp; tmp=0x1e; PS=*:2 tmp; call [PC];}
+:TRAP "[#"baitas"]"		is op_h=0x89 &baitas	{push(PS); tmp:2=inst_next; push(tmp); tmp=0x1c; PC=*:2 tmp; tmp=0x1e; PS=*:2 tmp; call [PC];}
 :IOT		is imm16=0x004	{push(PS); tmp:2=inst_next; push(tmp); tmp=0x10; PC=*:2 tmp; tmp=0x12; PS=*:2 tmp; call [PC];}
 :BPT		is imm16=0x003	{push(PS); tmp:2=inst_next; push(tmp); tmp=0x0C; PC=*:2 tmp; tmp=0x0E; PS=*:2 tmp; call [PC];}
 
