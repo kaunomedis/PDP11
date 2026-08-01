@@ -72,15 +72,7 @@ macro push(val) {SP = SP - 2;*:2 SP = val;}
 macro pop(val)  {val = *:2 SP;SP = SP + 2;}
 
 ########## PC is R7, but ghidra ignores it. fix ##############
-macro PCFIX(mode, reg, pcount) {
-if (mode!=0) goto <skip>;
-if (reg!=7) goto <skip>;
-	pcount=pcount+2;
-	PC=pcount;
-  goto [PC];
-<skip>
-}
-
+macro PCFIX(value, regfield) { if (regfield!=7) goto <exit>; PC=value; goto [PC]; <exit> }
 #TOKENS:
 
 # main opcode
@@ -525,12 +517,13 @@ V = (((old ^ comb) & 0x80000000)!=0);
 #:MOV OPS,OPD 	is (kodas_s=0x1)...& OPD & OPS 				{N=((OPS & 0x8000)!=0);FLZ(OPS); OPD = OPS; V=0;}
 
 #:MOV OPS,OPD 	is (kodas_s=0x1)...& OPD & OPS 				{N=((OPS & 0x8000)!=0);FLZ(OPS); OPD = OPS; V=0;}
-:MOV OPS,OPD 	is (kodas_s=0x1 & reg_dd )...& OPD & OPS 				{N=((OPS & 0x8000)!=0);FLZ(OPS); OPD = OPS; V=0;
-if (reg_dd:1!=7) goto <exit>;
-PC=OPD;
-goto [PC];
-<exit>
-}
+#:MOV OPS,OPD 	is (kodas_s=0x1 & reg_dd )...& OPD & OPS 				{N=((OPS & 0x8000)!=0);FLZ(OPS); OPD = OPS; V=0;
+#if (reg_dd:1!=7) goto <exit>;
+#PC=OPD;
+#goto [PC];
+#<exit>
+#}
+:MOV OPS,OPD 	is (kodas_s=0x1 & reg_dd)...& OPD & OPS 				{N=((OPS & 0x8000)!=0);FLZ(OPS); OPD = OPS; V=0; PCFIX(OPD:2,reg_dd:1);}
 
 
 
