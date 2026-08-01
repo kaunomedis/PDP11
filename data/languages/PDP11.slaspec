@@ -71,6 +71,16 @@ macro FLN(register){N=(register & 0x8000)!=0;}
 macro push(val) {SP = SP - 2;*:2 SP = val;}
 macro pop(val)  {val = *:2 SP;SP = SP + 2;}
 
+########## PC is R7, but ghidra ignores it. fix ##############
+macro PCFIX(mode, reg, pcount) {
+if (mode!=0) goto <skip>;
+if (reg!=7) goto <skip>;
+	pcount=pcount+2;
+	PC=pcount;
+  goto [PC];
+<skip>
+}
+
 #TOKENS:
 
 # main opcode
@@ -121,6 +131,12 @@ define token data_double_word (32)
 	imm32L=(0,15)
 	rell32l=(0,15) signed
 ;
+
+
+
+
+
+
 # Relative addressing. Note x2 multiplication (adressing is in words)
 REL8:	reloc	is rell			[reloc = inst_next + 2 * rell;]	{ tmp:2 = 0; tmp=reloc; export  tmp;} 
 # relative values from extra bytes.
@@ -506,7 +522,18 @@ V = (((old ^ comb) & 0x80000000)!=0);
 ##################################################################################
 
 # ############ DOUBLE OPS & OPD ########################
-:MOV OPS,OPD 	is (kodas_s=0x1)...& OPD & OPS 				{N=((OPS & 0x8000)!=0);FLZ(OPS); OPD = OPS; V=0;}
+#:MOV OPS,OPD 	is (kodas_s=0x1)...& OPD & OPS 				{N=((OPS & 0x8000)!=0);FLZ(OPS); OPD = OPS; V=0;}
+
+#:MOV OPS,OPD 	is (kodas_s=0x1)...& OPD & OPS 				{N=((OPS & 0x8000)!=0);FLZ(OPS); OPD = OPS; V=0;}
+:MOV OPS,OPD 	is (kodas_s=0x1 & reg_dd )...& OPD & OPS 				{N=((OPS & 0x8000)!=0);FLZ(OPS); OPD = OPS; V=0;
+if (reg_dd:1!=7) goto <exit>;
+PC=OPD;
+goto [PC];
+<exit>
+}
+
+
+
 :MOVB OPS,OPD 	is (kodas_s=0x9 & met_d=0)...  & OPD & OPS	{OPD=sext(OPS[0,8]); FLZ(OPS&0xFF); N=((OPS&0x80)!=0); V=0;}
 :MOVB OPS,OPD 	is (kodas_s=0x9 & met_d!=0)... & OPD & OPS	{OPD=(OPD&0xFF00)|(OPS&0xFF); FLZ(OPS&0xFF); N=((OPS&0x80)!=0); V=0;}
 :CMP OPS,OPD 	is (kodas_s=0x2)... & OPD & OPS				{CMP_FLAGS(OPS,OPD);}
