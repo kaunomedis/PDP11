@@ -72,7 +72,9 @@ macro push(val) {SP = SP - 2;*:2 SP = val;}
 macro pop(val)  {val = *:2 SP;SP = SP + 2;}
 
 ########## PC is R7, but ghidra ignores it. fix ##############
-macro PCFIX(value, regfield) { if (regfield!=7) goto <exit>; PC=value; goto [PC]; <exit> }
+macro PCFIX(value, regfield,metod_d) {
+if (regfield!=7 | metod_d==3 | metod_d==6) goto <exit>; PC=value; goto [PC]; <exit> 
+ }
 #TOKENS:
 
 # main opcode
@@ -262,7 +264,7 @@ OPS: "@-("reg_s")_OK5a"		is met_s=5 & reg_s {reg_s=reg_s-2; tmp:2 = *:2 reg_s; e
 # EA = Rn + offset
 # operand = MEM[EA]
 OPS: imm16"("reg_s")_OK6a"	is met_s=6 & reg_s									;imm16	{tmp:2 = imm16+reg_s; export *:2 tmp;}
-OPS: REL16"_OK6b"			is met_s=6 & reg_s=7								;REL16	{tmp:2= REL16; export *:2 tmp;} #ar tikrai
+OPS: REL16"_OK6b"			is met_s=6 & reg_s=7								;REL16	{export *:2 REL16;}#{tmp:2= REL16; export *:2 tmp;} #ar tikrai
 OPS: REL32L"_OK6c"			is met_s=6 & met_d=6 & reg_s=7						;REL32L	{tmp:2 = REL32L; export *:2 tmp;}
 OPS: REL32L"_OK6d"			is met_s=6 & met_d=7 & reg_s=7						;REL32L	{tmp:2 = REL32L; export *:2 tmp;}
 OPS: imm32L"("reg_s")_OK6e"	is met_s=6 & met_d=6 & reg_s						;imm32L	{tmp:2 = imm32L+reg_s; export *:2 tmp;}
@@ -523,7 +525,7 @@ V = (((old ^ comb) & 0x80000000)!=0);
 #goto [PC];
 #<exit>
 #}
-:MOV OPS,OPD 	is (kodas_s=0x1 & reg_dd)...& OPD & OPS 				{N=((OPS & 0x8000)!=0);FLZ(OPS); OPD = OPS; V=0; PCFIX(OPD:2,reg_dd:1);}
+:MOV OPS,OPD 	is (kodas_s=0x1 & reg_dd & met_d)...& OPD & OPS 				{N=((OPS & 0x8000)!=0);FLZ(OPS); OPD = OPS; V=0; PCFIX(OPD:2,reg_dd:1,met_d:1);}
 
 
 
