@@ -73,7 +73,9 @@ macro pop(val)  {val = *:2 SP;SP = SP + 2;}
 
 ########## PC is R7, but ghidra ignores it. fix ##############
 macro PCFIX(value, regfield,metod_d) {
-if (regfield!=7 | metod_d==3 | metod_d==6) goto <exit>; PC=value; goto [PC]; <exit> 
+if !(regfield==7 & (metod_d==0 | metod_d==2 | metod_d==3 | metod_d==4 | metod_d==5)) goto <exit>;
+ PC=value; goto [PC];
+<exit> 
  }
 #TOKENS:
 
