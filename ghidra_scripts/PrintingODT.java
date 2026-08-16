@@ -58,5 +58,7 @@ public class PrintingODT extends GhidraScript {
         emu.step(monitor);
         }
 	print("\r\n");
+	// Cleanup resources and release hold on currentProgram
+	emu.dispose();
     }
 }

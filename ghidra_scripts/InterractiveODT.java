@@ -19,9 +19,12 @@ public class InterractiveODT extends GhidraScript {
         String startPCStr = askString("Start PC", "Enter starting PC (hex, no 0x):", "0080");
         long startPC = Long.parseLong(startPCStr.trim(), 16);
 
+        String startSPStr = askString("Start SP", "Enter starting stack SP (hex, no 0x):", "5000");
+        long startSP = Long.parseLong(startSPStr.trim(), 16);
+		
         emuHelper.writeRegister("PC", startPC);
         emuHelper.writeRegister("PS", 0x0000);
-        emuHelper.writeRegister("SP", 0x5000);
+        emuHelper.writeRegister("SP", startSP);
 
         println("Starting ODT>:\n\r");
         emuHelper.writeMemoryValue(toAddr(0xFF74), 2, 0xFFFF); // XCSR: transmitter always ready
@@ -81,7 +84,7 @@ public class InterractiveODT extends GhidraScript {
 
             if (!ready) {
                 if (pending.length() == 0) {
-                    String more = askString("Console Input",
+                    String more = askString("Console Input @ PC=0x"+ Long.toHexString(pc),
                         "Type text to send to the emulated console (blank = stop sending input):", "");
                     if (more != null && !more.isEmpty()) {
                         pending.append(more).append("\r"); // simulate pressing ENTER
@@ -98,5 +101,7 @@ public class InterractiveODT extends GhidraScript {
             emuHelper.step(monitor);
         }
         print("\r\n");
+		// Cleanup resources and release hold on currentProgram
+		emuHelper.dispose();
     }
 }

@@ -74,7 +74,8 @@ macro pop(val)  {val = *:2 SP;SP = SP + 2;}
 ########## PC is R7, but ghidra ignores it. fix ##############
 macro PCFIX(value, regfield,metod_d) {
 if !(regfield==7 & (metod_d==0 | metod_d==4 | metod_d==5)) goto <exit>;
- PC=value; goto [PC];
+# PC=value;
+ goto [value];
 <exit> 
  }
 #TOKENS:
@@ -229,9 +230,17 @@ OPS: "("reg_s") OK1"		is met_s=1 & reg_s {tmp:2 =0; tmp=*:2 reg_s; export tmp;}
 # Rn = Rn + (is_byte ? 1 : 2)
 OPS: "("reg_s")+ OK2a"		is byte=1 & met_s=2 & reg_s				{tmp:2=reg_s; reg_s=reg_s+1; export *:2 tmp; }
 OPS: "("reg_s")+ OK2b"		is byte=0 & met_s=2 & reg_s				{tmp:2=reg_s; reg_s=reg_s+2; export *:2 tmp; }
-OPS: "#"imm16" OK2c"		is byte=0 & met_s=2 & reg_s=7 & reg_s	;imm16	{tmp:2 = imm16; reg_s=reg_s+2; export tmp;}
-OPS: "#"imm16" OK2d"  is byte=1 & met_s=2 & reg_s=7 & reg_s ;imm16 {tmp:2=imm16; reg_s=reg_s+2; export tmp;}
-OPS: "#"imm32L"OK2e"	is byte=0 & met_s=2 & reg_s=7 & met_d=2 & reg_d=7;imm32L {tmp:2 = imm32L; export tmp;}
+OPS: "#"imm16" OK2c"		is byte=0 & met_s=2 & reg_s=7		;imm16	{tmp:2 = imm16; export tmp;}
+
+ #{tmp:2 = inst_start + 2; export tmp;}
+ #{tmp:2 = imm16; export *[const]:2 tmp;}
+ #{ export *[const]:2 immval; }
+ #blabla: "#"^immval		is immed8 [ immval = immed8 * 4; ]		{ export *[const]:4 immval; }
+ ## don't export as an address, may be PIC code, and would add spurious symbols.
+ # export *[const]:2 reloc;
+ 
+OPS: "#"imm16" OK2d"  		is byte=1 & met_s=2 & reg_s=7		;imm16 {tmp:2=imm16; export tmp;}
+OPS: "#"imm32L"OK2e"		is byte=0 & met_s=2 & reg_s=7 & met_d=2 & reg_d=7	;imm32L {tmp:2 = imm32L; export tmp;}
 
 # MODE3: (autoincrement deferred)
 # EA_ptr = Rn
@@ -239,14 +248,14 @@ OPS: "#"imm32L"OK2e"	is byte=0 & met_s=2 & reg_s=7 & met_d=2 & reg_d=7;imm32L {t
 # operand = MEM[EA]
 # Rn = Rn + 2
 
-OPS: "@("reg_s")+ OK3a"		is met_s=3& reg_ss!=7 & (met_d=0 | met_d=1 | met_d=4 | met_d=5)		& reg_s		{tmp:2 = *:2 reg_s; tmp2=*:2 tmp; reg_s=reg_s+2; export tmp2;}
+OPS: "@("reg_s")+ OK3a"		is met_s=3& reg_ss!=7 & (met_d=0 | met_d=1 | met_d=4 | met_d=5)		& reg_s		{tmp:2 = *:2 reg_s; tmp2:2=*:2 tmp; reg_s=reg_s+2; export tmp2;}
 OPS: "@("reg_s")+ OK3b"		is met_s=3& reg_ss!=7 & (met_d=2 | met_d=3) & reg_d!=7        		& reg_s		{tmp:2 = *:2 reg_s; tmp2=*:2 tmp; reg_s=reg_s+2; export tmp2;}
 OPS: "@("reg_s")+ OK3c"		is met_s=3& reg_ss!=7 & (met_d=2 | met_d=3) & reg_d=7				& reg_s		{tmp:2 = *:2 reg_s; tmp2=*:2 tmp; reg_s=reg_s+2; export tmp2;}
 OPS: "@("reg_s")+ OK3d"		is met_s=3& reg_ss!=7 & (met_d=6 | met_d=7)							& reg_s		{tmp:2 = *:2 reg_s; tmp2=*:2 tmp; reg_s=reg_s+2; export tmp2;}
-OPS: "@#"imm16" OK3e"		is met_s=3&  reg_ss=7 & (met_d=0 | met_d=1 | met_d=4 | met_d=5)		& reg_s	;imm16	{tmp:2 =imm16; export *:2 tmp;}
-OPS: "@#"imm16" OK3f"  is met_s=3 & reg_ss=7 & (met_d=2 | met_d=3) & reg_d!=7 & reg_s ;imm16  {tmp:2=imm16; export *:2 tmp;}
-OPS: "@#"imm32L" OK3g"		is met_s=3&  reg_ss=7 & (met_d=2 | met_d=3) & reg_d=7				& reg_s	;imm32L	{tmp:2 = imm32L; export *:2 tmp;}
-OPS: "@#"imm32L" OK3h"		is met_s=3&  reg_ss=7 & (met_d=6 | met_d=7)							& reg_s	;imm32L	{tmp:2 = imm32L; export *:2 tmp;}
+OPS: "@#"imm16" OK3e"		is met_s=3&  reg_ss=7 & (met_d=0 | met_d=1 | met_d=4 | met_d=5)		;imm16	{tmp:2 =imm16; export *:2 tmp;}
+OPS: "@#"imm16" OK3f"  		is met_s=3 & reg_ss=7 & (met_d=2 | met_d=3) & reg_d!=7 				;imm16  {tmp:2=imm16; export *:2 tmp;}
+OPS: "@#"imm32L" OK3g"		is met_s=3&  reg_ss=7 & (met_d=2 | met_d=3) & reg_d=7				;imm32L	{tmp:2 = imm32L; export *:2 tmp;}
+OPS: "@#"imm32L" OK3h"		is met_s=3&  reg_ss=7 & (met_d=6 | met_d=7)							;imm32L	{tmp:2 = imm32L; export *:2 tmp;}
 
 # MODE4: (autodecrement)
 # Rn = Rn - (is_byte ? 1 : 2)
@@ -266,7 +275,7 @@ OPS: "@-("reg_s")_OK5a"		is met_s=5 & reg_s {reg_s=reg_s-2; tmp:2 = *:2 reg_s; e
 # EA = Rn + offset
 # operand = MEM[EA]
 OPS: imm16"("reg_s")_OK6a"	is met_s=6 & reg_s									;imm16	{tmp:2 = imm16+reg_s; export *:2 tmp;}
-OPS: REL16"_OK6b"			is met_s=6 & reg_s=7								;REL16	{export *:2 REL16;}#{tmp:2= REL16; export *:2 tmp;} #ar tikrai
+OPS: REL16"_OK6b"			is met_s=6 & reg_s=7								;REL16	{export *:2 REL16;}
 OPS: REL32L"_OK6c"			is met_s=6 & met_d=6 & reg_s=7						;REL32L	{tmp:2 = REL32L; export *:2 tmp;}
 OPS: REL32L"_OK6d"			is met_s=6 & met_d=7 & reg_s=7						;REL32L	{tmp:2 = REL32L; export *:2 tmp;}
 OPS: imm32L"("reg_s")_OK6e"	is met_s=6 & met_d=6 & reg_s						;imm32L	{tmp:2 = imm32L+reg_s; export *:2 tmp;}
@@ -527,8 +536,7 @@ V = (((old ^ comb) & 0x80000000)!=0);
 #goto [PC];
 #<exit>
 #}
-:MOV OPS,OPD 	is (kodas_s=0x1 & reg_dd & met_d)...& OPD & OPS 				{N=((OPS & 0x8000)!=0);FLZ(OPS); OPD = OPS; V=0; PCFIX(OPD:2,reg_dd:1,met_d:1);}
-
+:MOV OPS,OPD 	is (kodas_s=0x1 & reg_dd & met_d)...& OPS & OPD 				{N=((OPS & 0x8000)!=0);FLZ(OPS); OPD = OPS; V=0; PCFIX(OPD:2,reg_dd:1,met_d:1);}
 
 
 :MOVB OPS,OPD 	is (kodas_s=0x9 & met_d=0)...  & OPD & OPS	{OPD=sext(OPS[0,8]); FLZ(OPS&0xFF); N=((OPS&0x80)!=0); V=0;}
@@ -598,8 +606,8 @@ OPJ: REL16" okJ6r"       	is met_d=6 & reg_d=7 ;REL16				{tmp:2=REL16; export tm
 OPJ: "@"imm16"("reg_d") okJ7" is met_d=7 & reg_dd!=7 & reg_d ;imm16	{tmp:2=imm16+reg_d; tmp2:2=*:2 tmp; export tmp2;}	# mode 7 @X(Rn): EA=MEM[Rn+X], one deref (intrinsic)
 OPJ: "@"REL16" okJ7r"    	is met_d=7 & reg_d=7 ;REL16				{tmp:2=REL16; tmp2:2=*:2 tmp; export tmp2;}			# mode 7, reg=PC: "JMP @label" -> EA=MEM[resolved address]
 
-:JSR reg_s,OPJ is (kodas_s=0 & met_s=4 & reg_s) ... & OPJ	{tmp:2=OPJ;push(reg_s);reg_s=inst_next;PC=tmp;call[PC];}
-:CALL OPJ is (kodas_s=0 & met_s=4 & reg_s=7) ... & OPJ		{push(PC);call[OPJ];}
+:JSR reg_s,OPJ is (kodas_s=0 & met_s=4 & reg_s) ... & OPJ	{tmp:2=OPJ;push(reg_s);reg_s=inst_next;call[tmp];}
+:CALL OPJ is (kodas_s=0 & met_s=4 & reg_s=7) ... & OPJ		{tmp:2=inst_next; push(tmp);call[OPJ];}
 :JMP OPJ       is (kodas_s=0 & met_s=0 & reg_s=1)... & OPJ {PC=OPJ; goto[PC];}
 
 ############################ RETURN ##########################################
@@ -617,7 +625,7 @@ OPJ: "@"REL16" okJ7r"    	is met_d=7 & reg_d=7 ;REL16				{tmp:2=REL16; tmp2:2=*:
 :EMT "[#"eemt"] .TTY_OUT"		is op_h=0x88 & baitas=0xE1 & eemt 	{ push(PS); tmp:2=inst_next; push(tmp); tmp=0x18; PC=*:2 tmp; tmp=0x1A; PS=*:2 tmp; call [PC];}
 :EMT "[#"eemt"] .I/O page op"	is op_h=0x88 & baitas=0xFD & eemt 	{ push(PS); tmp:2=inst_next; push(tmp); tmp=0x18; PC=*:2 tmp; tmp=0x1A; PS=*:2 tmp; call [PC];}
 
-:TRAP "[#"baitas"]"		is op_h=0x89 &baitas	{push(PS); tmp:2=inst_next; push(tmp); tmp=0x1c; PC=*:2 tmp; tmp=0x1e; PS=*:2 tmp; call [PC];}
+:TRAP "[#"baitas"]"		is op_h=0x89 &baitas	{push(PS); tmp:2=inst_next; push(tmp); tmp=0x1e; PS=*:2 tmp; tmp=0x1c; jumpas:2=*tmp; call [jumpas];}
 :IOT		is imm16=0x004	{push(PS); tmp:2=inst_next; push(tmp); tmp=0x10; PC=*:2 tmp; tmp=0x12; PS=*:2 tmp; call [PC];}
 :BPT		is imm16=0x003	{push(PS); tmp:2=inst_next; push(tmp); tmp=0x0C; PC=*:2 tmp; tmp=0x0E; PS=*:2 tmp; call [PC];}
 

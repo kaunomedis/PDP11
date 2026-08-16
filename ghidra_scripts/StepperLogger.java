@@ -105,5 +105,7 @@ public class StepperLogger extends GhidraScript {
 
         log.close();
         println("Done. Log written to: " + logPath);
+		// Cleanup resources and release hold on currentProgram
+		emu.dispose();
     }
 }

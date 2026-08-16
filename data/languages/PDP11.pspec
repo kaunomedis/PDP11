@@ -84,6 +84,10 @@
 	<symbol name="FLOATING_VECTORS_START" address="ram:0x00C0"/>
 	<symbol name="FLOATING_VECTORS_START_PS" address="ram:0x00C2"/>
 	
+	
+	<symbol name="VT11_DPC" address="ram:0xF400" entry="true"/>
+	<symbol name="VT11_DFSR" address="ram:0xF402" entry="true"/>
+	
 	<symbol name="CPU_ERR" address="ram:0xFFF6" entry="true"/>
 
 	<symbol name="TU58_RCSR" address="ram:0xFD40" entry="true"/>
@@ -109,13 +113,18 @@
 	<symbol name="DZ11_MSR_TDR" address="ram:0xe046" entry="true"/>
 	
 
-<symbol name="RK11_RKDS" address="ram:0xFF00" entry="true" />
-<symbol name="RK11_RKER" address="ram:0xFF02" entry="true" />
-<symbol name="RK11_RKCS" address="ram:0xFF04" entry="true" />
-<symbol name="RK11_RKWC" address="ram:0xFF06" entry="true" />
-<symbol name="RK11_RKBA" address="ram:0xFF08" entry="true" />
-<symbol name="RK11_RKDA" address="ram:0xFF0a" entry="true" />
-<symbol name="RK11_RKDB" address="ram:0xFF0c" entry="true" />
+	<symbol name="RK11_RKDS" address="ram:0xFF00" entry="true" />
+	<symbol name="RK11_RKER" address="ram:0xFF02" entry="true" />
+	<symbol name="RK11_RKCS" address="ram:0xFF04" entry="true" />
+	<symbol name="RK11_RKWC" address="ram:0xFF06" entry="true" />
+	<symbol name="RK11_RKBA" address="ram:0xFF08" entry="true" />
+	<symbol name="RK11_RKDA" address="ram:0xFF0a" entry="true" />
+	<symbol name="RK11_RKDB" address="ram:0xFF0c" entry="true" />
+	<symbol name="DRV11_SR" address="ram:0xFee0" entry="true" />
+	<symbol name="DRV11_OUTBUF" address="ram:0xFee2" entry="true" />
+	<symbol name="DRV11_INBUF" address="ram:0xFee4" entry="true" />
+	<symbol name="DRV11_1" address="ram:0xFee6" entry="true" />
+	<symbol name="DRV11_2" address="ram:0xFee8" entry="true" />
 
 	<symbol name="RL11_CSR" address="ram:0xF900" entry="true"/>
 	<symbol name="RL11_BA" address="ram:0xF902" entry="true"/>
@@ -144,15 +153,18 @@
 	<symbol name="RX02_DB" address="ram:0xFe82" entry="true"/>
 	<symbol name="RX02_ES" address="ram:0xFe84" entry="true"/>
 
+
+	<symbol name="DL11_RCSR" address="ram:0xFf60" entry="true"/>
+	<symbol name="DL11_RBUF" address="ram:0xFf62" entry="true"/>
+	<symbol name="DL11_XCSR" address="ram:0xFf64" entry="true"/>
+	<symbol name="DL11_XBUF" address="ram:0xFf66" entry="true"/>
 	
 	<symbol name="ODT_RCSR" address="ram:0xFF70" entry="true"/>
 	<symbol name="ODT_RBUF" address="ram:0xFF72" entry="true"/>
 	<symbol name="ODT_XCSR" address="ram:0xFF74" entry="true"/>
 	<symbol name="ODT_XBUF" address="ram:0xFF76" entry="true"/>
 	<symbol name="FPANEL_SWITCH" address="ram:0xFF78" entry="true"/>
-
 	<symbol name="CPU_DEBUG" address="ram:0xFFD4" entry="true"/>
-	
 	<symbol name="CPU_PSW" address="ram:0xFFFE" entry="true"/>
 	<symbol name="CPU_PIRQ" address="ram:0xFFFA" entry="true"/>
 	<symbol name="CPU_R0" address="ram:0xFFC0" entry="true"/>
@@ -166,6 +178,8 @@
 	
 	  </default_symbols>
   <default_memory_blocks>
+    <memory_block name="LOWRAM" start_address="ram:0x0000" mode="rw" length="0x0200" initialized="true"/>
+
     <memory_block name="IOSPACE" start_address="ram:0xE000" mode="rw" length="0x2000" initialized="true"/>
   </default_memory_blocks>
 </processor_spec>

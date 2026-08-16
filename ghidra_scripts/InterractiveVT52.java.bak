@@ -1,0 +1,207 @@
+//Line Interractive VT52 in emulator, with separate output window
+//@author Levas
+//@category PDP11 Hardware
+//@keybinding 
+//@menupath 
+//@toolbar 
+//@runtime Java
+import ghidra.app.script.GhidraScript;
+import ghidra.app.emulator.EmulatorHelper;
+import ghidra.app.emulator.MemoryAccessFilter;
+import ghidra.program.model.address.Address;
+import ghidra.program.model.address.AddressSpace;
+import ghidra.program.model.listing.Instruction;
+import ghidra.util.task.TaskMonitor;
+import javax.swing.*;
+import java.awt.*;
+
+
+public class InterractiveVT52 extends GhidraScript {
+
+    private static final int ST_NORMAL = 0;
+    private static final int ST_ESC = 1;
+    private static final int ST_ESC_Y_ROW = 2;
+    private static final int ST_ESC_Y_COL = 3;
+
+    public void run() throws Exception {
+        EmulatorHelper emuHelper = new EmulatorHelper(currentProgram);
+        String startPCStr = askString("Start PC", "Enter starting PC (hex, no 0x):", "0080");
+        long startPC = Long.parseLong(startPCStr.trim(), 16);
+
+        String startSPStr = askString("Start SP", "Enter starting stack SP (hex, no 0x):", "5000");
+        long startSP = Long.parseLong(startSPStr.trim(), 16);
+
+        emuHelper.writeRegister("PC", startPC);
+        emuHelper.writeRegister("PS", 0x0000);
+        emuHelper.writeRegister("SP", startSP);
+
+        // --- Output window (same pattern as the earlier front-panel/console scripts) ---
+        JFrame frame = new JFrame("PDP-11 VT52 Console (live)");
+        frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        frame.setAlwaysOnTop(true);
+
+        JTextArea screen = new JTextArea(25, 80);
+        screen.setEditable(false);
+        screen.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        JScrollPane screenScroll = new JScrollPane(screen);
+        JLabel status = new JLabel("Starting...");
+
+        JPanel content = new JPanel(new BorderLayout());
+        content.add(new JLabel("PDP-11 VT52 Console (live)", SwingConstants.CENTER), BorderLayout.NORTH);
+        content.add(screenScroll, BorderLayout.CENTER);
+        content.add(status, BorderLayout.SOUTH);
+        frame.setContentPane(content);
+        frame.pack();
+        frame.setMinimumSize(new Dimension(700, 500));
+        frame.setLocationRelativeTo(null);
+        SwingUtilities.invokeLater(() -> frame.setVisible(true));
+
+        // Small helper so every output path goes through the text area consistently
+        Runnable[] appender = new Runnable[1]; // placeholder to allow lambda capture below
+
+        emuHelper.writeMemoryValue(toAddr(0xFF74), 2, 0xFFFF); // XCSR: transmitter always ready
+
+        Address xbufAddr = toAddr(0xFF76);
+        Address rbufAddr = toAddr(0xFF72);
+        Address rcsrAddr = toAddr(0xFF70);
+
+        emuHelper.writeMemoryValue(rcsrAddr, 2, 0x0000); // RCSR starts "not ready"
+
+        final StringBuilder pending = new StringBuilder();
+        final int[] escState = { ST_NORMAL };
+        final int[] escRow = { 0 };
+
+        emuHelper.getEmulator().addMemoryAccessFilter(new MemoryAccessFilter() {
+
+            private void out(String s) {
+                SwingUtilities.invokeLater(() -> {
+                    screen.append(s);
+                    screen.setCaretPosition(screen.getDocument().getLength());
+                });
+            }
+
+            @Override
+            protected void processRead(AddressSpace space, long offset, int size, byte[] values) {
+                Address read = space.getAddress(offset);
+                if (read.equals(rbufAddr)) {
+                    try {
+                        byte[] cur = emuHelper.readMemory(rcsrAddr, 2);
+                        int val = (cur[0] & 0xFF) | ((cur[1] & 0xFF) << 8);
+                        emuHelper.writeMemoryValue(rcsrAddr, 2, val & ~0x80);
+                    } catch (Exception e) {
+                        // best effort only
+                    }
+                }
+            }
+
+            @Override
+            protected void processWrite(AddressSpace space, long offset, int size, byte[] values) {
+                Address written = space.getAddress(offset);
+                if (!written.equals(xbufAddr)) {
+                    return;
+                }
+                int b = values[0] & 0xFF;
+
+
+
+
+
+
+
+
+
+
+
+                switch (escState[0]) {
+                    case ST_ESC:
+                        switch (b) {
+                            case 'A': out("[CURSOR-UP]"); break;
+                            case 'B': out("[CURSOR-DOWN]"); break;
+                            case 'C': out("[CURSOR-RIGHT]"); break;
+                            case 'D': out("[CURSOR-LEFT]"); break;
+                            case 'H': out("[CURSOR-HOME]"); break;
+                            case 'I': out("[REVERSE-LF]"); break;
+                            case 'J': out("[ERASE-TO-END-OF-SCREEN]"); break;
+                            case 'K': out("[ERASE-TO-END-OF-LINE]"); break;
+                            case 'Z': out("[IDENTIFY]"); break;
+                            case '=': out("[ALT-KEYPAD-ON]"); break;
+                            case '>': out("[ALT-KEYPAD-OFF]"); break;
+                            case 'Y':
+                                escState[0] = ST_ESC_Y_ROW;
+                                return;
+                            default:
+                                out(String.format("[ESC-%c/%02X]", (b >= 0x20 && b < 0x7f) ? (char) b : '?', b));
+                                break;
+                        }
+                        escState[0] = ST_NORMAL;
+                        return;
+
+
+
+
+
+
+
+                    case ST_ESC_Y_ROW:
+                        escRow[0] = b - 32;
+                        escState[0] = ST_ESC_Y_COL;
+                        return;
+
+                    case ST_ESC_Y_COL:
+                        int col = b - 32;
+                        out(String.format("[CURSOR-TO row=%d col=%d]", escRow[0], col));
+                        escState[0] = ST_NORMAL;
+                        return;
+
+                    default:
+                        if (b == 0x1B) {
+                            escState[0] = ST_ESC;
+                            return;
+                        }
+                        if (b == 0x0A || b == 0x0D || b == 0x09) {
+                            out(String.valueOf((char) b));
+                        } else if (b < 0x20 || b > 0x7f) {
+                            out(String.format("[%02X]", b));
+                        } else {
+                            out(String.valueOf((char) b));
+                        }
+                }
+            }
+        });
+
+        while (!monitor.isCancelled()) {
+
+            long pc = emuHelper.readRegister("PC").longValue();
+            Instruction instr = currentProgram.getListing().getInstructionAt(toAddr(pc));
+            String instrText = (instr != null) ? instr.toString() : "??";
+            if (instrText.trim().startsWith("HALT")) {
+                String haltMsg = "Reached HALT at PC=0x" + Long.toHexString(pc) + " - stopping.";
+                SwingUtilities.invokeLater(() -> status.setText(haltMsg));
+                break;
+            }
+
+            byte[] rcsrBytes = emuHelper.readMemory(rcsrAddr, 2);
+            int rcsrVal = (rcsrBytes[0] & 0xFF) | ((rcsrBytes[1] & 0xFF) << 8);
+            boolean ready = (rcsrVal & 0x80) != 0;
+
+            if (!ready) {
+                if (pending.length() == 0) {
+                    String more = askString("Console Input @ PC=0x" + Long.toHexString(pc),
+                        "Type text to send to the emulated console (blank = stop sending input):", "");
+                    if (more != null && !more.isEmpty()) {
+                        pending.append(more).append("\r");
+                    }
+                }
+                if (pending.length() > 0) {
+                    char c = pending.charAt(0);
+                    pending.deleteCharAt(0);
+                    emuHelper.writeMemoryValue(rbufAddr, 2, (long) c & 0xFF);
+                    emuHelper.writeMemoryValue(rcsrAddr, 2, 0x80);
+                }
+            }
+
+            emuHelper.step(monitor);
+        }
+        emuHelper.dispose();
+    }
+}
