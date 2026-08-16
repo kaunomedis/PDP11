@@ -131,6 +131,7 @@
 	<symbol name="RL11_DA" address="ram:0xF904" entry="true"/>
 	<symbol name="RL11_MPR" address="ram:0xF906" entry="true"/>
 	
+<symbol name="KW11_CLK50_60INT" address="ram:0xFf66" entry="true"/>
 
 	<symbol name="PC11_PRS" address="ram:0xFf68" entry="true"/>
 	<symbol name="PC11_PRB" address="ram:0xFf6a" entry="true"/>
