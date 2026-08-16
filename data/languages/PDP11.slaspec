@@ -536,7 +536,15 @@ V = (((old ^ comb) & 0x80000000)!=0);
 #goto [PC];
 #<exit>
 #}
-:MOV OPS,OPD 	is (kodas_s=0x1 & reg_dd & met_d)...& OPS & OPD 				{N=((OPS & 0x8000)!=0);FLZ(OPS); OPD = OPS; V=0; PCFIX(OPD:2,reg_dd:1,met_d:1);}
+#:MOV OPS,OPD 	is (kodas_s=0x1 & reg_dd & met_d)...& OPS & OPD 				{N=((OPS & 0x8000)!=0);FLZ(OPS); OPD = OPS; V=0; PCFIX(OPD:2,reg_dd:1,met_d:1);}
+
+:MOV OPS,OPD is (kodas_s=0x1 & reg_dd & met_d)...& OPS & OPD {
+    build OPS;
+    build OPD;
+    N=((OPS & 0x8000)!=0);FLZ(OPS); OPD = OPS; V=0; PCFIX(OPD:2,reg_dd:1,met_d:1);
+}
+
+
 
 
 :MOVB OPS,OPD 	is (kodas_s=0x9 & met_d=0)...  & OPD & OPS	{OPD=sext(OPS[0,8]); FLZ(OPS&0xFF); N=((OPS&0x80)!=0); V=0;}
