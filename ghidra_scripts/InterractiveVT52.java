@@ -21,6 +21,7 @@ public class InterractiveVT52 extends GhidraScript {
     private static final int ST_ESC = 1;
     private static final int ST_ESC_Y_ROW = 2;
     private static final int ST_ESC_Y_COL = 3;
+    private static final int ST_ESC_E_DATA = 4;
 
     private static final int ROWS = 24;
     private static final int COLS = 80;
@@ -76,6 +77,7 @@ public class InterractiveVT52 extends GhidraScript {
         final StringBuilder pending = new StringBuilder();
         final int[] escState = { ST_NORMAL };
         final int[] escRow = { 0 };
+        final int[] escECount = { 0 };
         final boolean[] graphicsMode = { false };
 
         // --- The actual screen grid, and cursor position, that VT52 commands operate on ---
@@ -174,7 +176,13 @@ public class InterractiveVT52 extends GhidraScript {
                             case 'B': cur[0]++; clampCursor(); break;
                             case 'C': cur[1]++; clampCursor(); break;
                             case 'D': cur[1]--; clampCursor(); break;
-                            case 'E': clearScreen(); break; // best-guess execution; real meaning still unconfirmed
+                            case 'E':
+                                // Confirmed via real disassembly (FUN_195e): ESC E consumes
+                                // exactly 8 following bytes, each sent to XBUF as an ordinary
+                                // printable character - NOT a clear-screen, NOT a bitmap.
+                                escState[0] = ST_ESC_E_DATA;
+                                escECount[0] = 0;
+                                return;
                             case 'F': graphicsMode[0] = true; break;
                             case 'G': graphicsMode[0] = false; break;
                             case 'H': cur[0] = 0; cur[1] = 0; break;
@@ -211,6 +219,23 @@ public class InterractiveVT52 extends GhidraScript {
                         cur[1] = b - 32;
                         clampCursor();
                         escState[0] = ST_NORMAL;
+                        redraw();
+                        return;
+
+                    case ST_ESC_E_DATA:
+                        escECount[0]++;
+                        if (b >= 0x20 && b <= 0x7E) {
+                            putChar((char) b);
+                        } else if (b == 0x00) {
+                            putChar(NUL_MARKER);
+                        } else {
+                            for (char c : String.format("[%02X]", b).toCharArray()) {
+                                putChar(c);
+                            }
+                        }
+                        if (escECount[0] >= 8) {
+                            escState[0] = ST_NORMAL;
+                        }
                         redraw();
                         return;
 
