@@ -423,6 +423,7 @@ OPDD: "@"REL16" ok7f" 		is met_d=7 & reg_dd=7 & reg_d			;REL16	{tmp:2 = REL16; e
 }
 
 :DIV OPD,reg_s  is (kodas_s=7 & met_s=1 & reg_s & reg_lo) ... & OPD  {
+build OPD;
     dividend:4 = (zext(reg_s) << 16) | zext(reg_lo);
     divisor:4  = sext(OPD);
     if (divisor != 0) goto <ok>;
@@ -441,6 +442,7 @@ OPDD: "@"REL16" ok7f" 		is met_d=7 & reg_dd=7 & reg_d			;REL16	{tmp:2 = REL16; e
 }
 
 :ASH OPD,reg_s	is (kodas_s=7 &met_s=2 & reg_s) ...& OPD {
+build OPD;
 cnt:2 = OPD & 0x3F;
 old:2 = reg_s;
 mag:2 = 0;
@@ -471,6 +473,7 @@ FLN(reg_s); FLZ(reg_s);
 
 
 :ASHC OPD,reg_s	is (kodas_s=7 & met_s=3 & reg_s & reg_lo & reg_ss) ... & OPD {
+build OPD;
 cnt:2 = OPD & 0x3F;
 mag:2 = 0;
 rot:2 = 0;
@@ -538,27 +541,19 @@ V = (((old ^ comb) & 0x80000000)!=0);
 #}
 #:MOV OPS,OPD 	is (kodas_s=0x1 & reg_dd & met_d)...& OPS & OPD 				{N=((OPS & 0x8000)!=0);FLZ(OPS); OPD = OPS; V=0; PCFIX(OPD:2,reg_dd:1,met_d:1);}
 
-:MOV OPS,OPD is (kodas_s=0x1 & reg_dd & met_d)...& OPS & OPD {
-    build OPS;
-    build OPD;
-    N=((OPS & 0x8000)!=0);FLZ(OPS); OPD = OPS; V=0; PCFIX(OPD:2,reg_dd:1,met_d:1);
-}
-
-
-
-
-:MOVB OPS,OPD 	is (kodas_s=0x9 & met_d=0)...  & OPD & OPS	{OPD=sext(OPS[0,8]); FLZ(OPS&0xFF); N=((OPS&0x80)!=0); V=0;}
-:MOVB OPS,OPD 	is (kodas_s=0x9 & met_d!=0)... & OPD & OPS	{OPD=(OPD&0xFF00)|(OPS&0xFF); FLZ(OPS&0xFF); N=((OPS&0x80)!=0); V=0;}
-:CMP OPS,OPD 	is (kodas_s=0x2)... & OPD & OPS				{CMP_FLAGS(OPS,OPD);}
-:CMPB OPS,OPD 	is (kodas_s=0xA)... & OPD & OPS				{CMP_FLAGS(OPS<<8,OPD<<8); Z=((OPD&0xFF)==(OPS&0xFF));}
-:SUB OPS,OPD 	is (kodas_s=0xE)... & OPS & OPD				{SUB_FLAGS(OPS,OPD); OPD=OPD-OPS;FLN(OPD);}
-:ADD OPS,OPD 	is (kodas_s=0x6)... & OPS & OPD				{ADD_FLAGS(OPS,OPD);OPD=OPD+OPS;FLN(OPD);}
-:BIT OPS,OPD 	is (kodas_s=0x3)... & OPS & OPD				{tmp:2=OPS&OPD;FLN(tmp);FLZ(tmp);V=0;}
-:BITB OPS,OPD 	is (kodas_s=0xB)... & OPS & OPD				{tmp:2=OPS&OPD;FLN(tmp<<8);FLZ(tmp&0xFF);V=0;}
-:BIC OPS,OPD 	is (kodas_s=0x4)... & OPS & OPD				{OPD=(~OPS) & OPD;FLZ(OPD);FLN(OPD); V=0;} #bit clear dst=not(src) and (dst)
-:BICB OPS,OPD 	is (kodas_s=0xC)... & OPS & OPD				{tmp=OPD&0xFF00;OPD=((~OPS)&(OPD&0xFF))|tmp;FLZ(OPD&0x00FF);FLN(OPD<<8); V=0;}
-:BIS OPS,OPD 	is (kodas_s=0x5)... & OPS & OPD				{OPD=OPD | OPS; FLN(OPD);FLZ(OPD);V=0;}
-:BISB OPS,OPD 	is (kodas_s=0xD)... & OPS & OPD				{OPD=OPD | (OPS&0xFF); FLN(OPD);FLZ(OPD);V=0;}
+:MOV OPS,OPD	is (kodas_s=0x1 & reg_dd & met_d)...& OPS & OPD {build OPS;build OPD;N=((OPS & 0x8000)!=0);FLZ(OPS); OPD = OPS; V=0; PCFIX(OPD:2,reg_dd:1,met_d:1);}
+:MOVB OPS,OPD 	is (kodas_s=0x9 & met_d=0)...  & OPD & OPS	{build OPS;build OPD;OPD=sext(OPS[0,8]); FLZ(OPS&0xFF); N=((OPS&0x80)!=0); V=0;}
+:MOVB OPS,OPD 	is (kodas_s=0x9 & met_d!=0)... & OPD & OPS	{build OPS;build OPD;OPD=(OPD&0xFF00)|(OPS&0xFF); FLZ(OPS&0xFF); N=((OPS&0x80)!=0); V=0;}
+:CMP OPS,OPD 	is (kodas_s=0x2)... & OPD & OPS				{build OPS;build OPD;CMP_FLAGS(OPS,OPD);}
+:CMPB OPS,OPD 	is (kodas_s=0xA)... & OPD & OPS				{build OPS;build OPD;CMP_FLAGS(OPS<<8,OPD<<8); Z=((OPD&0xFF)==(OPS&0xFF));}
+:SUB OPS,OPD 	is (kodas_s=0xE)... & OPS & OPD				{build OPS;build OPD;SUB_FLAGS(OPS,OPD); OPD=OPD-OPS;FLN(OPD);}
+:ADD OPS,OPD 	is (kodas_s=0x6)... & OPS & OPD				{build OPS;build OPD;ADD_FLAGS(OPS,OPD);OPD=OPD+OPS;FLN(OPD);}
+:BIT OPS,OPD 	is (kodas_s=0x3)... & OPS & OPD				{build OPS;build OPD;tmp:2=OPS&OPD;FLN(tmp);FLZ(tmp);V=0;}
+:BITB OPS,OPD 	is (kodas_s=0xB)... & OPS & OPD				{build OPS;build OPD;tmp:2=OPS&OPD;FLN(tmp<<8);FLZ(tmp&0xFF);V=0;}
+:BIC OPS,OPD 	is (kodas_s=0x4)... & OPS & OPD				{build OPS;build OPD;OPD=(~OPS) & OPD;FLZ(OPD);FLN(OPD); V=0;} #bit clear dst=not(src) and (dst)
+:BICB OPS,OPD 	is (kodas_s=0xC)... & OPS & OPD				{build OPS;build OPD;tmp=OPD&0xFF00;OPD=((~OPS)&(OPD&0xFF))|tmp;FLZ(OPD&0x00FF);FLN(OPD<<8); V=0;}
+:BIS OPS,OPD 	is (kodas_s=0x5)... & OPS & OPD				{build OPS;build OPD;OPD=OPD | OPS; FLN(OPD);FLZ(OPD);V=0;}
+:BISB OPS,OPD 	is (kodas_s=0xD)... & OPS & OPD				{build OPS;build OPD;OPD=OPD | (OPS&0xFF); FLN(OPD);FLZ(OPD);V=0;}
 
 # ############ SINGLE DDDD #############################
 
