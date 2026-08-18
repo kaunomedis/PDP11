@@ -363,9 +363,20 @@ public class InterractiveVT52 extends GhidraScript {
             if (!ready) {
                 if (pending.length() == 0) {
                     String more = askString("Console Input @ PC=0x" + Long.toHexString(pc),
-                        "Type text to send to the emulated console (blank = stop sending input):", "");
-                    if (more != null && !more.isEmpty()) {
-                        pending.append(more).append("\r");
+                        "Type text to send (use ^O, ^L etc for control chars; type 'stop' to stop sending):", "stop");
+                    if (more != null && !more.equalsIgnoreCase("stop")) {
+                        StringBuilder decoded = new StringBuilder();
+                        for (int i = 0; i < more.length(); i++) {
+                            char ch = more.charAt(i);
+                            if (ch == '^' && i + 1 < more.length()) {
+                                char next = Character.toUpperCase(more.charAt(i + 1));
+                                decoded.append((char) (next & 0x1F));
+                                i++;
+                            } else {
+                                decoded.append(ch);
+                            }
+                        }
+                        pending.append(decoded).append("\r");
                     }
                 }
                 if (pending.length() > 0) {
