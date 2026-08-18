@@ -230,7 +230,8 @@ public class InterractiveVT52 extends GhidraScript {
                 }
                 if (r0 == 0x00) {
                     putEscapeAtomic(String.valueOf(NUL_MARKER));
-                } else if (r0 <= 0x7E) {
+                } else if ((r0 >= 0x20 && r0 <= 0x7E) || (r0 >= 0x0400 && r0 <= 0x04FF)) {
+                    // printable ASCII OR a real Cyrillic Unicode codepoint from KOI-7 translation
                     putRawChar((char) r0);
                 } else {
                     putEscapeAtomic(String.format("[%02X]", r0));
