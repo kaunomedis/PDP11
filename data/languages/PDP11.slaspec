@@ -347,7 +347,9 @@ OPD: "@#"imm16" OK3e"		is met_d=3&  reg_dd=7 & (met_s=0 | met_s=1 | met_s=4 | me
 OPD: "@#"imm16"_OK3f"		is met_d=3&  reg_dd=7 & (met_s=2 | met_s=3) &   reg_s!=7 & reg_d		;imm16	{tmp:2=imm16; export *:2 tmp;}
 OPD: "@#"imm32H" OK3g"		is met_d=3&  reg_dd=7 & (met_s=2 | met_s=3) &   reg_s=7  & reg_d		;imm32H	{tmp:2 = imm32H; export *:2 tmp;}
 OPD: "@#"imm32H" OK3h"		is met_d=3&  reg_dd=7 & (met_s=6 | met_s=7) & reg_d=7					;imm32H	{tmp:2 = imm32H; export *:2 tmp;}
-OPD: "@#"imm16" OK3h"		is kodas_s!=1 & met_d=3&  reg_dd=7 & (met_s=6 | met_s=7) & reg_d=7		;imm16	{tmp:2 = imm16; export *:2 tmp;}
+#OPD: "@#"imm16" OK3i"		is kodas_s!=1 & met_d=3&  reg_dd=7 & (met_s=6 | met_s=7) & reg_d=7		;imm16	{tmp:2 = imm16; export *:2 tmp;}
+OPD: "@#"imm32H" OK3i"		is kodas_s!=1 & met_d=3&  reg_dd=7 & (met_s=6 | met_s=7)				;imm32H	{tmp:2 = imm32H; export *:2 tmp;}
+
 
 OPDD: "@("reg_d")+ OK3a"	is met_d=3& reg_dd!=7 & reg_d 		{tmp:2=*:2 reg_d; reg_d=reg_d+2; export *:2 tmp;}
 OPDD: "@#"imm16" OK3e"		is met_d=3&  reg_dd=7 & reg_d	;imm16	{tmp:2 =imm16; export *:2 tmp;}
@@ -543,7 +545,9 @@ V = (((old ^ comb) & 0x80000000)!=0);
 
 :MOV OPS,OPD	is (kodas_s=0x1 & reg_dd & met_d)...& OPS & OPD {build OPS;build OPD;N=((OPS & 0x8000)!=0);FLZ(OPS); OPD = OPS; V=0; PCFIX(OPD:2,reg_dd:1,met_d:1);}
 :MOVB OPS,OPD 	is (kodas_s=0x9 & met_d=0)...  & OPD & OPS	{build OPS;build OPD;OPD=sext(OPS[0,8]); FLZ(OPS&0xFF); N=((OPS&0x80)!=0); V=0;}
-:MOVB OPS,OPD 	is (kodas_s=0x9 & met_d!=0)... & OPD & OPS	{build OPS;build OPD;OPD=(OPD&0xFF00)|(OPS&0xFF); FLZ(OPS&0xFF); N=((OPS&0x80)!=0); V=0;}
+#:MOVB OPS,OPD 	is (kodas_s=0x9 & met_d!=0)... & OPD & OPS	{build OPS;build OPD;OPD=(OPD&0xFF00)|(OPS&0xFF); FLZ(OPS&0xFF); N=((OPS&0x80)!=0); V=0;}
+:MOVB OPS,OPD 	is (kodas_s=0x9 & met_d!=0)... & OPD & OPS	{build OPS;build OPD;OPD[0,8]=OPS[0,8]; FLZ(OPS&0xFF); N=((OPS&0x80)!=0); V=0;}
+
 :CMP OPS,OPD 	is (kodas_s=0x2)... & OPD & OPS				{build OPS;build OPD;CMP_FLAGS(OPS,OPD);}
 :CMPB OPS,OPD 	is (kodas_s=0xA)... & OPD & OPS				{build OPS;build OPD;CMP_FLAGS(OPS<<8,OPD<<8); Z=((OPD&0xFF)==(OPS&0xFF));}
 :SUB OPS,OPD 	is (kodas_s=0xE)... & OPS & OPD				{build OPS;build OPD;SUB_FLAGS(OPS,OPD); OPD=OPD-OPS;FLN(OPD);}

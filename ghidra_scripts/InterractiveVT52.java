@@ -60,7 +60,7 @@ public class InterractiveVT52 extends GhidraScript {
         content.add(status, BorderLayout.SOUTH);
         frame.setContentPane(content);
         frame.pack();
-        frame.setMinimumSize(new Dimension(750, 500));
+        frame.setMinimumSize(new Dimension(790, 550));
         frame.setLocationRelativeTo(null);
         SwingUtilities.invokeLater(() -> frame.setVisible(true));
 
@@ -85,6 +85,7 @@ public class InterractiveVT52 extends GhidraScript {
         final char[][] grid = new char[ROWS][COLS];
         for (char[] row : grid) java.util.Arrays.fill(row, ' ');
         final int[] cur = { 0, 0 };
+		
 
         emuHelper.getEmulator().addMemoryAccessFilter(new MemoryAccessFilter() {
 
@@ -92,7 +93,7 @@ public class InterractiveVT52 extends GhidraScript {
             // Order: Ю А Б Ц Д Е Ф Г Х И Й К Л М Н О П Я Р С Т У Ж В Ь Ы З Ш Э Щ Ч
 
             private volatile long lastRedrawTime = 0;
-            private static final long REDRAW_INTERVAL_MS = 50;
+            private static final long REDRAW_INTERVAL_MS = 20;
 
             private void redraw() {
                 long now = System.currentTimeMillis();
@@ -347,7 +348,6 @@ public class InterractiveVT52 extends GhidraScript {
         });
 
         while (windowOpen && !monitor.isCancelled()) {
-
             long pc = emuHelper.readRegister("PC").longValue();
             Instruction instr = currentProgram.getListing().getInstructionAt(toAddr(pc));
             String instrText = (instr != null) ? instr.toString() : "??";
@@ -363,6 +363,7 @@ public class InterractiveVT52 extends GhidraScript {
 
             if (!ready) {
                 if (pending.length() == 0) {
+
                     String more = askString("Console Input @ PC=0x" + Long.toHexString(pc),
                         "Type text to send (use ^O, ^L etc for control chars; type 'stop' to stop sending):", "stop");
                     if (more != null && !more.equalsIgnoreCase("stop")) {
@@ -397,7 +398,22 @@ public class InterractiveVT52 extends GhidraScript {
         }
         String finalText = finalSb.toString();
         SwingUtilities.invokeLater(() -> screen.setText(finalText));
-
+	String pc = " PC="+Long.toHexString(emuHelper.readRegister("PC").longValue());
+	String r0 = " R0="+Long.toHexString(emuHelper.readRegister("R0").longValue());
+	String r1 = " R1="+Long.toHexString(emuHelper.readRegister("R1").longValue());
+	String r2 = " R2="+Long.toHexString(emuHelper.readRegister("R2").longValue());
+	String r3 = " R3="+Long.toHexString(emuHelper.readRegister("R3").longValue());
+	String r4 = " R4="+Long.toHexString(emuHelper.readRegister("R4").longValue());
+	String r5 = " R5="+Long.toHexString(emuHelper.readRegister("R5").longValue());
+	String sp = " SP="+Long.toHexString(emuHelper.readRegister("SP").longValue());
+	String ps = " PS="+Long.toHexString(emuHelper.readRegister("PS").longValue());
+	
+	byte[] b = emuHelper.readMemory(toAddr(0xFF74), 2);
+    int val = (b[0] & 0xFF) | ((b[1] & 0xFF) << 8);
+    String ramas=" RAM: "+String.format("[%04X]=%04X ", 0xFF74, val);
+	
+	
+	print ("Stopped @" +pc+r0+r1+r2+r3+r4+r5+sp+ps+ramas+"\n\r");
         emuHelper.dispose();
     }
 }
