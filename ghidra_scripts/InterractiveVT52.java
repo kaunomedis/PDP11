@@ -1,4 +1,8 @@
 //Line Interractive VT52 in emulator, with separate output window
+//Decoder logic ported directly from confirmed real firmware:
+//https://github.com/forth32/vt52/blob/main/vt52-firmware/terminal.mac
+//(CHCONTROL / ESCPROCESS routines - both VT52 and 15IE command sets)
+//KOI-7 Cyrillic table from https://www.kermitproject.org/koi7.html
 //@author Levas
 //@category PDP11 Hardware
 //@keybinding 
@@ -17,15 +21,9 @@ import java.awt.*;
 
 public class InterractiveVT52 extends GhidraScript {
 
-    private static final int ST_NORMAL = 0;
-    private static final int ST_ESC = 1;
-    private static final int ST_ESC_Y_ROW = 2;
-    private static final int ST_ESC_Y_COL = 3;
-    private static final int ST_ESC_E_DATA = 4;
-
     private static final int ROWS = 24;
     private static final int COLS = 80;
-    private static final char NUL_MARKER = '\u2588'; // solid block - makes 0x00 bytes visually obvious
+    private static final char NUL_MARKER = '\u2588';
 
     private volatile boolean windowOpen = true;
 
@@ -41,7 +39,7 @@ public class InterractiveVT52 extends GhidraScript {
         emuHelper.writeRegister("PS", 0x0000);
         emuHelper.writeRegister("SP", startSP);
 
-        JFrame frame = new JFrame("PDP-11 VT52 Console (live, rendered)");
+        JFrame frame = new JFrame("PDP-11 VT52/15IE Console (live, rendered)");
         frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         frame.setAlwaysOnTop(true);
         frame.addWindowListener(new java.awt.event.WindowAdapter() {
@@ -57,7 +55,7 @@ public class InterractiveVT52 extends GhidraScript {
         JLabel status = new JLabel("Starting...");
 
         JPanel content = new JPanel(new BorderLayout());
-        content.add(new JLabel("PDP-11 VT52 Rendered Screen", SwingConstants.CENTER), BorderLayout.NORTH);
+        content.add(new JLabel("PDP-11 VT52/15IE Rendered Screen", SwingConstants.CENTER), BorderLayout.NORTH);
         content.add(screenScroll, BorderLayout.CENTER);
         content.add(status, BorderLayout.SOUTH);
         frame.setContentPane(content);
@@ -75,28 +73,31 @@ public class InterractiveVT52 extends GhidraScript {
         emuHelper.writeMemoryValue(rcsrAddr, 2, 0x0000);
 
         final StringBuilder pending = new StringBuilder();
-        final int[] escState = { ST_NORMAL };
-        final int[] escRow = { 0 };
-        final int[] escECount = { 0 };
-        final boolean[] graphicsMode = { false };
 
-        // --- The actual screen grid, and cursor position, that VT52 commands operate on ---
+        final boolean[] escOn   = { false };
+        final boolean[] escY0   = { false };
+        final boolean[] escY1   = { false };
+        final boolean[] mode15IE= { false };
+        final boolean[] grfMode = { false };
+        final boolean[] langRus = { false };
+        final int[] escY0L = { 0 };
+
         final char[][] grid = new char[ROWS][COLS];
         for (char[] row : grid) java.util.Arrays.fill(row, ' ');
-        final int[] cur = { 0, 0 }; // cur[0]=row, cur[1]=col
+        final int[] cur = { 0, 0 };
 
         emuHelper.getEmulator().addMemoryAccessFilter(new MemoryAccessFilter() {
 
-			private volatile long lastRedrawTime = 0;
-            private static final long REDRAW_INTERVAL_MS = 50; // ~20 updates/sec max
+            private static final String KOI7_CYRIL  = "\u042e\u0410\u0411\u0426\u0414\u0415\u0424\u0413\u0425\u0418\u0419\u041a\u041b\u041c\u041d\u041e\u041f\u042f\u0420\u0421\u0422\u0423\u0416\u0412\u042c\u042b\u0417\u0428\u042d\u0429\u0427";
+            // Order: Ю А Б Ц Д Е Ф Г Х И Й К Л М Н О П Я Р С Т У Ж В Ь Ы З Ш Э Щ Ч
+
+            private volatile long lastRedrawTime = 0;
+            private static final long REDRAW_INTERVAL_MS = 50;
 
             private void redraw() {
                 long now = System.currentTimeMillis();
-                if (now - lastRedrawTime < REDRAW_INTERVAL_MS) {
-                    return; // grid is already updated; just skip the expensive Swing push for now
-                }
+                if (now - lastRedrawTime < REDRAW_INTERVAL_MS) return;
                 lastRedrawTime = now;
-
                 StringBuilder sb = new StringBuilder();
                 for (int r = 0; r < ROWS; r++) {
                     sb.append(grid[r]);
@@ -105,6 +106,7 @@ public class InterractiveVT52 extends GhidraScript {
                 String text = sb.toString();
                 SwingUtilities.invokeLater(() -> screen.setText(text));
             }
+
             private void clampCursor() {
                 if (cur[0] < 0) cur[0] = 0;
                 if (cur[0] >= ROWS) cur[0] = ROWS - 1;
@@ -119,32 +121,179 @@ public class InterractiveVT52 extends GhidraScript {
                 java.util.Arrays.fill(grid[ROWS - 1], ' ');
             }
 
-            private void putChar(char c) {
+            private void putRawChar(char c) {
                 grid[cur[0]][cur[1]] = c;
                 cur[1]++;
                 if (cur[1] >= COLS) {
                     cur[1] = 0;
                     cur[0]++;
-                    if (cur[0] >= ROWS) {
-                        scrollUp();
-                        cur[0] = ROWS - 1;
-                    }
+                    if (cur[0] >= ROWS) { scrollUp(); cur[0] = ROWS - 1; }
                 }
             }
 
-            private void clearScreen() {
-                for (char[] row : grid) java.util.Arrays.fill(row, ' ');
-                cur[0] = 0;
-                cur[1] = 0;
+            private void putEscapeAtomic(String s) {
+                if (cur[1] + s.length() > COLS) {
+                    cur[1] = 0;
+                    cur[0]++;
+                    if (cur[0] >= ROWS) { scrollUp(); cur[0] = ROWS - 1; }
+                }
+                for (char c : s.toCharArray()) {
+                    grid[cur[0]][cur[1]] = c;
+                    cur[1]++;
+                }
             }
 
-            private void eraseToEndOfScreen() {
+            private void home() { cur[0] = 0; cur[1] = 0; }
+            private void bline() { cur[1] = 0; }
+
+            private void lfeed() {
+                cur[0]++;
+                if (cur[0] >= ROWS) { scrollUp(); cur[0] = ROWS - 1; }
+            }
+
+            private void revlf() {
+                cur[0]--;
+                if (cur[0] < 0) { scrollUp(); cur[0] = 0; }
+            }
+
+            private void cup()    { if (cur[0] > 0) cur[0]--; }
+            private void cdown()  { if (cur[0] < ROWS - 1) cur[0]++; }
+            private void cleft()  { if (cur[1] > 0) cur[1]--; }
+            private void cright() { if (cur[1] < COLS - 1) cur[1]++; }
+
+            private void htab() {
+                if (cur[1] >= COLS - 1) return;
+                if (cur[1] >= 72) { cur[1]++; }
+                else { cur[1] = 72; }
+                clampCursor();
+            }
+
+            private void clreol() {
                 for (int x = cur[1]; x < COLS; x++) grid[cur[0]][x] = ' ';
+            }
+
+            private void clreos() {
+                clreol();
                 for (int r = cur[0] + 1; r < ROWS; r++) java.util.Arrays.fill(grid[r], ' ');
             }
 
-            private void eraseToEndOfLine() {
-                for (int x = cur[1]; x < COLS; x++) grid[cur[0]][x] = ' ';
+            private void clscreen() {
+                for (char[] row : grid) java.util.Arrays.fill(row, ' ');
+                home();
+            }
+
+            private void scrlup() { scrollUp(); }
+
+            private void insblank() {
+                for (int x = COLS - 1; x > cur[1]; x--) grid[cur[0]][x] = grid[cur[0]][x - 1];
+                grid[cur[0]][cur[1]] = ' ';
+            }
+
+            private void delchar() {
+                for (int x = cur[1]; x < COLS - 1; x++) grid[cur[0]][x] = grid[cur[0]][x + 1];
+                grid[cur[0]][COLS - 1] = ' ';
+            }
+
+            private void curmove(int row, int col) {
+                if (row < 0) row = 0;
+                if (row >= ROWS) row = ROWS - 1;
+                if (col < 0) col = 0;
+                if (col >= COLS) col = COLS - 1;
+                cur[0] = row;
+                cur[1] = col;
+            }
+
+            private void identify() {
+                try {
+                    for (int c : new int[]{0x1B, '/', 'L'}) {
+                        emuHelper.writeMemoryValue(rbufAddr, 2, c);
+                        emuHelper.writeMemoryValue(rcsrAddr, 2, 0x80);
+                    }
+                } catch (Exception e) { /* best effort */ }
+            }
+
+            private int koi7Translate(int r0) {
+                // Real KOI-7 N1: codes 0140-0176 octal get replaced "by sound"
+                // with uppercase Cyrillic letters.
+                if (r0 >= 0140 && r0 <= 0176) {
+                    int idx = r0 - 0140;
+                    if (idx < KOI7_CYRIL.length()) return KOI7_CYRIL.charAt(idx);
+                }
+                return r0;
+            }
+
+            private void putCharProcessed(int r0) {
+                if (grfMode[0] && r0 >= 0137 && r0 <= 0176) {
+                    r0 += 041;
+                } else if (langRus[0]) {
+                    r0 = koi7Translate(r0);
+                }
+                if (r0 == 0x00) {
+                    putEscapeAtomic(String.valueOf(NUL_MARKER));
+                } else if (r0 <= 0x7E) {
+                    putRawChar((char) r0);
+                } else {
+                    putEscapeAtomic(String.format("[%02X]", r0));
+                }
+            }
+
+            private void escProcess(int r0) {
+                if (escY1[0]) {
+                    int col = r0 - 32;
+                    curmove(escY0L[0], col);
+                    escY1[0] = false;
+                    escOn[0] = false;
+                    return;
+                }
+                if (escY0[0]) {
+                    escY0L[0] = r0 - 32;
+                    escY0[0] = false;
+                    escY1[0] = true;
+                    return;
+                }
+                switch (r0) {
+                    case 'B': cdown(); break;
+                    case 'A': cup(); break;
+                    case 'C': cright(); break;
+                    case 'D': cleft(); break;
+                    case 'H': home(); break;
+                    case 'Y': escY0[0] = true; return;
+                    case 'J': clreos(); break;
+                    case 075: break;
+                    case 076: break;
+                    case 'K': clreol(); break;
+                    case 0111: revlf(); break;
+                    case 'Z': identify(); break;
+                    case 'E': mode15IE[0] = true; break;
+                    case 'F': grfMode[0] = true; break;
+                    case 'G': grfMode[0] = false; break;
+                    case 0133: break;
+                    case 0134: break;
+                    default: break;
+                }
+                escOn[0] = false;
+            }
+
+            private boolean ch15ie(int r0) {
+                switch (r0) {
+                    case 010: home(); return true;
+                    case 013: clreol(); return true;
+                    case 014: clscreen(); return true;
+                    case 022: case 026: scrlup(); return true;
+                    case 023: insblank(); return true;
+                    case 024: delchar(); return true;
+                    case 025:
+                        bline();
+                        cur[0]++;
+                        if (cur[0] >= ROWS) { scrollUp(); cur[0] = ROWS - 1; }
+                        return true;
+                    case 027: mode15IE[0] = false; return true;
+                    case 031: cright(); return true;
+                    case 032: cleft(); return true;
+                    case 034: cup(); return true;
+                    case 035: cdown(); return true;
+                    default: return false;
+                }
             }
 
             @Override
@@ -164,100 +313,35 @@ public class InterractiveVT52 extends GhidraScript {
             @Override
             protected void processWrite(AddressSpace space, long offset, int size, byte[] values) {
                 Address written = space.getAddress(offset);
-                if (!written.equals(xbufAddr)) {
+                if (!written.equals(xbufAddr)) return;
+
+                int r0 = values[0] & 0x7F;
+
+                if (escOn[0]) {
+                    escProcess(r0);
+                    redraw();
                     return;
                 }
-                int b = values[0] & 0xFF;
 
-                switch (escState[0]) {
-                    case ST_ESC:
-                        switch (b) {
-                            case 'A': cur[0]--; clampCursor(); break;
-                            case 'B': cur[0]++; clampCursor(); break;
-                            case 'C': cur[1]++; clampCursor(); break;
-                            case 'D': cur[1]--; clampCursor(); break;
-                            case 'E':
-                                // Confirmed via real disassembly (FUN_195e): ESC E consumes
-                                // exactly 8 following bytes, each sent to XBUF as an ordinary
-                                // printable character - NOT a clear-screen, NOT a bitmap.
-                                escState[0] = ST_ESC_E_DATA;
-                                escECount[0] = 0;
-                                return;
-                            case 'F': graphicsMode[0] = true; break;
-                            case 'G': graphicsMode[0] = false; break;
-                            case 'H': cur[0] = 0; cur[1] = 0; break;
-                            case 'I':
-                                cur[0]--;
-                                if (cur[0] < 0) { scrollUp(); cur[0] = 0; }
-                                break;
-                            case 'J': eraseToEndOfScreen(); break;
-                            case 'K': eraseToEndOfLine(); break;
-                            case 'Z':
-                                try {
-                                    emuHelper.writeMemoryValue(rbufAddr, 2, 0x1B);
-                                    emuHelper.writeMemoryValue(rcsrAddr, 2, 0x80);
-                                } catch (Exception e) { /* best effort */ }
-                                break;
-                            case 'Y':
-                                escState[0] = ST_ESC_Y_ROW;
-                                return;
-                            default:
-                                // unrecognized/unimplemented - ignored for now
-                                break;
-                        }
-                        escState[0] = ST_NORMAL;
-                        redraw();
-                        return;
+                if (r0 == 0x0D) { bline(); redraw(); return; }
+                if (r0 == 0x0A) { lfeed(); redraw(); return; }
+                if (r0 == 0x0F) { langRus[0] = false; return; }
+                if (r0 == 0x0E) { langRus[0] = true; return; }
+                if (r0 == 0x07) { return; }
+                if (r0 == 0x7F) { return; }
 
-                    case ST_ESC_Y_ROW:
-                        escRow[0] = b - 32;
-                        escState[0] = ST_ESC_Y_COL;
-                        return;
-
-                    case ST_ESC_Y_COL:
-                        cur[0] = escRow[0];
-                        cur[1] = b - 32;
-                        clampCursor();
-                        escState[0] = ST_NORMAL;
-                        redraw();
-                        return;
-
-                    case ST_ESC_E_DATA:
-                        escECount[0]++;
-                        if (b >= 0x20 && b <= 0x7E) {
-                            putChar((char) b);
-                        } else if (b == 0x00) {
-                            putChar(NUL_MARKER);
-                        } else {
-                            for (char c : String.format("[%02X]", b).toCharArray()) {
-                                putChar(c);
-                            }
-                        }
-                        if (escECount[0] >= 8) {
-                            escState[0] = ST_NORMAL;
-                        }
-                        redraw();
-                        return;
-
-                    default:
-                        if (b == 0x1B) {
-                            escState[0] = ST_ESC;
-                            return;
-                        }
-                        if (b == 0x0D) { // CR
-                            cur[1] = 0;
-                        } else if (b == 0x0A) { // LF
-                            cur[0]++;
-                            if (cur[0] >= ROWS) { scrollUp(); cur[0] = ROWS - 1; }
-                        } else if (b == 0x00) {
-                            putChar(NUL_MARKER); // visually flag suspected bug output
-                        } else if (b < 0x20 || b == 0x7f) {
-                            // other non-printing control bytes: skip silently for now
-                        } else {
-                            putChar((char) b);
-                        }
-                        redraw();
+                if (mode15IE[0]) {
+                    if (ch15ie(r0)) { redraw(); return; }
+                } else {
+                    if (r0 == 0x08) { cleft(); redraw(); return; }
+                    if (r0 == 0x09) { htab(); redraw(); return; }
+                    if (r0 == 0x0B || r0 == 0x0C) { lfeed(); redraw(); return; }
+                    if (r0 == 0x05) { identify(); return; }
+                    if (r0 == 0x1B) { escOn[0] = true; return; }
                 }
+
+                putCharProcessed(r0);
+                redraw();
             }
         });
 
@@ -294,7 +378,6 @@ public class InterractiveVT52 extends GhidraScript {
 
             emuHelper.step(monitor);
         }
-        // Force one final redraw so the last frame isn't stuck behind the throttle
         StringBuilder finalSb = new StringBuilder();
         for (int r = 0; r < ROWS; r++) {
             finalSb.append(grid[r]);
