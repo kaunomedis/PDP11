@@ -441,11 +441,14 @@ public class InterractiveVT52 extends GhidraScript {
 	String sp = " SP="+Long.toHexString(emuHelper.readRegister("SP").longValue());
 	String ps = " PS="+Long.toHexString(emuHelper.readRegister("PS").longValue());
 	
-	byte[] b = emuHelper.readMemory(toAddr(0xFF74), 2);
-    int val = (b[0] & 0xFF) | ((b[1] & 0xFF) << 8);
-    String ramas=" RAM: "+String.format("[%04X]=%04X ", 0xFF74, val);
-	
-	
+	// FF70,FF72,FF74,FF76	
+	byte[] b = emuHelper.readMemory(toAddr(0xFF70), 8);
+	String ramas=" RAM: ";
+	for(int i=0;i<8;i=i+2) {
+    int val = (b[i+0] & 0xFF) | ((b[i+1] & 0xFF) << 8);
+    ramas=ramas+String.format("[%04X]=%04X ", 0xFF70+i, val);
+	}
+
 	print ("Stopped @" +pc+r0+r1+r2+r3+r4+r5+sp+ps+ramas+"\n\r");
         emuHelper.dispose();
     }
