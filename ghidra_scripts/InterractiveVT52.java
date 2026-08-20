@@ -64,11 +64,12 @@ public class InterractiveVT52 extends GhidraScript {
         frame.setLocationRelativeTo(null);
         SwingUtilities.invokeLater(() -> frame.setVisible(true));
 
-        emuHelper.writeMemoryValue(toAddr(0xFF74), 2, 0xFFFF);
+        emuHelper.writeMemoryValue(toAddr(0xFF74), 2, 0x0080); // XCSR: start ready (bit7 set)
 
         Address xbufAddr = toAddr(0xFF76);
         Address rbufAddr = toAddr(0xFF72);
         Address rcsrAddr = toAddr(0xFF70);
+        Address xcsrAddr = toAddr(0xFF74);
 
         emuHelper.writeMemoryValue(rcsrAddr, 2, 0x0000);
 
@@ -309,6 +310,19 @@ public class InterractiveVT52 extends GhidraScript {
                     } catch (Exception e) {
                         // best effort only
                     }
+                } else if (read.equals(xcsrAddr)) {
+                    // Real hardware: XCSR bit7 becomes 1 again once XBUF is ready for the
+                    // next character. We have no real transmission-time delay to model, so
+                    // "ready again by the time the program next checks" is our stand-in -
+                    // guarantees the poll loop always sees busy-then-ready, deterministically,
+                    // regardless of wall-clock/redraw timing.
+                    try {
+                        byte[] c = emuHelper.readMemory(xcsrAddr, 2);
+                        int val = (c[0] & 0xFF) | ((c[1] & 0xFF) << 8);
+                        emuHelper.writeMemoryValue(xcsrAddr, 2, val | 0x80);
+                    } catch (Exception e) {
+                        // best effort only
+                    }
                 }
             }
 
@@ -316,6 +330,14 @@ public class InterractiveVT52 extends GhidraScript {
             protected void processWrite(AddressSpace space, long offset, int size, byte[] values) {
                 Address written = space.getAddress(offset);
                 if (!written.equals(xbufAddr)) return;
+
+                // Real hardware: "After an Output cycle to XBUF, this bit must be cleared
+                // to 0 by the hardware." Do this before anything else.
+                try {
+                    emuHelper.writeMemoryValue(xcsrAddr, 2, 0x0000);
+                } catch (Exception e) {
+                    // best effort only
+                }
 
                 int r0 = values[0] & 0x7F;
 
@@ -363,6 +385,17 @@ public class InterractiveVT52 extends GhidraScript {
 
             if (!ready) {
                 if (pending.length() == 0) {
+
+                    // Flush the screen NOW, unconditionally, bypassing the redraw
+                    // throttle - guarantees the input prompt always reflects the
+                    // real, current state, never a stale one.
+                    StringBuilder flushSb = new StringBuilder();
+                    for (int r = 0; r < ROWS; r++) {
+                        flushSb.append(grid[r]);
+                        if (r < ROWS - 1) flushSb.append('\n');
+                    }
+                    String flushText = flushSb.toString();
+                    SwingUtilities.invokeLater(() -> screen.setText(flushText));
 
                     String more = askString("Console Input @ PC=0x" + Long.toHexString(pc),
                         "Type text to send (use ^O, ^L etc for control chars; type 'stop' to stop sending):", "stop");
