@@ -396,14 +396,19 @@ OPDD: REL16" OK6b"			is met_d=6 & reg_d=7						;REL16	{tmp:2 = REL16;			export *
 # operand = MEM[EA]
 OPD: "@"imm16"("reg_d")7a" 	is met_d=7 & (met_s=0 | met_s=1 | met_s=4 | met_s=5) & reg_dd!=7 & reg_d		;imm16	{tmp:2 = imm16+reg_d; tmp2=*:2 tmp; export *:2 tmp2;}
 OPD: "@"REL16" ok7f" 		is met_d=7 & (met_s=0 | met_s=1 | met_s=4 | met_s=5) & reg_dd=7 & reg_d			;REL16	{tmp:2 = REL16; export *:2 tmp;}
-OPD: "@"REL16"("reg_d")7b"	is met_d=7 & (met_s=2 | met_s=3) &reg_s!=7 & reg_d 								;REL16	{tmp:2 = REL16; export *:2 tmp;}
+#OPD: "@"REL16"("reg_d")7b"	is met_d=7 & (met_s=2 | met_s=3) &reg_s!=7 & reg_d 								;REL16	{tmp:2 = REL16; export *:2 tmp;}
 OPD: "@"REL32H"?OK7c"		is met_d=7 & reg_d & (met_s=2 | met_s=3) &reg_s=7								;REL32H	{tmp:2 = REL32H; export *:2 tmp;}
 OPD: "@"imm32H"("reg_d") OK7cc"	is met_d=7 & reg_dd!=7 & (met_s=2 | met_s=3) &reg_s=7 & reg_d				;imm32H	{tmp:2 = imm32H+reg_d; tmp2=*:2 tmp; export *:2 tmp2;}
 OPD: "@"imm32H"?OK7d"		is met_d=7 &         (met_s=6 | met_s=7) & reg_d!=7								;imm32H	{tmp:2 = imm32H; export *:2 tmp;}
 OPD: "@"REL32H"?OK7e"		is met_d=7 &         (met_s=6 | met_s=7) & reg_d=7								;REL32H	{tmp:2 = REL32H; export *:2 tmp;}
 
-OPDD: "@"imm16"("reg_d")7a" is met_d=7 & reg_dd!=7 & reg_d		;imm16	{tmp:2 = imm16+reg_d; tmp2=*:2 tmp; export *:2 tmp2;}
+OPDD: "@"imm16"("reg_d")7z" is met_d=7 & reg_dd!=7 & reg_d		;imm16	{tmp:2 = imm16+reg_d; tmp2=*:2 tmp; export *:2 tmp2;}
 OPDD: "@"REL16" ok7f" 		is met_d=7 & reg_dd=7 & reg_d			;REL16	{tmp:2 = REL16; export *:2 tmp;}
+
+
+OPD: "@"imm16"("reg_d")7b" is met_d=7 & (met_s=2|met_s=3) & reg_s!=7 & reg_dd!=7 & reg_d ;imm16 {tmp:2 = imm16+reg_d; tmp2:2=*:2 tmp; export *:2 tmp2;}
+OPD: "@"REL16" ok7g" is met_d=7 & (met_s=2|met_s=3) & reg_s!=7 & reg_dd=7 & reg_d ;REL16 {tmp:2 = REL16; export *:2 tmp;}
+
 
 
 ######### XOR SOB MUL DIV ASH ASHC - too complicated to understand ###################################

@@ -96,6 +96,34 @@ public class StepperLogger extends GhidraScript {
                 break;
             }
 
+
+
+// Clear RCSR ready bit if the just-executed instruction read RBUF
+// (approximation - real clear-on-read needs a MemoryAccessFilter;
+// this stepper doesn't have one, so we clear it here based on whether
+// the instruction we just stepped past was an RBUF-reading MOVB/MOV)
+if (instrText.contains("0xff72")) {
+    emu.writeMemoryValue(toAddr(0xFF70), 2, 0x0000);
+}
+
+// Inject test input whenever RCSR isn't ready
+byte[] rcsrCheck = emu.readMemory(toAddr(0xFF70), 2);
+int rcsrVal = (rcsrCheck[0] & 0xFF) | ((rcsrCheck[1] & 0xFF) << 8);
+if ((rcsrVal & 0x80) == 0) {
+    String key = askString("Key Input", "Character to inject into RBUF (blank = skip this time):", "");
+    if (key != null && !key.isEmpty()) {
+        emu.writeMemoryValue(toAddr(0xFF72), 2, (long) key.charAt(0) & 0xFF);
+        emu.writeMemoryValue(toAddr(0xFF70), 2, 0x80);
+    }
+}
+
+
+
+
+
+
+
+
             boolean ok = emu.step(monitor);
             if (!ok) {
                 log.println("Emulation stopped: " + emu.getLastError());
