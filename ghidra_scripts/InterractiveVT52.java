@@ -96,7 +96,7 @@ public class InterractiveVT52 extends GhidraScript {
             private volatile long lastRedrawTime = 0;
             private static final long REDRAW_INTERVAL_MS = 20;
 
-            private void redraw() {
+            private void redraw() {			
                 long now = System.currentTimeMillis();
                 if (now - lastRedrawTime < REDRAW_INTERVAL_MS) return;
                 lastRedrawTime = now;
@@ -307,6 +307,8 @@ public class InterractiveVT52 extends GhidraScript {
                         byte[] c = emuHelper.readMemory(rcsrAddr, 2);
                         int val = (c[0] & 0xFF) | ((c[1] & 0xFF) << 8);
                         emuHelper.writeMemoryValue(rcsrAddr, 2, val & ~0x80);
+						
+						emuHelper.writeMemoryValue(xcsrAddr, 2, 0x80);
                     } catch (Exception e) {
                         // best effort only
                     }
@@ -394,6 +396,7 @@ public class InterractiveVT52 extends GhidraScript {
                         flushSb.append(grid[r]);
                         if (r < ROWS - 1) flushSb.append('\n');
                     }
+					
                     String flushText = flushSb.toString();
                     SwingUtilities.invokeLater(() -> screen.setText(flushText));
 
@@ -442,6 +445,7 @@ public class InterractiveVT52 extends GhidraScript {
 	String ps = " PS="+Long.toHexString(emuHelper.readRegister("PS").longValue());
 	
 	// FF70,FF72,FF74,FF76	
+	// RCSR,RBUF,XCSR,XBUF
 	byte[] b = emuHelper.readMemory(toAddr(0xFF70), 8);
 	String ramas=" RAM: ";
 	for(int i=0;i<8;i=i+2) {
