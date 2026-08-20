@@ -64,13 +64,13 @@ public class InterractiveVT52 extends GhidraScript {
         frame.setLocationRelativeTo(null);
         SwingUtilities.invokeLater(() -> frame.setVisible(true));
 
-        emuHelper.writeMemoryValue(toAddr(0xFF74), 2, 0x0080); // XCSR: start ready (bit7 set)
 
         Address xbufAddr = toAddr(0xFF76);
         Address rbufAddr = toAddr(0xFF72);
         Address rcsrAddr = toAddr(0xFF70);
         Address xcsrAddr = toAddr(0xFF74);
-
+		
+        emuHelper.writeMemoryValue(xcsrAddr, 2, 0x0080); // XCSR: start ready (bit7 set)
         emuHelper.writeMemoryValue(rcsrAddr, 2, 0x0000);
 
         final StringBuilder pending = new StringBuilder();
