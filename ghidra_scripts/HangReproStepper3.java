@@ -1,9 +1,9 @@
-//Line Interractive VT52 in emulator, with separate output window
-//Decoder logic ported directly from confirmed real firmware:
-//https://github.com/forth32/vt52/blob/main/vt52-firmware/terminal.mac
-//(CHCONTROL / ESCPROCESS routines - both VT52 and 15IE command sets)
-//KOI-7 Cyrillic table from https://www.kermitproject.org/koi7.html
-//@author Levas
+//Third isolated reproduction - same exact register snapshot, this time with
+//the REAL, complete VT52-decoding processWrite/processRead logic (copied
+//verbatim from InterractiveVT52.java) attached, including redraw().
+//Uses a headless JTextArea (never shown) so redraw() has something to call
+//setText() on without needing a real visible window.
+//@author 
 //@category PDP11 Hardware
 //@keybinding 
 //@menupath 
@@ -14,96 +14,38 @@ import ghidra.app.emulator.EmulatorHelper;
 import ghidra.app.emulator.MemoryAccessFilter;
 import ghidra.program.model.address.Address;
 import ghidra.program.model.address.AddressSpace;
-import ghidra.program.model.listing.Instruction;
 import ghidra.util.task.TaskMonitor;
 import javax.swing.*;
-import java.awt.*;
 
-public class InterractiveVT52 extends GhidraScript {
+public class HangReproStepper3 extends GhidraScript {
 
     private static final int ROWS = 24;
     private static final int COLS = 80;
     private static final char NUL_MARKER = '\u2588';
 
-    private volatile boolean windowOpen = true;
-
     public void run() throws Exception {
         EmulatorHelper emuHelper = new EmulatorHelper(currentProgram);
-        String startPCStr = askString("Start PC", "Enter starting PC (hex, no 0x):", "0080");
-        long startPC = Long.parseLong(startPCStr.trim(), 16);
 
-        String startSPStr = askString("Start SP", "Enter starting stack SP (hex, no 0x):", "5000");
-        long startSP = Long.parseLong(startSPStr.trim(), 16);
-
-        emuHelper.writeRegister("PC", startPC);
-        emuHelper.writeRegister("PS", 0x0000);
-        emuHelper.writeRegister("SP", startSP);
-
-        JFrame frame = new JFrame("PDP-11 VT52/15IE Console (live, rendered)");
-        frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        frame.setAlwaysOnTop(true);
-        frame.addWindowListener(new java.awt.event.WindowAdapter() {
-            public void windowClosed(java.awt.event.WindowEvent e) {
-                windowOpen = false;
-            }
-        });
-
-        JTextArea screen = new JTextArea(ROWS, COLS);
-        screen.setEditable(false);
-        screen.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 14));
-        JScrollPane screenScroll = new JScrollPane(screen);
-        JLabel status = new JLabel("Starting...");
-        JLabel rcsrCounterLabel = new JLabel("RCSR reads: 0 (last value: ----)");
-        JButton forceXcsrButton = new JButton("Force XCSR Ready");
-        JTextField keyInputField = new JTextField(20);
-        JButton sendKeyButton = new JButton("Send to RBUF");
-        JTextField rcsrHexField = new JTextField(6);
-        JButton setRcsrButton = new JButton("Set RCSR (hex)");
-        JButton pauseButton = new JButton("Pause");
-        JButton stepButton = new JButton("Step 1 Instruction");
-        JLabel currentInstrLabel = new JLabel("PC=---- (not started)");
-
-        JPanel content = new JPanel(new BorderLayout());
-        content.add(new JLabel("PDP-11 VT52/15IE Rendered Screen", SwingConstants.CENTER), BorderLayout.NORTH);
-        content.add(screenScroll, BorderLayout.CENTER);
-        JPanel bottom = new JPanel(new BorderLayout());
-        JPanel buttonRow = new JPanel(new BorderLayout());
-        JPanel leftButtons = new JPanel(new BorderLayout());
-        leftButtons.add(forceXcsrButton, BorderLayout.WEST);
-        leftButtons.add(pauseButton, BorderLayout.CENTER);
-        leftButtons.add(stepButton, BorderLayout.EAST);
-        buttonRow.add(leftButtons, BorderLayout.WEST);
-        JPanel rcsrRow = new JPanel(new BorderLayout());
-        rcsrRow.add(rcsrHexField, BorderLayout.CENTER);
-        rcsrRow.add(setRcsrButton, BorderLayout.EAST);
-        buttonRow.add(rcsrRow, BorderLayout.EAST);
-        JPanel inputRow = new JPanel(new BorderLayout());
-        inputRow.add(keyInputField, BorderLayout.CENTER);
-        inputRow.add(sendKeyButton, BorderLayout.EAST);
-        bottom.add(buttonRow, BorderLayout.NORTH);
-        bottom.add(inputRow, BorderLayout.CENTER);
-        JPanel statusStack = new JPanel(new java.awt.GridLayout(3, 1));
-        statusStack.add(currentInstrLabel);
-        statusStack.add(rcsrCounterLabel);
-        statusStack.add(status);
-        bottom.add(statusStack, BorderLayout.SOUTH);
-        content.add(bottom, BorderLayout.SOUTH);
-        frame.setContentPane(content);
-        frame.pack();
-        frame.setMinimumSize(new Dimension(790, 550));
-        frame.setLocationRelativeTo(null);
-        SwingUtilities.invokeLater(() -> frame.setVisible(true));
-
+        emuHelper.writeRegister("PC", 0x19b8);
+        emuHelper.writeRegister("R0", 0x47);
+        emuHelper.writeRegister("R1", 0x1);
+        emuHelper.writeRegister("R2", 0x0);
+        emuHelper.writeRegister("R3", 0x0);
+        emuHelper.writeRegister("R4", 0x0);
+        emuHelper.writeRegister("R5", 0x1921);
+        emuHelper.writeRegister("SP", 0x1fc);
+        emuHelper.writeRegister("PS", 0xc);
 
         Address xbufAddr = toAddr(0xFF76);
         Address rbufAddr = toAddr(0xFF72);
         Address rcsrAddr = toAddr(0xFF70);
         Address xcsrAddr = toAddr(0xFF74);
-		
-        emuHelper.writeMemoryValue(xcsrAddr, 2, 0x0080); // XCSR: start ready (bit7 set)
+
+        emuHelper.writeMemoryValue(xcsrAddr, 2, 0x0080);
         emuHelper.writeMemoryValue(rcsrAddr, 2, 0x0000);
 
-        final StringBuilder pending = new StringBuilder();
+        JTextArea screen = new JTextArea(ROWS, COLS); // never shown - headless
+        JLabel rcsrCounterLabel = new JLabel(); // never shown - headless, just needs to exist
 
         final boolean[] escOn   = { false };
         final boolean[] escY0   = { false };
@@ -116,73 +58,7 @@ public class InterractiveVT52 extends GhidraScript {
         final char[][] grid = new char[ROWS][COLS];
         for (char[] row : grid) java.util.Arrays.fill(row, ' ');
         final int[] cur = { 0, 0 };
-
-        // Shared, deterministic flag: button click (Swing thread) sets it,
-        // emulation loop (its own thread) checks and acts on it every step -
-        // no wall-clock timing involved, no race with redraw/step speed.
-        final boolean[] forceXcsrReady = { false };
-        forceXcsrButton.addActionListener(e -> forceXcsrReady[0] = true);
-        final boolean[] forceKeyInject = { false };
         final long[] rcsrReadCount = { 0 };
-
-        // Pause/step control - same safe flag-checked-by-loop pattern as everything
-        // else. Paused = true means the loop stops calling emuHelper.step() and just
-        // idles, waiting for either Resume or a single Step click.
-        final boolean[] paused = { false };
-        final boolean[] stepOnce = { false };
-        pauseButton.addActionListener(e -> {
-            paused[0] = !paused[0];
-            SwingUtilities.invokeLater(() -> pauseButton.setText(paused[0] ? "Resume" : "Pause"));
-        });
-        stepButton.addActionListener(e -> stepOnce[0] = true);
-
-        // Manual RCSR override: type a hex value, click Set - forced onto the
-        // NEXT loop iteration, same safe flag-checked-by-loop pattern as the
-        // other buttons. Lets you poke RCSR directly, bypassing all our own
-        // automatic clear/set logic entirely, for direct experimentation.
-        final int[] manualRcsrValue = { -1 }; // -1 = no pending manual override
-        setRcsrButton.addActionListener(e -> {
-            String hex = rcsrHexField.getText().trim();
-            try {
-                manualRcsrValue[0] = Integer.parseInt(hex, 16) & 0xFFFF;
-            } catch (NumberFormatException ex) {
-                SwingUtilities.invokeLater(() -> status.setText("Invalid hex value: " + hex));
-            }
-        });
-
-        // Non-blocking input: button click (Swing thread) queues decoded text into
-        // 'pending'; the emulation loop (its own thread) only ever CHECKS/drains it,
-        // never blocks waiting for it. Replaces the old askString() dialog, which
-        // froze the entire emulator thread - including this very button check -
-        // while it was open.
-        sendKeyButton.addActionListener(e -> {
-            String more = keyInputField.getText();
-            keyInputField.setText("");
-            if (more != null && !more.isEmpty()) {
-                StringBuilder decoded = new StringBuilder();
-                for (int i = 0; i < more.length(); i++) {
-                    char ch = more.charAt(i);
-                    if (ch == '^' && i + 1 < more.length()) {
-                        char next = Character.toUpperCase(more.charAt(i + 1));
-                        decoded.append((char) (next & 0x1F));
-                        i++;
-                    } else {
-                        decoded.append(ch);
-                    }
-                }
-                synchronized (pending) {
-                    pending.setLength(0);
-                    pending.append(decoded);
-                }
-                // Force-inject on the NEXT loop iteration regardless of ready state -
-                // in case the game already set RCSR ready=1 itself (e.g. switching to
-                // interrupt-driven input) without us ever writing a real character.
-                // Flag checked/acted on by the emulation loop's own thread only -
-                // matches the XCSR button's safe pattern, no direct emuHelper calls here.
-                forceKeyInject[0] = true;
-            }
-        });
-		
 
         emuHelper.getEmulator().addMemoryAccessFilter(new MemoryAccessFilter() {
 
@@ -471,86 +347,28 @@ public class InterractiveVT52 extends GhidraScript {
             }
         });
 
-        while (windowOpen && !monitor.isCancelled()) {
-            long pc = emuHelper.readRegister("PC").longValue();
-            Instruction instr = currentProgram.getListing().getInstructionAt(toAddr(pc));
-            String instrText = (instr != null) ? instr.toString() : "??";
+        println("Before step: PC=" + Long.toHexString(emuHelper.readRegister("PC").longValue()));
 
-            // Show what's about to execute BEFORE stepping - if step() ever hangs,
-            // you'll already have seen exactly which instruction it hung on, live,
-            // not just from a final "Stopped @" dump after cancelling.
-            String instrLabel = String.format("PC=%04X  %s", pc, instrText);
-            SwingUtilities.invokeLater(() -> currentInstrLabel.setText(instrLabel));
-
-            if (instrText.trim().startsWith("HALT")) {
-                String haltMsg = "Reached HALT at PC=0x" + Long.toHexString(pc) + " - stopping.";
-                SwingUtilities.invokeLater(() -> status.setText(haltMsg));
-                break;
+        long timeoutMs = 5000;
+        Thread stepThread = new Thread(() -> {
+            try {
+                emuHelper.step(monitor);
+            } catch (Exception e) {
+                println("step() threw: " + e);
             }
+        });
+        stepThread.start();
+        stepThread.join(timeoutMs);
 
-            if (forceXcsrReady[0]) {
-                forceXcsrReady[0] = false;
-                emuHelper.writeMemoryValue(xcsrAddr, 2, 0x0080);
-            }
-
-            if (manualRcsrValue[0] >= 0) {
-                emuHelper.writeMemoryValue(rcsrAddr, 2, manualRcsrValue[0]);
-                manualRcsrValue[0] = -1;
-            }
-
-            byte[] rcsrBytes = emuHelper.readMemory(rcsrAddr, 2);
-            int rcsrVal = (rcsrBytes[0] & 0xFF) | ((rcsrBytes[1] & 0xFF) << 8);
-            boolean ready = (rcsrVal & 0x80) != 0;
-
-            if (!ready || forceKeyInject[0]) {
-                forceKeyInject[0] = false;
-                synchronized (pending) {
-                    if (pending.length() > 0) {
-                        char c = pending.charAt(0);
-                        pending.deleteCharAt(0);
-                        emuHelper.writeMemoryValue(rbufAddr, 2, (long) c & 0xFF);
-                        emuHelper.writeMemoryValue(rcsrAddr, 2, 0x80);
-                    }
-                }
-            }
-
-            if (paused[0] && !stepOnce[0]) {
-                // Idle without stepping the emulator - still processes all the
-                // buttons above every iteration, so XCSR/RCSR/input controls
-                // remain fully usable while paused.
-                Thread.sleep(50);
-                continue;
-            }
-            stepOnce[0] = false;
-
-            emuHelper.step(monitor);
+        if (stepThread.isAlive()) {
+            println("CONFIRMED: step() with FULL VT52 processWrite/redraw logic did NOT return within " + timeoutMs + "ms.");
+            monitor.cancel();
+            stepThread.interrupt();
+        } else {
+            println("step() returned normally.");
+            println("After step: PC=" + Long.toHexString(emuHelper.readRegister("PC").longValue()));
         }
-        StringBuilder finalSb = new StringBuilder();
-        for (int r = 0; r < ROWS; r++) {
-            finalSb.append(grid[r]);
-            if (r < ROWS - 1) finalSb.append('\n');
-        }
-        String finalText = finalSb.toString();
-        SwingUtilities.invokeLater(() -> screen.setText(finalText));
-	String pc = " PC="+Long.toHexString(emuHelper.readRegister("PC").longValue());
-	String r0 = " R0="+Long.toHexString(emuHelper.readRegister("R0").longValue());
-	String r1 = " R1="+Long.toHexString(emuHelper.readRegister("R1").longValue());
-	String r2 = " R2="+Long.toHexString(emuHelper.readRegister("R2").longValue());
-	String r3 = " R3="+Long.toHexString(emuHelper.readRegister("R3").longValue());
-	String r4 = " R4="+Long.toHexString(emuHelper.readRegister("R4").longValue());
-	String r5 = " R5="+Long.toHexString(emuHelper.readRegister("R5").longValue());
-	String sp = " SP="+Long.toHexString(emuHelper.readRegister("SP").longValue());
-	String ps = " PS="+Long.toHexString(emuHelper.readRegister("PS").longValue());
-	
-	// FF70,FF72,FF74,FF76	
-	byte[] b = emuHelper.readMemory(toAddr(0xFF70), 8);
-	String ramas=" RAM: ";
-	for(int i=0;i<8;i=i+2) {
-    int val = (b[i+0] & 0xFF) | ((b[i+1] & 0xFF) << 8);
-    ramas=ramas+String.format("[%04X]=%04X ", 0xFF70+i, val);
-	}
 
-	print ("Stopped @" +pc+r0+r1+r2+r3+r4+r5+sp+ps+ramas+"\n\r");
         emuHelper.dispose();
     }
 }
