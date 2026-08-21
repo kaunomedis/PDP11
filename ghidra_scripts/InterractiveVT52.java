@@ -145,6 +145,7 @@ public class InterractiveVT52 extends GhidraScript {
             String hex = rcsrHexField.getText().trim();
             try {
                 manualRcsrValue[0] = Integer.parseInt(hex, 16) & 0xFFFF;
+				SwingUtilities.invokeLater(() -> status.setText("Hex value: " + hex));
             } catch (NumberFormatException ex) {
                 SwingUtilities.invokeLater(() -> status.setText("Invalid hex value: " + hex));
             }
