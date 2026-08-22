@@ -232,7 +232,7 @@ public class VT52Terminal3Thread extends GhidraScript {
             if (r0 == 0x0F) { langRus = false; return; }
             if (r0 == 0x0E) { langRus = true; return; }
             if (r0 == 0x07) { return; }
-            if (r0 == 0x7F) { return; }
+            if (r0 == 0x7F) { putRawChar(NUL_MARKER); return; }
 
             if (mode15IE) {
                 if (ch15ie(r0)) return;

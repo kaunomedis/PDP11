@@ -33,7 +33,7 @@ import java.awt.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-public class VT52Terminal3Thread extends GhidraScript {
+public class VT52Terminal3oldThread extends GhidraScript {
 
     // ============================================================
     // PART 1: VT52 screen emulation logic.
