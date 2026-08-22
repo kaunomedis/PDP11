@@ -145,6 +145,25 @@ if ((rcsrVal & 0x80) == 0) {
             boolean ok = emu.step(monitor);
             if (!ok) {
                 log.println("Emulation stopped: " + emu.getLastError());
+				
+				
+				final int LINES_BEFORE = 16;
+				final int LINES_AFTER=2;
+				
+				pc=(emu.readRegister("PC").longValue() & 0xFFFF)-16*LINES_BEFORE;
+				pc=pc & 0xFFF0;
+				byte[] b = emu.readMemory(toAddr(pc), 16*(LINES_BEFORE+LINES_AFTER+1));
+				String ramas=" RAM: \n";
+				for(int j=0;j<(LINES_BEFORE+LINES_AFTER+1)*16;j=j+16){
+				ramas=ramas+String.format("%04X:",pc+j);
+				for(int i=0;i<16;i++) {
+				int val = (b[i+j] & 0xFF);
+				ramas=ramas+String.format(" %02X", val);
+				}
+				ramas=ramas+"\n";
+				}
+				log.println(ramas);
+				
                 break;
             }
         }
