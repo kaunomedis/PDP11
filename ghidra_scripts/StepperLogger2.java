@@ -118,9 +118,9 @@ if ((rcsrVal & 0x80) == 0) {
 
 
 	String rpc = " PC="+Long.toHexString(emu.readRegister("PC").longValue());
-    String key = askString("Key Input @"+rpc, "Character to inject into RBUF (EXIT=exit trace, ^O =Cntr+O):", "");
+    String key = askString("Key Input @"+rpc, "Character to inject into RBUF (EXIT=exit trace, ^O =Cntr+O, ^[ =Esc):", "");
 
-	log2.println("\n\r< request for key input @"+rpc+"injected: '"+key+"' >");
+	log2.println("\n\r< request for key input @"+rpc+", injected: '"+key+"' >");
 
 
 	if (key.length()>1 && key.charAt(0) == '^'){
