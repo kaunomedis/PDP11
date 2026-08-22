@@ -146,6 +146,14 @@ RELN:	reloc	is nnn	[reloc = inst_next-nnn*2;]		{tmp:2 = 0; tmp=reloc; export  tm
 # ############# SIMPLE INSTRUCTIONS #################################### 
 :MFPT		is imm16=0x07	{R0=R0;}
 :EMHALT		is imm16=0x08	{R0=R0;}
+:start0		is imm16=0x09	{R0=R0;}
+:start1		is imm16=0x0a	{R0=R0;}
+:start2		is imm16=0x0b	{R0=R0;}
+:step0		is imm16=0x0c	{R0=R0;}
+:step1		is imm16=0x0d	{R0=R0;}
+:step2		is imm16=0x0e	{R0=R0;}
+:step3		is imm16=0x0f	{R0=R0;}
+
 :NOP		is imm16=0x0A0	{R0=R0;}
 :HALT		is imm16=0		{tmp:2=0x28; PC=*:2 tmp; tmp=0x2A; PS=*:2 tmp; goto [PC];}
 :WAIT		is imm16=1		{PC=PC-2; goto [PC];}
@@ -158,7 +166,7 @@ RELN:	reloc	is nnn	[reloc = inst_next-nnn*2;]		{tmp:2 = 0; tmp=reloc; export  tm
 :CLZVC		is imm16=0x0A7	{Z=0;V=0;C=0;}
 :CLN		is imm16=0x0A8	{N=0;}
 :CCC		is imm16=0x0AF	{C=0;V=0;Z=0;N=0;}
-
+:nop2		is imm16=0x0b0	{C=C;}
 :SEC		is imm16=0x0b1	{C=1;}
 :SEV		is imm16=0x0b2	{V=1;}
 :SEVC		is imm16=0x0b3	{V=1;C=1;}
