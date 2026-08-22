@@ -57,6 +57,11 @@ public class StepperLogger2 extends GhidraScript {
                 if (space.getAddress(offset).equals(xbufAddrObj)) {
                     screen.append((char) (values[0] & 0xFF));
                 }
+                if (offset >= 0x1ef0 && offset <= 0x1fff) {
+                    log.println(String.format("WRITE TRAP: wrote 0x%02X to address 0x%04X",
+                        values[0] & 0xFF, offset));
+                    log.flush();
+                }
             }
         });
 
