@@ -316,7 +316,9 @@ public class VT52Terminal3Thread extends GhidraScript {
         JButton forceXcsrButton = new JButton("Force XCSR Ready");
         JButton stopDumpButton = new JButton("Stop && Dump State");
         JButton pauseButton = new JButton("Pause");
-        JLabel liveRegsLabel = new JLabel("PC=---- (not started)");
+        // (liveRegsLabel removed - updating it every single step flooded Swing's
+        // event queue and throttled the emulation; the Pause button's one-shot
+        // console dump already covers this need without the per-step overhead.)
 
         sendKeyButton.addActionListener(e -> {
             String typed = keyInputField.getText();
@@ -352,8 +354,7 @@ public class VT52Terminal3Thread extends GhidraScript {
         topButtons.add(forceXcsrButton, BorderLayout.CENTER);
         topButtons.add(stopDumpButton, BorderLayout.EAST);
         bottom.add(topButtons, BorderLayout.NORTH);
-        JPanel lowerPanel = new JPanel(new java.awt.GridLayout(3, 1));
-        lowerPanel.add(liveRegsLabel);
+        JPanel lowerPanel = new JPanel(new java.awt.GridLayout(2, 1));
         lowerPanel.add(inputRow);
         lowerPanel.add(statusLabel);
         bottom.add(lowerPanel, BorderLayout.CENTER);
@@ -438,12 +439,6 @@ public class VT52Terminal3Thread extends GhidraScript {
                 long pc = emuHelper.readRegister("PC").longValue();
                 Instruction instr = currentProgram.getListing().getInstructionAt(toAddr(pc));
                 String instrText = (instr != null) ? instr.toString() : "??";
-
-                // Live display, updated every iteration BEFORE stepping - lets you
-                // see exactly where execution is, pause, and read it off, without
-                // needing to fully stop (unlike Stop & Dump, which ends everything).
-                String liveLabel = String.format("PC=%04X  %s", pc, instrText);
-                SwingUtilities.invokeLater(() -> liveRegsLabel.setText(liveLabel));
 
                 if (instrText.trim().startsWith("HALT")) {
                     String haltMsg = "Reached HALT at PC=0x" + Long.toHexString(pc);
