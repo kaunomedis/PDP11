@@ -307,7 +307,8 @@ public class VT52Terminal3Thread extends GhidraScript {
 
         JTextArea screenArea = new JTextArea(24, 80);
         screenArea.setEditable(false);
-        screenArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 14));
+        screenArea.setFont(new Font("Consolas", Font.PLAIN, 14));
+		
         JScrollPane screenScroll = new JScrollPane(screenArea);
 
         JLabel statusLabel = new JLabel("Starting...");

@@ -127,16 +127,16 @@ attach variables [ reg_lo ] [ R1 R1 R3 R3 R5 R5 PC PC];
 
 # next word with data or first opcode
 define token data_word (16)
-	imm16 = (0,15)
+	imm16 = (0,15) signed
 	rell16	=(0,15) signed
 ;
 
 # THIS HACK. I do not know how to use two imm16, two words of data (4 bytes)
 define token data_double_word (32)
 	imm32=(0,31)
-	imm32H=(16,31)
+	imm32H=(16,31) signed
 	rell32h=(16,31) signed
-	imm32L=(0,15)
+	imm32L=(0,15) signed
 	rell32l=(0,15) signed
 ;
 
@@ -267,7 +267,7 @@ OPS: "#"imm32L"OK2e"		is byte=0 & met_s=2 & reg_s=7 & met_d=2 & reg_d=7	;imm32L 
 # operand = MEM[EA]
 # Rn = Rn + 2
 
-OPS: "@("reg_s")+ OK3a"		is met_s=3& reg_ss!=7 & (met_d=0 | met_d=1 | met_d=4 | met_d=5)		& reg_s		{tmp:2 = *:2 reg_s; tmp2:2=*:2 tmp; reg_s=reg_s+2; export tmp2;}
+OPS: "@("reg_s")+ OK3a"		is met_s=3& reg_ss!=7 & (met_d=0 | met_d=1 | met_d=4 | met_d=5)		& reg_s		{tmp:2 = *:2 reg_s; tmp2=*:2 tmp; reg_s=reg_s+2; export tmp2;}
 OPS: "@("reg_s")+ OK3b"		is met_s=3& reg_ss!=7 & (met_d=2 | met_d=3) & reg_d!=7        		& reg_s		{tmp:2 = *:2 reg_s; tmp2=*:2 tmp; reg_s=reg_s+2; export tmp2;}
 OPS: "@("reg_s")+ OK3c"		is met_s=3& reg_ss!=7 & (met_d=2 | met_d=3) & reg_d=7				& reg_s		{tmp:2 = *:2 reg_s; tmp2=*:2 tmp; reg_s=reg_s+2; export tmp2;}
 OPS: "@("reg_s")+ OK3d"		is met_s=3& reg_ss!=7 & (met_d=6 | met_d=7)							& reg_s		{tmp:2 = *:2 reg_s; tmp2=*:2 tmp; reg_s=reg_s+2; export tmp2;}
