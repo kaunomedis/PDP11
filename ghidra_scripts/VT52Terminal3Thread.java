@@ -315,6 +315,8 @@ public class VT52Terminal3Thread extends GhidraScript {
         JButton sendKeyButton = new JButton("Send to RBUF");
         JButton forceXcsrButton = new JButton("Force XCSR Ready");
         JButton stopDumpButton = new JButton("Stop && Dump State");
+        JButton pauseButton = new JButton("Pause");
+        JLabel liveRegsLabel = new JLabel("PC=---- (not started)");
 
         sendKeyButton.addActionListener(e -> {
             String typed = keyInputField.getText();
@@ -330,6 +332,12 @@ public class VT52Terminal3Thread extends GhidraScript {
         final boolean[] requestStop = { false };
         stopDumpButton.addActionListener(e -> requestStop[0] = true);
 
+        final boolean[] paused = { false };
+        pauseButton.addActionListener(e -> {
+            paused[0] = !paused[0];
+            SwingUtilities.invokeLater(() -> pauseButton.setText(paused[0] ? "Resume" : "Pause"));
+        });
+
         JPanel content = new JPanel(new BorderLayout());
         content.add(new JLabel("PDP-11 VT52 Terminal", SwingConstants.CENTER), BorderLayout.NORTH);
         content.add(screenScroll, BorderLayout.CENTER);
@@ -338,9 +346,11 @@ public class VT52Terminal3Thread extends GhidraScript {
         inputRow.add(keyInputField, BorderLayout.CENTER);
         inputRow.add(sendKeyButton, BorderLayout.EAST);
         JPanel topButtons = new JPanel(new BorderLayout());
-        topButtons.add(forceXcsrButton, BorderLayout.WEST);
+        topButtons.add(pauseButton, BorderLayout.WEST);
+        topButtons.add(forceXcsrButton, BorderLayout.CENTER);
         topButtons.add(stopDumpButton, BorderLayout.EAST);
         bottom.add(topButtons, BorderLayout.NORTH);
+        bottom.add(liveRegsLabel, BorderLayout.CENTER);
         bottom.add(inputRow, BorderLayout.CENTER);
         bottom.add(statusLabel, BorderLayout.SOUTH);
         content.add(bottom, BorderLayout.SOUTH);
@@ -396,6 +406,12 @@ public class VT52Terminal3Thread extends GhidraScript {
                 Instruction instr = currentProgram.getListing().getInstructionAt(toAddr(pc));
                 String instrText = (instr != null) ? instr.toString() : "??";
 
+                // Live display, updated every iteration BEFORE stepping - lets you
+                // see exactly where execution is, pause, and read it off, without
+                // needing to fully stop (unlike Stop & Dump, which ends everything).
+                String liveLabel = String.format("PC=%04X  %s", pc, instrText);
+                SwingUtilities.invokeLater(() -> liveRegsLabel.setText(liveLabel));
+
                 if (instrText.trim().startsWith("HALT")) {
                     String haltMsg = "Reached HALT at PC=0x" + Long.toHexString(pc);
                     SwingUtilities.invokeLater(() -> statusLabel.setText(haltMsg));
@@ -405,6 +421,14 @@ public class VT52Terminal3Thread extends GhidraScript {
                 if (forceXcsrReady[0]) {
                     forceXcsrReady[0] = false;
                     emuHelper.writeMemoryValue(xcsrAddr, 2, 0x0080);
+                }
+
+                if (paused[0]) {
+                    // Idle without stepping the emulator - still processes all the
+                    // buttons above every iteration, so XCSR/input/stop controls
+                    // remain fully usable while paused.
+                    Thread.sleep(50);
+                    continue;
                 }
 
                 byte[] rcsrBytes = emuHelper.readMemory(rcsrAddr, 2);
