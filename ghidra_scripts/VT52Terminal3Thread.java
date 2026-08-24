@@ -333,8 +333,10 @@ public class VT52Terminal3Thread extends GhidraScript {
         stopDumpButton.addActionListener(e -> requestStop[0] = true);
 
         final boolean[] paused = { false };
+        final boolean[] dumpOnPauseRequested = { false };
         pauseButton.addActionListener(e -> {
             paused[0] = !paused[0];
+            if (paused[0]) dumpOnPauseRequested[0] = true; // only dump when PAUSING, not on resume
             SwingUtilities.invokeLater(() -> pauseButton.setText(paused[0] ? "Resume" : "Pause"));
         });
 
@@ -350,9 +352,11 @@ public class VT52Terminal3Thread extends GhidraScript {
         topButtons.add(forceXcsrButton, BorderLayout.CENTER);
         topButtons.add(stopDumpButton, BorderLayout.EAST);
         bottom.add(topButtons, BorderLayout.NORTH);
-        bottom.add(liveRegsLabel, BorderLayout.CENTER);
-        bottom.add(inputRow, BorderLayout.CENTER);
-        bottom.add(statusLabel, BorderLayout.SOUTH);
+        JPanel lowerPanel = new JPanel(new java.awt.GridLayout(3, 1));
+        lowerPanel.add(liveRegsLabel);
+        lowerPanel.add(inputRow);
+        lowerPanel.add(statusLabel);
+        bottom.add(lowerPanel, BorderLayout.CENTER);
         content.add(bottom, BorderLayout.SOUTH);
         frame.setContentPane(content);
         frame.pack();
@@ -399,6 +403,35 @@ public class VT52Terminal3Thread extends GhidraScript {
             }
         });
 
+        // Shared dump logic, used both by Pause and the final stop - same format,
+        // just a different prefix word ("Paused"/"Stopped").
+        java.util.function.Consumer<String> dumpState = (prefix) -> {
+            try {
+                long dpc = emuHelper.readRegister("PC").longValue() & 0xFFFF;
+                long dr0 = emuHelper.readRegister("R0").longValue() & 0xFFFF;
+                long dr1 = emuHelper.readRegister("R1").longValue() & 0xFFFF;
+                long dr2 = emuHelper.readRegister("R2").longValue() & 0xFFFF;
+                long dr3 = emuHelper.readRegister("R3").longValue() & 0xFFFF;
+                long dr4 = emuHelper.readRegister("R4").longValue() & 0xFFFF;
+                long dr5 = emuHelper.readRegister("R5").longValue() & 0xFFFF;
+                long dsp = emuHelper.readRegister("SP").longValue() & 0xFFFF;
+                long dps = emuHelper.readRegister("PS").longValue() & 0xFFFF;
+                byte[] drc = emuHelper.readMemory(rcsrAddr, 2);
+                byte[] drb = emuHelper.readMemory(rbufAddr, 2);
+                byte[] dxc = emuHelper.readMemory(xcsrAddr, 2);
+                byte[] dxb = emuHelper.readMemory(xbufAddr, 2);
+                int drcVal = (drc[0] & 0xFF) | ((drc[1] & 0xFF) << 8);
+                int drbVal = (drb[0] & 0xFF) | ((drb[1] & 0xFF) << 8);
+                int dxcVal = (dxc[0] & 0xFF) | ((dxc[1] & 0xFF) << 8);
+                int dxbVal = (dxb[0] & 0xFF) | ((dxb[1] & 0xFF) << 8);
+                println(String.format(
+                    "%s @ PC=%04X R0=%04X R1=%04X R2=%04X R3=%04X R4=%04X R5=%04X SP=%04X PS=%04X RAM: [FF70]=%04X [FF72]=%04X [FF74]=%04X [FF76]=%04X",
+                    prefix, dpc, dr0, dr1, dr2, dr3, dr4, dr5, dsp, dps, drcVal, drbVal, dxcVal, dxbVal));
+            } catch (Exception dumpEx) {
+                println("Could not read state for dump: " + dumpEx);
+            }
+        };
+
         // --- Part 3's main loop: simple, non-blocking, nothing but stepping ---
         try {
             while (windowOpen[0] && !monitor.isCancelled() && !requestStop[0]) {
@@ -424,6 +457,10 @@ public class VT52Terminal3Thread extends GhidraScript {
                 }
 
                 if (paused[0]) {
+                    if (dumpOnPauseRequested[0]) {
+                        dumpOnPauseRequested[0] = false;
+                        dumpState.accept("Paused");
+                    }
                     // Idle without stepping the emulator - still processes all the
                     // buttons above every iteration, so XCSR/input/stop controls
                     // remain fully usable while paused.
@@ -450,31 +487,8 @@ public class VT52Terminal3Thread extends GhidraScript {
         } finally {
             // Guaranteed to run no matter how the loop above exited -
             // normal stop, HALT, window closed, Stop&Dump button, or a
-            // genuine crash/exception. Same dump format as the other scripts.
-            try {
-                long pc = emuHelper.readRegister("PC").longValue();
-                long r0 = emuHelper.readRegister("R0").longValue() & 0xFFFF;
-                long r1 = emuHelper.readRegister("R1").longValue() & 0xFFFF;
-                long r2 = emuHelper.readRegister("R2").longValue() & 0xFFFF;
-                long r3 = emuHelper.readRegister("R3").longValue() & 0xFFFF;
-                long r4 = emuHelper.readRegister("R4").longValue() & 0xFFFF;
-                long r5 = emuHelper.readRegister("R5").longValue() & 0xFFFF;
-                long sp = emuHelper.readRegister("SP").longValue() & 0xFFFF;
-                long ps = emuHelper.readRegister("PS").longValue() & 0xFFFF;
-                byte[] rc = emuHelper.readMemory(rcsrAddr, 2);
-                byte[] rb = emuHelper.readMemory(rbufAddr, 2);
-                byte[] xc = emuHelper.readMemory(xcsrAddr, 2);
-                byte[] xb = emuHelper.readMemory(xbufAddr, 2);
-                int rcVal = (rc[0] & 0xFF) | ((rc[1] & 0xFF) << 8);
-                int rbVal = (rb[0] & 0xFF) | ((rb[1] & 0xFF) << 8);
-                int xcVal = (xc[0] & 0xFF) | ((xc[1] & 0xFF) << 8);
-                int xbVal = (xb[0] & 0xFF) | ((xb[1] & 0xFF) << 8);
-                println(String.format(
-                    "Stopped @ PC=%04X R0=%04X R1=%04X R2=%04X R3=%04X R4=%04X R5=%04X SP=%04X PS=%04X RAM: [FF70]=%04X [FF72]=%04X [FF74]=%04X [FF76]=%04X",
-                    pc, r0, r1, r2, r3, r4, r5, sp, ps, rcVal, rbVal, xcVal, xbVal));
-            } catch (Exception dumpEx) {
-                println("Could not read final state for dump: " + dumpEx);
-            }
+            // genuine crash/exception. Same dump format the Pause button uses.
+            dumpState.accept("Stopped");
 
             screenLogic.stop();
             emuHelper.dispose();
