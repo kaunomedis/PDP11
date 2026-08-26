@@ -317,6 +317,7 @@ public class VT52Terminal3Thread extends GhidraScript {
         JButton forceXcsrButton = new JButton("Force XCSR Ready");
         JButton stopDumpButton = new JButton("Stop && Dump State");
         JButton pauseButton = new JButton("Pause");
+        JButton dumpRamButton = new JButton("Dump RAM to File");
         // (liveRegsLabel removed - updating it every single step flooded Swing's
         // event queue and throttled the emulation; the Pause button's one-shot
         // console dump already covers this need without the per-step overhead.)
@@ -343,6 +344,9 @@ public class VT52Terminal3Thread extends GhidraScript {
             SwingUtilities.invokeLater(() -> pauseButton.setText(paused[0] ? "Resume" : "Pause"));
         });
 
+        final boolean[] ramDumpRequested = { false };
+        dumpRamButton.addActionListener(e -> ramDumpRequested[0] = true);
+
         JPanel content = new JPanel(new BorderLayout());
         content.add(new JLabel("PDP-11 VT52 Terminal", SwingConstants.CENTER), BorderLayout.NORTH);
         content.add(screenScroll, BorderLayout.CENTER);
@@ -350,10 +354,11 @@ public class VT52Terminal3Thread extends GhidraScript {
         JPanel inputRow = new JPanel(new BorderLayout());
         inputRow.add(keyInputField, BorderLayout.CENTER);
         inputRow.add(sendKeyButton, BorderLayout.EAST);
-        JPanel topButtons = new JPanel(new BorderLayout());
-        topButtons.add(pauseButton, BorderLayout.WEST);
-        topButtons.add(forceXcsrButton, BorderLayout.CENTER);
-        topButtons.add(stopDumpButton, BorderLayout.EAST);
+        JPanel topButtons = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT));
+        topButtons.add(pauseButton);
+        topButtons.add(forceXcsrButton);
+        topButtons.add(dumpRamButton);
+        topButtons.add(stopDumpButton);
         bottom.add(topButtons, BorderLayout.NORTH);
         JPanel lowerPanel = new JPanel(new java.awt.GridLayout(2, 1));
         lowerPanel.add(inputRow);
@@ -450,6 +455,20 @@ public class VT52Terminal3Thread extends GhidraScript {
                 if (forceXcsrReady[0]) {
                     forceXcsrReady[0] = false;
                     emuHelper.writeMemoryValue(xcsrAddr, 2, 0x0080);
+                }
+
+                if (ramDumpRequested[0]) {
+                    ramDumpRequested[0] = false;
+                    String ramPath = "C:/GHIDRA/ram_dump_" + Long.toHexString(pc) + ".bin";
+                    try {
+                        byte[] fullRam = emuHelper.readMemory(toAddr(0x0000), 0x10000);
+                        java.io.FileOutputStream fos = new java.io.FileOutputStream(ramPath);
+                        fos.write(fullRam);
+                        fos.close();
+                        println("RAM dumped to " + ramPath + " (65536 bytes)");
+                    } catch (Exception ramEx) {
+                        println("RAM dump failed: " + ramEx);
+                    }
                 }
 
                 if (paused[0]) {
