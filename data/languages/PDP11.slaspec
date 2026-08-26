@@ -199,6 +199,25 @@ RELN:	reloc	is nnn	[reloc = inst_next-nnn*2;]		{tmp:2 = 0; tmp=reloc; export  tm
 :SCC		is imm16=0x0bF {C=1;V=1;Z=1;N=1;}
 :RESET		is imm16=0x005	{SP=SP;}
 
+################ ILLEGAL INSTRUCTIONS ####################
+:ILLEGAL_INSTRUCTION is kodas=0 & metod=2	{push(PS); tmp:2=inst_next; push(tmp); tmp=0x0A; PS=*:2 tmp; tmp=0x08; call [tmp];}
+:ILLEGAL_INSTRUCTION is kodas=0 & metod=3	{push(PS); tmp:2=inst_next; push(tmp); tmp=0x0A; PS=*:2 tmp; tmp=0x08; call [tmp];}
+:ILLEGAL_INSTRUCTION is kodas=0 & metod=4	{push(PS); tmp:2=inst_next; push(tmp); tmp=0x0A; PS=*:2 tmp; tmp=0x08; call [tmp];}
+:ILLEGAL_INSTRUCTION is kodas=0 & metod=5	{push(PS); tmp:2=inst_next; push(tmp); tmp=0x0A; PS=*:2 tmp; tmp=0x08; call [tmp];}
+:ILLEGAL_INSTRUCTION is kodas=0 & metod=6	{push(PS); tmp:2=inst_next; push(tmp); tmp=0x0A; PS=*:2 tmp; tmp=0x08; call [tmp];}
+:ILLEGAL_INSTRUCTION is kodas=0 & metod=7	{push(PS); tmp:2=inst_next; push(tmp); tmp=0x0A; PS=*:2 tmp; tmp=0x08; call [tmp];}
+
+:ILLEGAL_INSTRUCTION is kodas=2 & metod=1	{push(PS); tmp:2=inst_next; push(tmp); tmp=0x0A; PS=*:2 tmp; tmp=0x08; call [tmp];}
+:ILLEGAL_INSTRUCTION is kodas=2 & metod=2	{push(PS); tmp:2=inst_next; push(tmp); tmp=0x0A; PS=*:2 tmp; tmp=0x08; call [tmp];}
+#:ILLEGAL_INSTRUCTION is kodas=2 & metod=3	{push(PS); tmp:2=inst_next; push(tmp); tmp=0x0A; PS=*:2 tmp; tmp=0x08; call [tmp];}
+:ILLEGAL_INSTRUCTION is kodas_s=0 & met_s=7	{push(PS); tmp:2=inst_next; push(tmp); tmp=0x0A; PS=*:2 tmp; tmp=0x08; call [tmp];}
+
+:ILLEGAL_INSTRUCTION is kodas_s=7 & met_s=5	{push(PS); tmp:2=inst_next; push(tmp); tmp=0x0A; PS=*:2 tmp; tmp=0x08; call [tmp];}
+:ILLEGAL_INSTRUCTION is kodas_s=7 & met_s=6	{push(PS); tmp:2=inst_next; push(tmp); tmp=0x0A; PS=*:2 tmp; tmp=0x08; call [tmp];}
+:ILLEGAL_INSTRUCTION is kodas_s=8 & met_s=7	{push(PS); tmp:2=inst_next; push(tmp); tmp=0x0A; PS=*:2 tmp; tmp=0x08; call [tmp];}
+:ILLEGAL_INSTRUCTION is kodas_s=0xF			{push(PS); tmp:2=inst_next; push(tmp); tmp=0x0A; PS=*:2 tmp; tmp=0x08; call [tmp];}
+
+
 ################ BRANCHES ################################
 
 :BR   REL8			is op_h=1 & REL8	{goto [REL8];}
@@ -727,39 +746,18 @@ FRD: reg_d is reg_d			{ export *:1 reg_d; }
 
 ############ nezinoma fpu
 
-:ldcfd OPD,"f1"		is (op_h=0b11111111  &ac=0)... &OPD{PC=PC;}
-:ldcfd OPD,"f2"		is (op_h=0b11111111  &ac=1)... &OPD{PC=PC;}
-:ldcfd OPD,"f3"		is (op_h=0b11111111  &ac=2)... &OPD{PC=PC;}
-:divfd OPD,"f1"		is (op_h=0b11111001  &ac=0)... &OPD{PC=PC;}
-:divfd OPD,"f2"		is (op_h=0b11111001  &ac=1)... &OPD{PC=PC;}
-:divfd OPD,"f3"		is (op_h=0b11111001  &ac=2)... &OPD{PC=PC;}
-:cmpfd OPD,"f1"		is (op_h=0b11110111  &ac=0)... &OPD{PC=PC;}
-:cmpfd OPD,"f2"		is (op_h=0b11110111  &ac=1)... &OPD{PC=PC;}
-:cmpfd OPD,"f3"		is (op_h=0b11110111  &ac=2)... &OPD{PC=PC;}
-:ldcifd OPD,"f1"	is (op_h=0b11111110  &ac=0)... &OPD{PC=PC;}
-:ldcifd OPD,"f2"	is (op_h=0b11111110  &ac=1)... &OPD{PC=PC;}
-:ldcifd OPD,"f3"	is (op_h=0b11111110  &ac=2)... &OPD{PC=PC;}
-:ldexp OPD,"f1"		is (op_h=0b11111101  &ac=0)... &OPD{PC=PC;}
-:ldexp OPD,"f2"		is (op_h=0b11111101  &ac=1)... &OPD{PC=PC;}
-:ldexp OPD,"f3"		is (op_h=0b11111101  &ac=2)... &OPD{PC=PC;}
-:ldfd OPD,"f1"		is (op_h=0b11110101  &ac=0)... &OPD{PC=PC;}
-:ldfd OPD,"f2"		is (op_h=0b11110101  &ac=1)... &OPD{PC=PC;}
-:ldfd OPD,"f3"		is (op_h=0b11110101  &ac=2)... &OPD{PC=PC;}
-:modfd OPD,"f1"		is (op_h=0b11110011  &ac=0)... &OPD{PC=PC;}
-:modfd OPD,"f2"		is (op_h=0b11110011  &ac=1)... &OPD{PC=PC;}
-:modfd OPD,"f3"		is (op_h=0b11110011  &ac=2)... &OPD{PC=PC;}
-:mulfd OPD,"f1"		is (op_h=0b11110010  &ac=0)... &OPD{PC=PC;}
-:mulfd OPD,"f2"		is (op_h=0b11110010  &ac=1)... &OPD{PC=PC;}
-:mulfd OPD,"f3"		is (op_h=0b11110010  &ac=2)... &OPD{PC=PC;}
-:negfd OPD,"f1"		is (op_h=0b11000111  &ac=0)... &OPD{PC=PC;}
-:negfd OPD,"f2"		is (op_h=0b11000111  &ac=1)... &OPD{PC=PC;}
-:negfd OPD,"f3"		is (op_h=0b11000111  &ac=2)... &OPD{PC=PC;}
-:stcfd OPD,"f1"		is (op_h=0b11111100  &ac=0)... &OPD{PC=PC;}
-:stcfd OPD,"f2"		is (op_h=0b11111100  &ac=1)... &OPD{PC=PC;}
-:stcfd OPD,"f3"		is (op_h=0b11111100  &ac=2)... &OPD{PC=PC;}
-:stfd OPD,"f1"		is (op_h=0b11111000  &ac=0)... &OPD{PC=PC;}
-:stfd OPD,"f2"		is (op_h=0b11111000  &ac=1)... &OPD{PC=PC;}
-:stfd OPD,"f3"		is (op_h=0b11111000  &ac=2)... &OPD{PC=PC;}
+:ldcfd OPD,ac		is (op_h=0b11111111  &ac)... &OPD{PC=PC;}
+:divfd OPD,ac		is (op_h=0b11111001  &ac)... &OPD{PC=PC;}
+:cmpfd OPD,ac		is (op_h=0b11110111  &ac)... &OPD{PC=PC;}
+:ldcifd OPD,ac		is (op_h=0b11111110  &ac)... &OPD{PC=PC;}
+:ldexp OPD,ac		is (op_h=0b11111101  &ac)... &OPD{PC=PC;}
+:ldfd OPD,ac		is (op_h=0b11110101  &ac)... &OPD{PC=PC;}
+:modfd OPD,ac		is (op_h=0b11110011  &ac)... &OPD{PC=PC;}
+:mulfd OPD,ac		is (op_h=0b11110010  &ac)... &OPD{PC=PC;}
+:negfd OPD,ac		is (op_h=0b11000111  &ac)... &OPD{PC=PC;}
+:stcfd OPD,ac		is (op_h=0b11111100  &ac)... &OPD{PC=PC;}
+:stfd OPD,ac		is (op_h=0b11111000  &ac)... &OPD{PC=PC;}
+
 
 :ccfc is imm16=0xf000 {PC=PC;}
 :setf is imm16=0xf001 {PC=PC;}
@@ -769,7 +767,7 @@ FRD: reg_d is reg_d			{ export *:1 reg_d; }
 :setl is imm16=0xf00a {PC=PC;}
 
 :stexp	ac,reg_d	is op_h=0b11111010 &reg_d &ac {PC=PC;}
-:ldexp	reg_d,ac	is op_h=0b11111101 &reg_d &ac {PC=PC;}
+#:ldexp	reg_d,ac	is op_h=0b11111101 &reg_d &ac {PC=PC;}
 
 ######## HALT MODE ############################
 
