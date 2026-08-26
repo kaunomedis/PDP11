@@ -127,16 +127,16 @@ attach variables [ reg_lo ] [ R1 R1 R3 R3 R5 R5 PC PC];
 
 # next word with data or first opcode
 define token data_word (16)
-	imm16 = (0,15) signed
+	imm16 = (0,15)
 	rell16	=(0,15) signed
 ;
 
 # THIS HACK. I do not know how to use two imm16, two words of data (4 bytes)
 define token data_double_word (32)
 	imm32=(0,31)
-	imm32H=(16,31) signed
+	imm32H=(16,31)
 	rell32h=(16,31) signed
-	imm32L=(0,15) signed
+	imm32L=(0,15)
 	rell32l=(0,15) signed
 ;
 
