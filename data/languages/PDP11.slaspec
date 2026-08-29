@@ -312,7 +312,7 @@ OPS: "@-("reg_s")_OK5a"		is met_s=5 & reg_s {reg_s=reg_s-2; tmp:2 = *:2 reg_s; e
 # MODE6: (index)
 # EA = Rn + offset
 # operand = MEM[EA]
-OPS: imm16"("reg_s")_OK6a"	is met_s=6 & reg_s									;imm16	{tmp:2 = imm16+reg_s; export *:2 tmp;}
+OPS: imm16"("reg_s")_OK6a"	is met_s=6 & reg_s									;imm16	{tmp:2 = imm16 + reg_s; export *:2 tmp;}
 
 OPS: REL16"_OK6b"			is met_s=6 & reg_s=7								;REL16	{export  *:2 REL16;}
 

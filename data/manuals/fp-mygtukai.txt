@@ -1,0 +1,14 @@
+     **************************************************************
+     * SW15 =   .... HALT ON ERROR                                *
+     * SW14 =   .... LOOP SUBTEST                                 *
+     * SW13 =   .... INHIBIT ERROR PRINTOUT                       *
+     * SW12 =   .... INHIBIT TRACE TRAPPING                       *
+     * SW11 =   .... INHIBIT SUBTEST ITERATION                    *
+     * SW10 =   .... RING BELL ON ERROR                           *
+     * SW 8 =   .... LOAD PDP-11/45 MICRO BREAK REGISTER          *
+     * SW 7-0 = .... WHEN SET LOADS THE MICRO BREAK REGISTER W... *
+     *               SET INTO SW7-0 AT THE BEGINNING OF EACH S... *
+     **************************************************************
+     FPANEL_SWITCH
+
+ff78 00 c4           dw         1100010000000000b

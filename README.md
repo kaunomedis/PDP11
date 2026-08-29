@@ -65,9 +65,10 @@ As for 2026.07.20:
 - D0KA-PB (SUBTRACT)
 - D0LA-PB (JMP)
 - D0MA-PB (JSR/CALL/RETURN/RTI)
+- D0OA-PB (NEW NUMBER - DZQKA. T15 Instruction Exerciser)?
 
 ## Debuger Failed:
-- D0NA-PB (TRAP/EMT) - possible wrong tape for this CPU.
+- D0NA-PB (NEW NUMBER - DAKAA. TRAP/EMT. PDP-11/20, 11/05, 11/10) - possible wrong tape for this CPU.
 
 
 
