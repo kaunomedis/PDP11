@@ -252,7 +252,11 @@ RELN:	reloc	is nnn	[reloc = inst_next-nnn*2;]		{tmp:2 = 0; tmp=reloc; export  tm
 
 # MODE0: Operand is in the register
 # operand = Rn
-OPS: reg_s" OK0a"			is met_s=0 & reg_ss=7 & reg_s{tmp:2 =  reg_s+2; export tmp;} # Tested in hardware: PC reg contains NEXT adr
+#OPS: reg_s" OK0a"			is met_s=0 & reg_ss=7 & reg_s{tmp:2 =  reg_s+2; export tmp;} # Tested in hardware: PC reg contains NEXT adr
+OPS: reg_s" OK0a"			is met_s=0 & reg_ss=7 & reg_s{tmp:2 =  inst_next; export tmp;}
+
+
+
 OPS: reg_s" OK0b"			is met_s=0 & reg_ss!=7 & reg_s{tmp:2 =  reg_s; export tmp;}
 
 # MODE1:(register deferred)
@@ -260,7 +264,7 @@ OPS: reg_s" OK0b"			is met_s=0 & reg_ss!=7 & reg_s{tmp:2 =  reg_s; export tmp;}
 # EA = Rn
 # operand = MEM[EA]
 
-OPS: "("reg_s") OK1"		is met_s=1 & reg_s {tmp:2 =0; tmp=*:2 reg_s; export tmp;}
+OPS: "("reg_s") OK1"		is met_s=1 & reg_s {export *:2 reg_s;}
 
 # MODE2: (autoincrement)
 # EA = Rn
@@ -346,8 +350,8 @@ OPD: reg_d" OK0"		is met_d=0 & reg_d	{export reg_d;}
 OPDD: reg_d" OK0"		is met_d=0 & reg_d	{export reg_d;}
 
 # MODE1:
-OPD: "("reg_d") OK1"	is met_d=1 & reg_d	{tmp:2=reg_d; export *:2 tmp;}
-OPDD: "("reg_d") OK1"	is met_d=1 & reg_d	{tmp:2=reg_d; export *:2 tmp;}
+OPD: "("reg_d") OK1"	is met_d=1 & reg_d	{export *:2 reg_d;}
+OPDD: "("reg_d") OK1"	is met_d=1 & reg_d	{export *:2 reg_d;}
 
 # MODE2: (autoincrement)
 # EA = Rn
@@ -403,11 +407,11 @@ OPDD: "@#"imm16" OK3e"		is met_d=3&  reg_dd=7 & reg_d	;imm16	{tmp:2 =imm16; expo
 # Rn = Rn - (is_byte ? 1 : 2)
 # EA = Rn
 # operand = MEM[EA]
-OPD: "-("reg_d") OK4a"	is byte=1 & met_d=4 & reg_d 	{reg_d=reg_d-1; tmp:2=reg_d; export *:2 tmp;}
-OPD: "-("reg_d") OK4b"	is byte=0 & met_d=4 & reg_d 	{reg_d=reg_d-2; tmp:2=reg_d; export *:2 tmp;}
+OPD: "-("reg_d") OK4a"	is byte=1 & met_d=4 & reg_d 	{reg_d=reg_d-1; export *:2 reg_d;}
+OPD: "-("reg_d") OK4b"	is byte=0 & met_d=4 & reg_d 	{reg_d=reg_d-2; export *:2 reg_d;}
 
-OPDD: "-("reg_d") OK4a"	is byte=1 & met_d=4 & reg_d 	{reg_d=reg_d-1; tmp:2=reg_d; export *:2 tmp;}
-OPDD: "-("reg_d") OK4b"	is byte=0 & met_d=4 & reg_d 	{reg_d=reg_d-2; tmp:2=reg_d; export *:2 tmp;}
+OPDD: "-("reg_d") OK4aa"	is byte=1 & met_d=4 & reg_d 	{reg_d=reg_d-1; export *:2 reg_d;}
+OPDD: "-("reg_d") OK4bb"	is byte=0 & met_d=4 & reg_d 	{reg_d=reg_d-2; export *:2 reg_d;}
 
 # MODE5: (autodecrement deferred)
 # Rn = Rn - 2
@@ -430,8 +434,8 @@ OPD: imm32H"("reg_d")?OK6f"	is met_d=6 & met_s=7 & reg_d				;imm32H	{tmp:2 = imm
 OPD: REL32H" OK6g"			is met_d=6 & met_s=3 & reg_d=7				;REL32H	{tmp:2 = REL32H;		export *:2 tmp;}
 OPD: imm32H(reg_d)"_OK6h"	is met_d=6 & (met_s=3 | met_s=2) & reg_s=7 & reg_dd!=7 & reg_d	;imm32H	{tmp:2 = imm32H+reg_d;		export *:2 tmp;}
 
-OPDD: imm16"("reg_d") OK6aa"	is met_d=6 & reg_d						;imm16	{tmp:2 = imm16+reg_d;	export *:2 tmp;}
-OPDD: REL16" OK6bb"				is met_d=6 & reg_d=7					;REL16	{tmp:2 = REL16;			export  *:2 tmp;}
+OPDD: imm16"("reg_d") OK6aa"	is met_d=6 & reg_d						;imm16	{tmp:2 = imm16 + reg_d;	export *:2 tmp;}
+OPDD: REL16" OK6bb"				is met_d=6 & reg_d=7					;REL16	{tmp:2 = REL16;			export *:2 tmp;}
 
 #OPDD: REL16" OK6bb"			is met_d=6 & reg_d=7				;REL16 & imm16	{tmp:2 = imm16+reg_d;	export *:2 tmp;}
 

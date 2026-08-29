@@ -32,6 +32,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class VT52Terminal3Thread extends GhidraScript {
 
@@ -337,6 +338,93 @@ public class VT52Terminal3Thread extends GhidraScript {
         stopDumpButton.addActionListener(e -> requestStop[0] = true);
 
         final boolean[] paused = { false };
+
+        // ============================================================
+        // UART TIMING SIMULATION - "countdown" model
+        // ============================================================
+        //
+        // THE PROBLEM THIS SOLVES:
+        // Real 1980s UART hardware is MUCH SLOWER than the CPU reading it.
+        // So on real hardware, a program's "wait for a character" poll loop
+        // naturally spins hundreds or thousands of times before a new
+        // character actually shows up - the slow UART is the bottleneck,
+        // never the fast CPU.
+        //
+        // Our emulator did the OPPOSITE: the instant we (Java) decided to
+        // inject a character, we set the "ready" bit immediately - zero
+        // delay at all. Some real PDP-11 programs (like the BASIC we tested)
+        // apparently rely on there being SOME minimum number of poll
+        // iterations between characters (maybe as part of their own
+        // debounce/confirmation logic). Injecting instantly broke that
+        // assumption, and characters got silently skipped or overwritten.
+        //
+        // THE FIX - a countdown counter, like a hardware timer/counter chip:
+        //   - Starts at 0, meaning "ready right now". This is why the very
+        //     FIRST character (or a single character sent alone) always
+        //     worked correctly even before this fix - there's no artificial
+        //     delay before the very first injection.
+        //   - Every time the EMULATED PDP-11 PROGRAM touches RBUF or RCSR
+        //     (either reading OR writing either one - see below for why we
+        //     count all four combinations), we decrement the counter by 1,
+        //     but ONLY IF it is currently ABOVE zero. If it's already at
+        //     zero, touching RBUF/RCSR does nothing to the counter - it
+        //     just stays at zero, "ready", waiting for us to inject.
+        //   - Our OWN main loop checks: "is the counter at exactly zero
+        //     right now?" If yes, and there's a character waiting in the
+        //     queue, we inject it AND re-arm the counter back up to
+        //     COUNTDOWN_START - starting a brand new countdown before the
+        //     NEXT character can go in.
+        //
+        // WHY COUNT ALL FOUR (RBUF read, RBUF write, RCSR read, RCSR write)
+        // INSTEAD OF JUST "RBUF reads"?
+        // Different PDP-11 programs poll differently - some check RCSR
+        // twice before ever touching RBUF (we saw exactly this in one
+        // disassembly: a TST then a TSTB, both reading RCSR, BEFORE the
+        // actual RBUF read). If we only counted RBUF reads, a program that
+        // spends most of its polling time checking RCSR (not RBUF) would
+        // never advance the countdown at all. Counting every touch of
+        // either register makes the countdown track "how much real polling
+        // activity has happened" in general, regardless of which exact
+        // register a given program happens to check most.
+        //
+        // WHY NOT JUST DECREMENT WITHOUT CHECKING FOR ZERO FIRST?
+        // If we decremented unconditionally (even when already at 0), fast
+        // or overlapping activity could push the counter into NEGATIVE
+        // numbers. A plain "if (count == 0)" check somewhere else in the
+        // code would then never become true again - the counter would sail
+        // past zero without us ever noticing, and we'd stop injecting
+        // characters forever. This is a real risk in multi-threaded code:
+        // if two things tried to decrement at once with no protection, you
+        // could lose track of the exact moment the counter crosses zero.
+        // Guarding every decrement with "only if > 0" prevents this - the
+        // counter can never go below zero, period, no matter how many times
+        // or how quickly something tries to decrement it.
+        //
+        // WHY AtomicInteger INSTEAD OF A PLAIN int/int[]?
+        // A plain "int" (or a 1-element int[] used as a poor-man's mutable
+        // reference, which is what we used elsewhere in this file for
+        // simple flags) is NOT safe if two different threads ever read and
+        // write it at the same time - you can get corrupted, inconsistent
+        // values ("race conditions"). In our CURRENT code, only the
+        // emulation thread ever touches this counter, so a plain int would
+        // likely work fine today - but AtomicInteger costs us nothing and
+        // makes this permanently safe even if the code changes later (for
+        // example, if we ever add a second way to trigger a decrement from
+        // a different thread). getAndDecrement()/compareAndSet() style
+        // operations on AtomicInteger are guaranteed atomic - the "check if
+        // greater than zero, then decrement" happens as one indivisible
+        // step, so no other thread can sneak in between the check and the
+        // decrement and cause a bad value.
+        //
+        // COUNTDOWN_START is a GUESSED starting value, not a measured one.
+        // It represents "how many RBUF/RCSR touches should happen before we
+        // allow the next character in". Tune this by testing against real
+        // programs: too LOW and you'll see skipped/overwritten characters
+        // again; too HIGH and typing will feel artificially slow. Adjust
+        // this one number to experiment - nothing else needs to change.
+        final AtomicInteger uartCountdown = new AtomicInteger(0);
+        final int COUNTDOWN_START = 8;
+
         final boolean[] dumpOnPauseRequested = { false };
         pauseButton.addActionListener(e -> {
             paused[0] = !paused[0];
@@ -379,33 +467,81 @@ public class VT52Terminal3Thread extends GhidraScript {
 
         // --- Part 3's own memory-access hooks: ONLY ever push/pop queues ---
         emuHelper.getEmulator().addMemoryAccessFilter(new MemoryAccessFilter() {
+
+            // Small local helper: decrements uartCountdown by exactly 1, but
+            // ONLY if it's currently above zero. This is the one piece of
+            // logic that must run identically for all four RBUF/RCSR touch
+            // combinations below, so it's written once here instead of
+            // copy-pasted four times.
+            private void tickUartCountdown() {
+                uartCountdown.updateAndGet(current -> current > 0 ? current - 1 : current);
+            }
+
             @Override
             protected void processRead(AddressSpace space, long offset, int size, byte[] values) {
                 Address read = space.getAddress(offset);
+
                 if (read.equals(rbufAddr)) {
+                    // Real hardware behavior (confirmed from the UART
+                    // datasheet): reading RBUF clears RCSR's "Done"/ready
+                    // bit automatically. This is genuinely correct hardware
+                    // emulation and is UNRELATED to our own countdown timing
+                    // trick below - both happen here, for different reasons.
                     try {
                         byte[] c = emuHelper.readMemory(rcsrAddr, 2);
                         int val = (c[0] & 0xFF) | ((c[1] & 0xFF) << 8);
                         emuHelper.writeMemoryValue(rcsrAddr, 2, val & ~0x80);
                     } catch (Exception e) { /* best effort */ }
+                    tickUartCountdown();
+
+                } else if (read.equals(rcsrAddr)) {
+                    // The program's own "TSTB RCSR" / "TST RCSR" style poll
+                    // check. No hardware side-effect needed here (checking a
+                    // status register doesn't change it on real hardware) -
+                    // but this IS real polling activity, so it still counts
+                    // toward the countdown.
+                    tickUartCountdown();
+
                 } else if (read.equals(xcsrAddr)) {
                     try {
                         byte[] c = emuHelper.readMemory(xcsrAddr, 2);
                         int val = (c[0] & 0xFF) | ((c[1] & 0xFF) << 8);
                         emuHelper.writeMemoryValue(xcsrAddr, 2, val | 0x80);
                     } catch (Exception e) { /* best effort */ }
+                    // XCSR/XBUF are the OUTPUT (transmit) side - deliberately
+                    // NOT counted here, since this timing model is only for
+                    // input (keyboard) pacing.
                 }
             }
 
             @Override
             protected void processWrite(AddressSpace space, long offset, int size, byte[] values) {
                 Address written = space.getAddress(offset);
+
                 if (written.equals(xbufAddr)) {
                     // Non-blocking hand-off only - never touches VT52 logic directly.
                     outputQueue.offer(values[0] & 0xFF);
                     try {
                         emuHelper.writeMemoryValue(xcsrAddr, 2, 0x0000);
                     } catch (Exception e) { /* best effort */ }
+                    // Output side, not counted - see note above.
+
+                } else if (written.equals(rbufAddr)) {
+                    // Unusual (the CPU writing to its OWN receive buffer),
+                    // but if some program does this as part of a reset/self-
+                    // test sequence, it's still real activity on this
+                    // register, so it counts the same as everything else.
+                    tickUartCountdown();
+
+                } else if (written.equals(rcsrAddr)) {
+                    // The program's own writes to RCSR (e.g. "CLR RCSR" seen
+                    // in the real disassembly). We do NOT know for certain
+                    // whether this is genuinely part of the input-pacing
+                    // rhythm or unrelated housekeeping - but since the
+                    // countdown model only cares about "how much polling
+                    // activity happened", it's safe and consistent to count
+                    // this too, the same as the other three combinations.
+                    tickUartCountdown();
                 }
             }
         });
@@ -483,15 +619,16 @@ public class VT52Terminal3Thread extends GhidraScript {
                     continue;
                 }
 
-                byte[] rcsrBytes = emuHelper.readMemory(rcsrAddr, 2);
-                int rcsrVal = (rcsrBytes[0] & 0xFF) | ((rcsrBytes[1] & 0xFF) << 8);
-                boolean ready = (rcsrVal & 0x80) != 0;
-
-                if (!ready) {
+                // Only inject the next character once the countdown has
+                // genuinely reached zero (see the big comment block above,
+                // near where uartCountdown/COUNTDOWN_START are declared, for
+                // the full explanation of why this exists and how it works).
+                if (uartCountdown.get() == 0) {
                     Integer nextKey = inputQueue.poll(); // non-blocking - null if nothing waiting
                     if (nextKey != null) {
                         emuHelper.writeMemoryValue(rbufAddr, 2, (long) nextKey & 0xFF);
                         emuHelper.writeMemoryValue(rcsrAddr, 2, 0x80);
+                        uartCountdown.set(COUNTDOWN_START); // re-arm for the NEXT character
                     }
                 }
 
