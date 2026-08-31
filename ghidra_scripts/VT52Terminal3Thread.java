@@ -273,15 +273,65 @@ public class VT52Terminal3Thread extends GhidraScript {
     // ============================================================
     public void run() throws Exception {
 
-        String startPCStr = askString("Start PC", "Enter starting PC (hex, no 0x):", "0080");
-        long startPC = Long.parseLong(startPCStr.trim(), 16);
-        String startSPStr = askString("Start SP", "Enter starting stack SP (hex, no 0x):", "5000");
-        long startSP = Long.parseLong(startSPStr.trim(), 16);
+        // Real form dialog: one labeled text field per value, all shown at
+        // once in a single window - easier to read/use than a single
+        // space-separated string. Covers the full PDP-11 register set:
+        // R0-R5, SP (=R6), PC (=R7), and PS (the processor status word).
+        String[] labels = {
+            "R0 (hex, no 0x):", "R1 (hex, no 0x):", "R2 (hex, no 0x):",
+            "R3 (hex, no 0x):", "R4 (hex, no 0x):", "R5 (hex, no 0x):",
+            "SP (hex, no 0x):", "PC (hex, no 0x):", "PS (hex, no 0x):"
+        };
+        String[] defaults = {
+            "0000", "0000", "0000",
+            "0000", "0000", "0000",
+            "5000", "0080", "0000"
+        };
+        JTextField[] fields = new JTextField[labels.length];
+
+        JPanel formPanel = new JPanel(new java.awt.GridLayout(labels.length, 2, 5, 5));
+        for (int i = 0; i < labels.length; i++) {
+            formPanel.add(new JLabel(labels[i]));
+            fields[i] = new JTextField(defaults[i]);
+            formPanel.add(fields[i]);
+        }
+
+        // JOptionPane blocks the calling thread until dismissed - but it
+        // must be SHOWN on Swing's own thread (the EDT), not this script's
+        // thread. invokeAndWait() safely bridges the two: it runs the given
+        // code on the EDT and doesn't return here until that code (and the
+        // dialog it shows) is fully finished.
+        final int[] dialogResult = { JOptionPane.CANCEL_OPTION };
+        SwingUtilities.invokeAndWait(() -> {
+            dialogResult[0] = JOptionPane.showConfirmDialog(null, formPanel,
+                "Initial Register Values", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        });
+
+        if (dialogResult[0] != JOptionPane.OK_OPTION) {
+            println("Cancelled - no starting values entered.");
+            return;
+        }
+
+        long startR0 = Long.parseLong(fields[0].getText().trim(), 16);
+        long startR1 = Long.parseLong(fields[1].getText().trim(), 16);
+        long startR2 = Long.parseLong(fields[2].getText().trim(), 16);
+        long startR3 = Long.parseLong(fields[3].getText().trim(), 16);
+        long startR4 = Long.parseLong(fields[4].getText().trim(), 16);
+        long startR5 = Long.parseLong(fields[5].getText().trim(), 16);
+        long startSP = Long.parseLong(fields[6].getText().trim(), 16);
+        long startPC = Long.parseLong(fields[7].getText().trim(), 16);
+        long startPS = Long.parseLong(fields[8].getText().trim(), 16);
 
         EmulatorHelper emuHelper = new EmulatorHelper(currentProgram);
-        emuHelper.writeRegister("PC", startPC);
-        emuHelper.writeRegister("PS", 0x0000);
+        emuHelper.writeRegister("R0", startR0);
+        emuHelper.writeRegister("R1", startR1);
+        emuHelper.writeRegister("R2", startR2);
+        emuHelper.writeRegister("R3", startR3);
+        emuHelper.writeRegister("R4", startR4);
+        emuHelper.writeRegister("R5", startR5);
         emuHelper.writeRegister("SP", startSP);
+        emuHelper.writeRegister("PC", startPC);
+        emuHelper.writeRegister("PS", startPS);
 
         Address xbufAddr = toAddr(0xFF76);
         Address rbufAddr = toAddr(0xFF72);
