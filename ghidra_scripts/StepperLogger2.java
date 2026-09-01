@@ -58,7 +58,7 @@ public class StepperLogger2 extends GhidraScript {
                 if (space.getAddress(offset).equals(xbufAddrObj)) {
                     screen.append((char) (values[0] & 0xFF));
                 }
-				if (space.getName().equals("ram") && offset >= 0x1ef0 && offset <= 0x3fff) {
+				if (space.getName().equals("ram") && offset >= 0x17c0 && offset <= 0x17ce) {
                     log.println(String.format("WRITE TRAP: wrote 0x%04X to address 0x%04X",
                         values[0] & 0xFF | ((values[1] & 0xFF) << 8), offset));
                     log.flush();
@@ -159,7 +159,7 @@ if ((rcsrVal & 0x80) == 0) {
 				pc=(emu.readRegister("PC").longValue() & 0xFFFF)-16*LINES_BEFORE;
 				pc=pc & 0xFFF0;
 				byte[] b = emu.readMemory(toAddr(pc), 16*(LINES_BEFORE+LINES_AFTER+1));
-				String ramas=" RAM: \n";
+				String ramas="PC RAM: \n      00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\n";
 				for(int j=0;j<(LINES_BEFORE+LINES_AFTER+1)*16;j=j+16){
 				ramas=ramas+String.format("%04X:",pc+j);
 				for(int i=0;i<16;i++) {
@@ -169,6 +169,21 @@ if ((rcsrVal & 0x80) == 0) {
 				ramas=ramas+"\n";
 				}
 				log.println(ramas);
+				
+				pc=(emu.readRegister("SP").longValue() & 0xFFFF)-16*LINES_BEFORE;
+				pc=pc & 0xFFF0;
+				b = emu.readMemory(toAddr(pc), 16*(LINES_BEFORE+LINES_AFTER+1));
+				ramas="SP RAM: \n      00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\n";
+				for(int j=0;j<(LINES_BEFORE+LINES_AFTER+1)*16;j=j+16){
+				ramas=ramas+String.format("%04X:",pc+j);
+				for(int i=0;i<16;i++) {
+				int val = (b[i+j] & 0xFF);
+				ramas=ramas+String.format(" %02X", val);
+				}
+				ramas=ramas+"\n";
+				}
+				log.println(ramas);
+				
 				
                 break;
             }
