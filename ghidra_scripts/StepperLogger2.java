@@ -3,8 +3,9 @@
 //@category PDP11 Hardware
 //@keybinding 
 //@menupath 
-//@toolbar 
+//@toolbar world.png
 //@runtime Java
+
 import ghidra.app.script.GhidraScript;
 import ghidra.app.emulator.EmulatorHelper;
 import ghidra.app.emulator.MemoryAccessFilter;
@@ -57,9 +58,9 @@ public class StepperLogger2 extends GhidraScript {
                 if (space.getAddress(offset).equals(xbufAddrObj)) {
                     screen.append((char) (values[0] & 0xFF));
                 }
-                if (offset >= 0x1ef0 && offset <= 0x1fff) {
-                    log.println(String.format("WRITE TRAP: wrote 0x%02X to address 0x%04X",
-                        values[0] & 0xFF, offset));
+				if (space.getName().equals("ram") && offset >= 0x1ef0 && offset <= 0x3fff) {
+                    log.println(String.format("WRITE TRAP: wrote 0x%04X to address 0x%04X",
+                        values[0] & 0xFF | ((values[1] & 0xFF) << 8), offset));
                     log.flush();
                 }
             }
