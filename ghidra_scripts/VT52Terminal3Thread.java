@@ -337,6 +337,7 @@ public class VT52Terminal3Thread extends GhidraScript {
         Address rbufAddr = toAddr(0xFF72);
         Address rcsrAddr = toAddr(0xFF70);
         Address xcsrAddr = toAddr(0xFF74);
+		Address fpswAddr = toAddr(0xFF78);
 
         emuHelper.writeMemoryValue(xcsrAddr, 2, 0x0080);
         emuHelper.writeMemoryValue(rcsrAddr, 2, 0x0000);
@@ -561,8 +562,22 @@ public class VT52Terminal3Thread extends GhidraScript {
                     // XCSR/XBUF are the OUTPUT (transmit) side - deliberately
                     // NOT counted here, since this timing model is only for
                     // input (keyboard) pacing.
-                }
-            }
+                } else if (read.equals(fpswAddr)) {
+					try {
+						byte[] c = emuHelper.readMemory(fpswAddr, 2);
+                        int val = (c[0] & 0xFF) | ((c[1] & 0xFF) << 8);
+						
+	String result = String.format("%04x", val);
+	String key = askString("FP SW Input", "Hex Value (blank = skip this time):", result);
+    if (key != null && !key.isEmpty()) {
+		if(key.length()>1){
+		val=(int) (key.charAt(0) & 0xFF) | (key.charAt(1) & 0xFF <<8);}
+		else {val=(int) key.charAt(0);}
+		
+		emuHelper.writeMemoryValue(fpswAddr, 2, val);
+		}
+					} catch (Exception e) { /* best effort */ }
+            }}
 
             @Override
             protected void processWrite(AddressSpace space, long offset, int size, byte[] values) {
@@ -593,6 +608,15 @@ public class VT52Terminal3Thread extends GhidraScript {
                     // this too, the same as the other three combinations.
                     tickUartCountdown();
                 }
+				
+				//if (space.getName().equals("ram") && offset >= 0x1ef0 && offset <= 0x3fff)
+				else if (written.equals(fpswAddr)) {
+				int fpvalue= (int) (values[0] & 0xFF) | ((values[1] & 0xFF) << 8);
+				String fpbin= String.format("%16s", Integer.toBinaryString(fpvalue)).replace(' ', '0');
+				println(String.format("WRITE FP: wrote 0x%04X ( %s ) ",
+                       fpvalue , fpbin));
+				
+				}
             }
         });
 

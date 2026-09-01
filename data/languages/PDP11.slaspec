@@ -165,7 +165,7 @@ RELN:	reloc	is nnn	[reloc = (inst_next-nnn*2)	& 0xffff;]		{tmp:2 = reloc; export
 
 :NOP		is imm16=0x0A0	{R0=R0;}
 :HALT		is imm16=0		{tmp:2=0x28; PC=*:2 tmp; tmp=0x2A; PS=*:2 tmp; goto [PC];}
-:WAIT		is imm16=1		{PC=inst_next; goto [PC-2];}
+:WAIT		is imm16=1		{R0=R0;}#{PC=inst_next; goto [PC-2];}
 :CLC		is imm16=0x0A1	{C=0;}
 :CLV		is imm16=0x0A2	{V=0;}
 :CLVC		is imm16=0x0A3	{C=0;V=0;}
@@ -312,7 +312,7 @@ OPS: "@-("reg_s")_OK5a"		is met_s=5 & reg_s {reg_s=reg_s-2; tmp:2 = *:2 reg_s; e
 # EA = Rn + offset
 # operand = MEM[EA]
 OPS: imm16"("reg_s")_OK6a"	is met_s=6 & reg_s									;imm16	{tmp:2 = imm16 + reg_s; export *:2 tmp;}
-OPS: REL16"_OK6b"			is met_s=6 & reg_s=7								;REL16	{export  *:2 REL16;}
+OPS: REL16"_OK6b"			is met_s=6 & reg_s=7								;REL16	{export  REL16;}
 
 #OPS: REL16"_OK6b"			is met_s=6 & reg_ss=7	& reg_s							;REL16 & imm16	{tmp:2 = imm16+reg_s; export *:2 tmp;}
 # ^^--nerodo label
@@ -642,7 +642,7 @@ V = (((old ^ comb) & 0x80000000)!=0);
 # 7 - @X   111 111 = 3f
 
 OPJ: ">"reg_d" okJ0"		is met_d=0 & reg_d						{export reg_d;}										# mode 0: Rn tiesiogiai? JMP MODE=0 is ERROR!
-OPJ: reg_d" okJ1"        	is met_d=1 & reg_d						{export reg_d;}										# mode 1 (Rn): EA=Rn, zero deref
+OPJ: "@"reg_d" okJ1"        is met_d=1 & reg_d					{export reg_d;}										# mode 1 (Rn): EA=Rn, zero deref
 OPJ: reg_d" okJ1pc"			is met_d=1 & reg_dd=7 & reg_d			{tmp:2=inst_next; export tmp;}
 OPJ: "("reg_d")+ okJ2"   	is met_d=2 & reg_dd!=7 & reg_d			{tmp:2=reg_d; reg_d=reg_d+2; export tmp;}			# mode 2 (Rn)+: EA=Rn (pre-increment value), zero deref
 OPJ: "#"imm16" okJ2i"    	is met_d=2 & reg_dd=7 & reg_d ;imm16	{tmp:2=imm16; reg_d=reg_d+2; export tmp;}			# mode 2, reg=PC: "JMP #imm" -> EA=imm16 literally
@@ -657,7 +657,7 @@ OPJ: REL16" okJ6r"       	is met_d=6 & reg_d=7 ;REL16				{tmp:2=REL16; export tm
 OPJ: "@"imm16"("reg_d") okJ7" is met_d=7 & reg_dd!=7 & reg_d ;imm16	{tmp:2=imm16+reg_d; tmp2:2=*:2 tmp; export tmp2;}	# mode 7 @X(Rn): EA=MEM[Rn+X], one deref (intrinsic)
 OPJ: "@"REL16" okJ7r"    	is met_d=7 & reg_d=7 ;REL16				{tmp:2=REL16; tmp2:2=*:2 tmp; export tmp2;}			# mode 7, reg=PC: "JMP @label" -> EA=MEM[resolved address]
 
-:JSR reg_s,OPJ is (kodas_s=0 & met_s=4 & reg_s) ... & OPJ	{tmp:2=OPJ;push(reg_s);reg_s=inst_next;call[tmp];}
+:JSR reg_s,OPJ is (kodas_s=0 & met_s=4 & reg_s) ... & OPJ	{PC=OPJ;push(reg_s);reg_s=inst_next;call[PC];}
 
 # Another special case of the JSR instruction is JSR PC,
 # @(SP) + which exchanges the top element of the processor
