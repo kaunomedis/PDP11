@@ -59,10 +59,13 @@ public class StepperLogger2 extends GhidraScript {
                     screen.append((char) (values[0] & 0xFF));
                 }
 				if (space.getName().equals("ram") && offset >= 0x1700 && offset <= 0x17ce) {
-                    log.println(String.format("WRITE TRAP: wrote 0x%04X to address 0x%04X",
-                        values[0] & 0xFF | ((values[1] & 0xFF) << 8), offset));
-                    log.flush();
-                }
+
+					int val = values[0] & 0xFF;
+					if (size > 1) val |= (values[1] & 0xFF) << 8;
+					log.println(String.format("WRITE TRAP: wrote 0x%04X to address 0x%04X", val, offset));
+					log.flush();
+				}
+
             }
         });
 
