@@ -112,7 +112,7 @@
 	<symbol name="DZ11_TCR" address="ram:0xe044" entry="true"/>
 	<symbol name="DZ11_MSR_TDR" address="ram:0xe046" entry="true"/>
 	
-	<symbol name="MSV11_PARITYCNTR" address="ram:0xF4400" entry="true"/>
+	<symbol name="MSV11_PARITYCNTR" address="ram:0xF440" entry="true"/>
 	
 
 	<symbol name="RK11_RKDS" address="ram:0xFF00" entry="true" />
