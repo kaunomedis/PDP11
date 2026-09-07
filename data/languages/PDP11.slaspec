@@ -266,7 +266,11 @@ OPS: "("reg_s") OK1a"		is met_s=1 & reg_ss=7 & reg_s	{tmp:2=inst_next; export *:
 # EA = Rn
 # operand = MEM[EA]
 # Rn = Rn + (is_byte ? 1 : 2)
-OPS: "("reg_s")+ OK2a"		is byte=1 & met_s=2 & reg_s				{tmp:2=reg_s; reg_s=reg_s+1; export *:2 tmp; }
+#OPS: "("reg_s")+ OK2a"		is byte=1 & met_s=2 & reg_s				{tmp:2=reg_s; reg_s=reg_s+1; export *:2 tmp; }
+OPS: "("reg_s")+ OK2a"		is byte=1 & met_s=2 & reg_ss<6 & reg_s			{tmp:2=reg_s; reg_s=reg_s+1; export *:2 tmp; }
+OPS: "("reg_s")+ OK2asp"	is byte=1 & met_s=2 & reg_ss=6	& reg_s			{tmp:2=reg_s; reg_s=reg_s+2; export *:2 tmp; }
+
+
 OPS: "("reg_s")+ OK2b"		is byte=0 & met_s=2 & reg_s				{tmp:2=reg_s; reg_s=reg_s+2; export *:2 tmp; }
 OPS: "#"imm16" OK2c"		is byte=0 & met_s=2 & reg_s=7 ;imm16	{tmp:2 = imm16; export tmp;}
 OPS: "#"imm16" OK2d"  		is byte=1 & met_s=2 & reg_s=7 ;imm16	{tmp:2 = imm16; export tmp;}
@@ -301,7 +305,10 @@ OPS: "@#"imm32L" OK3h"		is met_s=3 & reg_ss=7 & (met_d=6 | met_d=7)							;imm32
 # Rn = Rn - (is_byte ? 1 : 2)
 # EA = Rn
 # operand = MEM[EA]
-OPS: "-("reg_s") OK4a"		is byte=1 & met_s=4 & reg_s {reg_s=reg_s-1; export *:2 reg_s;}
+OPS: "-("reg_s") OK4a"		is byte=1 & met_s=4 & reg_ss<6 & reg_s {reg_s=reg_s-1; export *:2 reg_s;}
+OPS: "-("reg_s") OK4c"		is byte=1 & met_s=4 & reg_ss=6 & reg_s {reg_s=reg_s-2; export *:2 reg_s;}
+
+
 OPS: "-("reg_s") OK4b"		is byte=0 & met_s=4 & reg_s {reg_s=reg_s-2; export *:2 reg_s;}
 
 # MODE5: (autodecrement deferred)
@@ -362,10 +369,16 @@ OPDD: "("reg_d") OK1bb"		is met_d=1 & reg_dd=7 & reg_d {tmp:2=inst_next; export 
 # operand = MEM[EA]
 # Rn = Rn + (is_byte ? 1 : 2)
 
-OPD: "("reg_d")+ OK2a"		is byte=1 &met_d=2 & reg_dd!=7 &reg_d	{tmp:2=reg_d; reg_d=reg_d+1; export *:2 tmp; }
+#OPD: "("reg_d")+ OK2a"		is byte=1 &met_d=2 & reg_dd!=7 &reg_d	{tmp:2=reg_d; reg_d=reg_d+1; export *:2 tmp; }
+OPD: "("reg_d")+ OK2a"		is byte=1 &met_d=2 & reg_dd<6 &reg_d	{tmp:2=reg_d; reg_d=reg_d+1; export *:2 tmp; }
+OPD: "("reg_d")+ OK2a"		is byte=1 &met_d=2 & reg_dd=6 &reg_d	{tmp:2=reg_d; reg_d=reg_d+2; export *:2 tmp; }
+
+
+
 OPD: "("reg_d")+ OK2b"		is byte=0 &met_d=2 & reg_dd!=7 &reg_d	{tmp:2=reg_d; reg_d=reg_d+2; export *:2 tmp; }
 
-OPDD: "("reg_d")+ OK2a"		is byte=1 &met_d=2 & reg_dd!=7 &reg_d	{tmp:2=reg_d; reg_d=reg_d+1; export *:2 tmp; }
+OPDD: "("reg_d")+ OK2a"		is byte=1 &met_d=2 & reg_dd<6 &reg_d	{tmp:2=reg_d; reg_d=reg_d+1; export *:2 tmp; }
+OPDD: "("reg_d")+ OK2a"		is byte=1 &met_d=2 & reg_dd=6 &reg_d	{tmp:2=reg_d; reg_d=reg_d+2; export *:2 tmp; }
 OPDD: "("reg_d")+ OK2b"		is byte=0 &met_d=2 & reg_dd!=7 &reg_d	{tmp:2=reg_d; reg_d=reg_d+2; export *:2 tmp; }
 
 OPDD: "#"imm16" OK2c" is met_d=2 & reg_dd=7 & reg_d ;imm16 {tmp:2 = imm16; export tmp;}
@@ -404,7 +417,8 @@ OPDD: "@#"imm16" OK3e"		is met_d=3 & reg_dd=7 & reg_d	;imm16	{tmp:2 =imm16; expo
 # Rn = Rn - (is_byte ? 1 : 2)
 # EA = Rn
 # operand = MEM[EA]
-OPD: "-("reg_d") OK4a"	is byte=1 & met_d=4 & reg_d 	{reg_d=reg_d-1; export *:2 reg_d;}
+OPD: "-("reg_d") OK4a"	is byte=1 & met_d=4 & reg_dd<6 & reg_d 	{reg_d=reg_d-1; export *:2 reg_d;}
+OPD: "-("reg_d") OK4c"	is byte=1 & met_d=4 & reg_dd=6 & reg_d 	{reg_d=reg_d-2; export *:2 reg_d;}
 OPD: "-("reg_d") OK4b"	is byte=0 & met_d=4 & reg_d 	{reg_d=reg_d-2; export *:2 reg_d;}
 
 OPDD: "-("reg_d") OK4aa"	is byte=1 & met_d=4 & reg_d 	{reg_d=reg_d-1; export *:2 reg_d;}
