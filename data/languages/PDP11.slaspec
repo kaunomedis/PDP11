@@ -22,7 +22,7 @@ define register offset=0x0008 size=2 [ R4 ];
 define register offset=0x000A size=2 [ R5 ];
 define register offset=0x000C size=2 [ SP ]; #R6 , stekas mazejantis
 define register offset=0x000E size=2 [ PC ]; #R7
-define register offset=0x0020 size=2 [ PS ]; # STATUS FLAGS & INT LEVEL
+define register offset=0x0010 size=2 [ PS ]; # STATUS FLAGS & INT LEVEL
 
 
 
@@ -68,7 +68,7 @@ macro SUB_FLAGS(ss,dd){ts=(ss & 0x8000)!=0;td=(dd & 0x8000)!=0;tr=(((ss-dd) & 0x
 macro CMP_FLAGS(ss,dd){ts=(ss & 0x8000)!=0;td=(dd & 0x8000)!=0;tr=(((ss-dd) & 0x8000)!=0);Z=(ss==dd);		V=((ts ^^ td) && (!(tr ^^ td)));C=(((!ts) && td)||((!(ts ^^ td)) && tr));N=tr;}
 macro FLZ(register){Z=(register==0);}
 
-macro FLN(register){N=(register & 0x8000)!=0;}
+macro FLN(register)	{N=(register & 0x8000)!=0;}
 macro FLNB(register){N=(register & 0x80)!=0;}
 
 ########## STACK MANAGMENT (decrementing stack) ##############
@@ -78,7 +78,6 @@ macro pop(val)  {val = *:2 SP;SP = SP + 2;}
 ########## PC is R7, but ghidra ignores it. fix ##############
 macro PCFIX(value, regfield,metod_d) {
 if !(regfield==7 & (metod_d==0 | metod_d==4 | metod_d==5)) goto <exit>;
-# PC=value;
  goto [value];
 <exit> 
  }
@@ -165,7 +164,9 @@ RELN:	reloc	is nnn	[reloc = (inst_next-nnn*2)	& 0xffff;]		{tmp:2 = reloc; export
 :step3		is imm16=0x0f	{R0=R0;}
 
 :NOP		is imm16=0x0A0	{R0=R0;}
-:HALT		is imm16=0		{tmp:2=0x28; PC=*:2 tmp; tmp=0x2A; PS=*:2 tmp; goto [PC];}
+:HALT		is imm16=0		{
+push(PS);push(PC);
+tmp:2=0x28; PC=*:2 tmp; tmp=0x2A; PS=*:2 tmp; goto [PC];}
 :WAIT		is imm16=1		{R0=R0;}#{PC=inst_next; goto [PC-2];}
 :CLC		is imm16=0x0A1	{C=0;}
 :CLV		is imm16=0x0A2	{V=0;}
@@ -266,9 +267,9 @@ OPS: "("reg_s") OK1a"		is met_s=1 & reg_ss=7 & reg_s	{tmp:2=inst_next; export *:
 # EA = Rn
 # operand = MEM[EA]
 # Rn = Rn + (is_byte ? 1 : 2)
-#OPS: "("reg_s")+ OK2a"		is byte=1 & met_s=2 & reg_s				{tmp:2=reg_s; reg_s=reg_s+1; export *:2 tmp; }
-OPS: "("reg_s")+ OK2a"		is byte=1 & met_s=2 & reg_ss<6 & reg_s			{tmp:2=reg_s; reg_s=reg_s+1; export *:2 tmp; }
-OPS: "("reg_s")+ OK2asp"	is byte=1 & met_s=2 & reg_ss=6	& reg_s			{tmp:2=reg_s; reg_s=reg_s+2; export *:2 tmp; }
+
+OPS: "("reg_s")+ OK2a"		is byte=1 & met_s=2 & reg_ss<6	& reg_s		{tmp:2=reg_s; reg_s=reg_s+1; export *:2 tmp; }
+OPS: "("reg_s")+ OK2asp"	is byte=1 & met_s=2 & reg_ss=6	& reg_s		{tmp:2=reg_s; reg_s=reg_s+2; export *:2 tmp; }
 
 
 OPS: "("reg_s")+ OK2b"		is byte=0 & met_s=2 & reg_s				{tmp:2=reg_s; reg_s=reg_s+2; export *:2 tmp; }
@@ -369,12 +370,8 @@ OPDD: "("reg_d") OK1bb"		is met_d=1 & reg_dd=7 & reg_d {tmp:2=inst_next; export 
 # operand = MEM[EA]
 # Rn = Rn + (is_byte ? 1 : 2)
 
-#OPD: "("reg_d")+ OK2a"		is byte=1 &met_d=2 & reg_dd!=7 &reg_d	{tmp:2=reg_d; reg_d=reg_d+1; export *:2 tmp; }
 OPD: "("reg_d")+ OK2a"		is byte=1 &met_d=2 & reg_dd<6 &reg_d	{tmp:2=reg_d; reg_d=reg_d+1; export *:2 tmp; }
 OPD: "("reg_d")+ OK2a"		is byte=1 &met_d=2 & reg_dd=6 &reg_d	{tmp:2=reg_d; reg_d=reg_d+2; export *:2 tmp; }
-
-
-
 OPD: "("reg_d")+ OK2b"		is byte=0 &met_d=2 & reg_dd!=7 &reg_d	{tmp:2=reg_d; reg_d=reg_d+2; export *:2 tmp; }
 
 OPDD: "("reg_d")+ OK2a"		is byte=1 &met_d=2 & reg_dd<6 &reg_d	{tmp:2=reg_d; reg_d=reg_d+1; export *:2 tmp; }
@@ -421,8 +418,10 @@ OPD: "-("reg_d") OK4a"	is byte=1 & met_d=4 & reg_dd<6 & reg_d 	{reg_d=reg_d-1; e
 OPD: "-("reg_d") OK4c"	is byte=1 & met_d=4 & reg_dd=6 & reg_d 	{reg_d=reg_d-2; export *:2 reg_d;}
 OPD: "-("reg_d") OK4b"	is byte=0 & met_d=4 & reg_d 	{reg_d=reg_d-2; export *:2 reg_d;}
 
-OPDD: "-("reg_d") OK4aa"	is byte=1 & met_d=4 & reg_d 	{reg_d=reg_d-1; export *:2 reg_d;}
+OPDD: "-("reg_d") OK4aa"	is byte=1 & met_d=4 & reg_dd<6 & reg_d 	{reg_d=reg_d-1; export *:2 reg_d;}
+OPDD: "-("reg_d") OK4cc"	is byte=1 & met_d=4 & reg_dd=6 & reg_d 	{reg_d=reg_d-2; export *:2 reg_d;}
 OPDD: "-("reg_d") OK4bb"	is byte=0 & met_d=4 & reg_d 	{reg_d=reg_d-2; export *:2 reg_d;}
+
 
 # MODE5: (autodecrement deferred)
 # Rn = Rn - 2
@@ -600,9 +599,7 @@ V = (((old ^ comb) & 0x80000000)!=0);
 
 # ############ DOUBLE OPS & OPD ########################
 
-#:MOV OPS,OPD	is (kodas_s=0x1 & reg_dd & met_d)...& OPS & OPD {build OPS;tmp:2=OPS;build OPD;N=((tmp & 0x8000)!=0);FLZ(tmp); OPD = tmp; V=0;		PCFIX(OPD:2,reg_dd:1,met_d:1);}
 :MOV OPS,OPD	is (kodas_s=0x1 & reg_dd & met_d)...& OPS & OPD {build OPS;build OPD;OPD=OPS;FLZ(OPD); V=0;N=((OPD & 0x8000)!=0);					PCFIX(OPD:2,reg_dd:1,met_d:1);}
-
 :MOVB OPS,OPD 	is (kodas_s=0x9 & met_d=0)...  & OPD & OPS	{build OPS;tmp:2=OPS;build OPD;OPD=sext(tmp[0,8]); FLZ(tmp&0xFF); N=((tmp&0x80)!=0); V=0;}
 :MOVB OPS,OPD 	is (kodas_s=0x9 & met_d!=0)... & OPD & OPS	{build OPS;build OPD;OPD[0,8]=OPS[0,8]; FLZ(OPS&0xFF); N=((OPS&0x80)!=0); V=0;}
 
@@ -611,7 +608,7 @@ V = (((old ^ comb) & 0x80000000)!=0);
 :SUB OPS,OPD 	is (kodas_s=0xE & met_d & reg_dd)... & OPS & OPD				{build OPS;build OPD;SUB_FLAGS(OPS,OPD);OPD=OPD-OPS;FLN(OPD);		PCFIX(OPD:2,reg_dd:1,met_d:1);}
 :ADD OPS,OPD 	is (kodas_s=0x6 & met_d & reg_dd)... & OPS & OPD				{build OPS;build OPD;ADD_FLAGS(OPS,OPD);OPD=OPD+OPS;FLN(OPD);		PCFIX(OPD:2,reg_dd:1,met_d:1);}
 :BIT OPS,OPD 	is (kodas_s=0x3)... & OPS & OPD				{build OPS;build OPD;tmp:2=OPS&OPD;FLN(tmp);FLZ(tmp);V=0;}
-:BITB OPS,OPD 	is (kodas_s=0xB)... & OPS & OPD				{build OPS;build OPD;tmp:2=OPS&OPD;FLNB(tmp);FLZ(tmp&0xFF);V=0;}
+:BITB OPS,OPD 	is (kodas_s=0xB)... & OPS & OPD				{build OPS;build OPD;tmp:2=OPS&OPD&0xFF;FLNB(tmp);FLZ(tmp);V=0;}
 :BIC OPS,OPD 	is (kodas_s=0x4)... & OPS & OPD				{build OPS;build OPD;OPD=(~OPS) & OPD;FLZ(OPD);FLN(OPD); V=0;}
 :BICB OPS,OPD 	is (kodas_s=0xC)... & OPS & OPD				{build OPS;build OPD;OPD[0,8]=(~OPS[0,8])&OPD[0,8];FLZ(OPD&0x00FF);FLNB(OPD); V=0;}
 
@@ -628,7 +625,6 @@ V = (((old ^ comb) & 0x80000000)!=0);
 :DEC OPDD		is (kodas_s=0 & met_s=5 &reg_s=3)... &OPDD	{V=(OPDD==0x8000);OPDD=OPDD-1;FLZ(OPDD);FLN(OPDD);}
 :DECB OPDD		is (kodas_s=8 & met_s=5 &reg_s=3)... &OPDD	{tmp0:2=OPDD&0xFF00;OPDD=OPDD&0xFF;V=(OPDD==0x80);OPDD=(OPDD-1)&0xFF;FLZ(OPDD);FLNB(OPDD);OPDD=OPDD|tmp0;}
 :NEG OPDD		is (kodas_s=0 & met_s=5 &reg_s=4)... &OPDD	{
-#OPDD=-OPDD; FLZ(OPDD); V=(OPDD==0x8000); FLN(OPDD); C=(OPDD!=0);
     OPDD = (~OPDD + 1) & 0xFFFF;
     
     FLZ(OPDD);                    # Z = (OPDD == 0)
@@ -699,9 +695,11 @@ OPJ: "@("reg_d")+ okJ3"  	is met_d=3 & reg_d						{tmp:2=*:2 reg_d; reg_d=reg_d+
 OPJ: "@#"imm16" okJ3pc" 	is met_d=3 & reg_d=7; imm16 			{tmp:2=imm16; export tmp;}
 OPJ: "-("reg_d") okJ4"   	is met_d=4 & reg_d						{reg_d=reg_d-2; export reg_d;}						# mode 4 -(Rn): EA=Rn (post-decrement), zero deref
 OPJ: "@-("reg_d") okJ5"  	is met_d=5 & reg_d						{reg_d=reg_d-2; tmp:2=*:2 reg_d; export tmp;}		# mode 5 @-(Rn): EA=MEM[Rn], one deref (intrinsic)
+
 # mode 6 for PC (R7) =[PC+4+X]
 OPJ: imm16"("reg_d") okJ6"	is met_d=6 & reg_dd!=7 & reg_d ;imm16	{tmp:2=imm16+reg_d; export tmp;}					# mode 6 X(Rn): EA=Rn+X, zero deref
 OPJ: REL16" okJ6r"       	is met_d=6 & reg_d=7 ;REL16				{tmp:2=REL16; export tmp;}							# mode 6, reg=PC: "JMP label" -> EA=resolved address directly
+
 # mode 7 for PC (R7) =[[PC+4+X]]
 OPJ: "@"imm16"("reg_d") okJ7" is met_d=7 & reg_dd!=7 & reg_d ;imm16	{tmp:2=imm16+reg_d; tmp2:2=*:2 tmp; export tmp2;}	# mode 7 @X(Rn): EA=MEM[Rn+X], one deref (intrinsic)
 OPJ: "@"REL16" okJ7r"    	is met_d=7 & reg_d=7 ;REL16				{tmp:2=REL16; tmp2:2=*:2 tmp; export tmp2;}			# mode 7, reg=PC: "JMP @label" -> EA=MEM[resolved address]
@@ -750,7 +748,7 @@ OPJ: "@"REL16" okJ7r"    	is met_d=7 & reg_d=7 ;REL16				{tmp:2=REL16; tmp2:2=*:
 #:MTPI OPDD		is kodas=0x36 ... & OPDD {tmpv:2=0; pop(tmpv); OPDD=tmpv; N=((tmpv&0x8000)!=0); Z=(tmpv==0); V=0;}		#Move to previous I space: Dest <- (SP)+
 :MTPD OPDD		is kodas=0x36 ... & OPDD {tmpv:2=0; pop(tmpv); OPDD=tmpv; N=((tmpv&0x8000)!=0); Z=(tmpv==0); V=0;}		#Move to previous D space: Dest <- (SP)+
 
-:TSTSET OPDD	is kodas=0x3A... & OPDD {tmpv:2=OPDD; N=((tmpv&0x8000)!=0); Z=(tmpv==0); V=0; C=((tmpv&1)!=0); OPDD=1; R0=tmpv;}
+:TSTSET OPDD	is kodas=0x3A... & OPDD {tmpv:2=OPDD; N=((tmpv&0x8000)!=0); Z=(tmpv==0); V=0; C=((tmpv&1)!=0); OPDD=OPDD&1; R0=tmpv;}
 :WRTLCK OPDD	is kodas=0x3E... & OPDD {OPDD=R0; N=((R0&0x8000)!=0); Z=(R0==0); V=0;}
 
 
