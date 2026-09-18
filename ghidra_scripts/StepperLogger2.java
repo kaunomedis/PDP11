@@ -107,7 +107,23 @@ public class StepperLogger2 extends GhidraScript {
 
             if (instrText.trim().startsWith("HALT")) {
                 log.println("Reached HALT at PC=0x" + Long.toHexString(pc) + " after " + step + " steps - stopping (like Ghidra's Debugger would).");
-                break;
+                
+				 try {
+                    byte[] fullRam = emu.readMemory(toAddr(0x0000), 0x10000);
+                    java.io.FileOutputStream fos = new java.io.FileOutputStream("C:/GHIDRA/ram_dump_at_halt.bin");
+                    fos.write(fullRam);
+                    fos.close();
+                    log.println("Full 64K RAM dumped to C:/GHIDRA/ram_dump_at_halt.bin");
+                } catch (Exception ramEx) {
+                    log.println("RAM dump failed: " + ramEx);
+                }
+				
+				
+				
+				
+				
+				
+				break;
             }
 
 

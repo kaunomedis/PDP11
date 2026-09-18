@@ -164,9 +164,7 @@ RELN:	reloc	is nnn	[reloc = (inst_next-nnn*2)	& 0xffff;]		{tmp:2 = reloc; export
 :step3		is imm16=0x0f	{R0=R0;}
 
 :NOP		is imm16=0x0A0	{R0=R0;}
-:HALT		is imm16=0		{
-push(PS);push(PC);
-tmp:2=0x28; PC=*:2 tmp; tmp=0x2A; PS=*:2 tmp; goto [PC];}
+:HALT		is imm16=0		{push(PS);push(PC);tmp:2=0x28; PC=*:2 tmp; tmp=0x2A; PS=*:2 tmp; goto [PC];}
 :WAIT		is imm16=1		{R0=R0;}#{PC=inst_next; goto [PC-2];}
 :CLC		is imm16=0x0A1	{C=0;}
 :CLV		is imm16=0x0A2	{V=0;}
@@ -329,7 +327,7 @@ OPS: REL16"_OK6b"			is met_s=6 & reg_s=7								;REL16	{export  *:2 REL16;}
 # ^^--nerodo label
 
 
-OPS: REL32L"_OK6c"			is met_s=6 & met_d=6						& reg_ss=7					;REL32L	{tmp:2 = REL32L; export *:2 tmp;}
+OPS: REL32L" OK6c"			is met_s=6 & met_d=6						& reg_ss=7					;REL32L	{tmp:2 = REL32L; export *:2 tmp;}
 OPS: REL32L"_OK6d"			is met_s=6 & met_d=7						& reg_ss=7					;REL32L	{tmp:2 = REL32L; export *:2 tmp;}
 OPS: imm32L"("reg_s")_OK6e"	is met_s=6 & met_d=6						& reg_ss!=7 & reg_s			;imm32L	{tmp:2 = imm32L+reg_s; export *:2 tmp;}
 OPS: imm32L"("reg_s")_OK6f"	is met_s=6 & met_d=7						& reg_ss!=7 & reg_s			;imm32L	{tmp:2 = imm32L+reg_s; export *:2 tmp;}
@@ -386,7 +384,7 @@ OPD: "#"imm32H" NK2B"	is met_d=2 & met_s=2 & reg_s=7 &  reg_d=7	;imm32H {tmp:2 =
 OPD: "#"imm32H" NK2C"	is met_d=2 & met_s=6 &reg_s!=7 &  reg_d=7	;imm32H {tmp:2 = imm32H; export tmp;}
 OPD: "#"imm32H" NK2D" 	is met_d=2 & reg_s=7 & reg_d=7;imm32H			{tmp:2 = imm32H; export tmp;}
 OPD: "#"imm16" NK2E" 	is met_d=2 & met_s=0 & reg_s=7 & reg_d=7;imm16	{tmp:2 = imm16; export tmp;}
-OPD: "#"imm32H" NK2F"	is met_d=2 & met_s=7 &reg_s!=7 & reg_d=7 & reg_d	;imm32H {tmp:2 = imm32H; reg_d=reg_d+2; export tmp;}
+OPD: "#"imm32H" NK2F"	is met_d=2 & met_s=7 &reg_s!=7 & reg_d=7 & reg_d	;imm32H {tmp:2 = imm32H; export tmp;}
 
 
 # MODE3: (autoincrement deferred)
@@ -472,7 +470,7 @@ OPDD: "@"REL16" ok7f" 		is met_d=7 & reg_dd=7 & reg_d			;REL16	{tmp:2 = REL16; e
 
 ######### XOR SOB MUL DIV ASH ASHC - too complicated to understand ###################################
 :XOR reg_s,OPD	is (kodas_s=7 &met_s=4 & reg_s) ...& OPD {tmp:2=reg_s;build OPD; OPD=OPD^tmp; FLZ(OPD);FLN(OPD);V=0;}
-:SOB reg_s,RELN	is kodas_s=7 &met_s=7 & reg_s & RELN &nnn {reg_s=reg_s-1;if (reg_s==0) goto inst_next;goto [RELN];} # SOB RRR,NNN NNN : R := R – 1; IF (R != 0) THEN PC := PC – 2 * NN
+:SOB reg_s,RELN	is kodas_s=7 &met_s=7 & reg_s & RELN &nnn {reg_s=reg_s-1;if (reg_s==0) goto inst_next;goto [RELN];}
 
 :MUL OPD,reg_s  is (kodas_s=7 & met_s=0 & reg_s & reg_lo) ... & OPD  { ### kodel susikeite OPD ir OPS?
     prod:4 = sext(reg_s) * sext(OPD);
@@ -715,7 +713,7 @@ OPJ: "@"REL16" okJ7r"    	is met_d=7 & reg_d=7 ;REL16				{tmp:2=REL16; tmp2:2=*:
 
 
 :CALL OPJ is (kodas_s=0 & met_s=4 & reg_s=7) ... & OPJ		{tmp:2=inst_next; push(tmp);call[OPJ];}
-:JMP OPJ       is (kodas_s=0 & met_s=0 & reg_s=1)... & OPJ {PC=OPJ; goto[PC];}
+:JMP OPJ  is (kodas_s=0 & met_s=0 & reg_s=1) ... & OPJ		{PC=OPJ; goto[PC];}
 
 ############################ RETURN ##########################################
 :RETURN		is imm16=0x87 {pop(PC);return [PC];}
