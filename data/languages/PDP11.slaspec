@@ -64,7 +64,17 @@ C = PS[0,1]
 macro CHKNZ(a){N=(a & 0x8000)!=0;Z=(a==0);}
 macro V_CxorN(){V=C ^^ N;}
 macro ADD_FLAGS(ss,dd){ts=(ss & 0x8000)!=0;td=(dd & 0x8000)!=0;tr=(((ss+dd) & 0x8000)!=0);Z=((ss+dd)==2:0);	V=((!(ts ^^ td)) && (tr ^^ td));C=((ts && td)||(ts ^^ td) && (!tr));}
-macro SUB_FLAGS(ss,dd){ts=(ss & 0x8000)!=0;td=(dd & 0x8000)!=0;tr=(((ss-dd) & 0x8000)!=0);Z=((ss-dd)==2:0);	V=((ts ^^ td) && (!(tr ^^ td)));C=((ts && (!td))||((!(ts ^^ td)) && tr));N=tr;}
+#macro SUB_FLAGS(ss,dd){ts=(ss & 0x8000)!=0;td=(dd & 0x8000)!=0;tr=(((ss-dd) & 0x8000)!=0);Z=((ss-dd)==2:0);	V=((ts ^^ td) && (!(tr ^^ td)));C=((ts && (!td))||((!(ts ^^ td)) && tr));N=tr;}
+macro SUB_FLAGS(ss,dd){
+    ts=(ss & 0x8000)!=0; td=(dd & 0x8000)!=0;
+    tr=(((dd-ss) & 0x8000)!=0);
+    Z=((dd-ss)==0);
+    V=((ts^^td) && (ts==tr));
+    C=((ts && (!td))||((ts==td) && tr));
+    N=tr;
+}
+
+
 macro CMP_FLAGS(ss,dd){ts=(ss & 0x8000)!=0;td=(dd & 0x8000)!=0;tr=(((ss-dd) & 0x8000)!=0);Z=(ss==dd);		V=((ts ^^ td) && (!(tr ^^ td)));C=(((!ts) && td)||((!(ts ^^ td)) && tr));N=tr;}
 macro FLZ(register){Z=(register==0);}
 
@@ -649,7 +659,14 @@ V = (((old ^ comb) & 0x80000000)!=0);
 :ADC OPDD		is (kodas_s=0 & met_s=5 &reg_s=5)... &OPDD	{local tmp:2=PS&1;V=(OPDD==0x7FFF)&(tmp==1);C=(OPDD==0xFFFF)&(tmp==1);OPDD=OPDD+tmp;FLZ(OPDD);FLN(OPDD);}
 :ADCB OPDD		is (kodas_s=8 & met_s=5 &reg_s=5)... &OPDD	{local tmp0:2=OPDD&0xFF;local tmp1:2=OPDD&0xFF00;local tmp:2=PS&1;V=(tmp0==0x7F)&(tmp==1);C=(tmp0==0xFF)&(tmp==1);tmp0=(tmp0+tmp)&0xFF;FLZ(tmp0);FLNB(tmp0);OPDD=tmp0|tmp1;}
 :SBC OPDD 		is (kodas_s=0 & met_s=5 &reg_s=6)... &OPDD	{V=((OPDD==0x8000)&((PS&1)==1));tmp=OPDD-(PS&1);C=((OPDD==0)&((PS&1)==1));OPDD=tmp;FLN(OPDD);FLZ(OPDD);}
-:SBCB OPDD 		is (kodas_s=8 & met_s=5 &reg_s=6)... &OPDD	{local tmp1=OPDD & 0xFF; local tmp2=OPDD&0xFF00;V=((tmp1==0x80)&((PS&1)==1));C=((tmp1==0)&((PS&1)==1));FLNB(tmp1);FLZ(tmp1);OPDD=tmp1|tmp2;}
+:SBCB OPDD 		is (kodas_s=8 & met_s=5 &reg_s=6)... &OPDD	{
+
+local tmp_c:2=PS&1;
+local tmp1=OPDD & 0xFF; local tmp2=OPDD&0xFF00;V=((tmp1==0x80)&(tmp_c==1));C=((tmp1==0)&(tmp_c==1));
+tmp1=(tmp1-tmp_c)&0xFF;
+FLNB(tmp1);FLZ(tmp1);
+
+OPDD=tmp1|tmp2;}
 
 :ROR OPDD  		is (kodas_s=0 & met_s=6 &reg_s=0)... &OPDD	{
 

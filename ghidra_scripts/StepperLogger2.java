@@ -81,7 +81,25 @@ public class StepperLogger2 extends GhidraScript {
 
             StringBuilder line = new StringBuilder();
             line.append(String.format("[%3d] PC=%04X  %-28s", step, pc, instrText));
-            line.append(String.format(" R0=%04X R1=%04X R2=%04X R3=%04X R4=%04X R5=%04X SP=%04X PS=%04X",
+            //line.append(String.format(" R0=%04X R1=%04X R2=%04X R3=%04X R4=%04X R5=%04X SP=%04X PS=%04X",
+            //    emu.readRegister("R0").longValue() & 0xFFFF,
+            //    emu.readRegister("R1").longValue() & 0xFFFF,
+            //    emu.readRegister("R2").longValue() & 0xFFFF,
+            //    emu.readRegister("R3").longValue() & 0xFFFF,
+            //    emu.readRegister("R4").longValue() & 0xFFFF,
+            //    emu.readRegister("R5").longValue() & 0xFFFF,
+            //    emu.readRegister("SP").longValue() & 0xFFFF,
+            //    emu.readRegister("PS").longValue() & 0xFFFF
+            //));
+			
+			
+			long psVal = emu.readRegister("PS").longValue() & 0xFFFF;
+            String nzvc = String.format("[%s%s%s%s]",
+                (psVal & 0x8) != 0 ? "N" : ".",
+                (psVal & 0x4) != 0 ? "Z" : ".",
+                (psVal & 0x2) != 0 ? "V" : ".",
+                (psVal & 0x1) != 0 ? "C" : ".");
+            line.append(String.format(" R0=%04X R1=%04X R2=%04X R3=%04X R4=%04X R5=%04X SP=%04X PS=%04X%s",
                 emu.readRegister("R0").longValue() & 0xFFFF,
                 emu.readRegister("R1").longValue() & 0xFFFF,
                 emu.readRegister("R2").longValue() & 0xFFFF,
@@ -89,8 +107,20 @@ public class StepperLogger2 extends GhidraScript {
                 emu.readRegister("R4").longValue() & 0xFFFF,
                 emu.readRegister("R5").longValue() & 0xFFFF,
                 emu.readRegister("SP").longValue() & 0xFFFF,
-                emu.readRegister("PS").longValue() & 0xFFFF
+                psVal, nzvc
             ));
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
             line.append(" | ");
             for (long addr : watchAddrs) {
                 byte[] b = emu.readMemory(toAddr(addr), 2);
