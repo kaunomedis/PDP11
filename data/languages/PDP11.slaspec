@@ -23,7 +23,7 @@ define register offset=0x000A size=2 [ R5 ];
 define register offset=0x000C size=2 [ SP ]; #R6 , stekas mazejantis
 define register offset=0x000E size=2 [ PC ]; #R7
 define register offset=0x0010 size=2 [ PS ]; # STATUS FLAGS & INT LEVEL
-
+define register offset=0x0012 size=2 [ R9 ]; # internal register R8,R9,R10,R11,R12,R13,Q
 
 
 
@@ -316,16 +316,22 @@ OPS: "@#"imm32L" OK3h"		is met_s=3 & reg_ss=7 & (met_d=6 | met_d=7)							;imm32
 # operand = MEM[EA]
 OPS: "-("reg_s") OK4a"		is byte=1 & met_s=4 & reg_ss<6 & reg_s {reg_s=reg_s-1; export *:2 reg_s;}
 OPS: "-("reg_s") OK4c"		is byte=1 & met_s=4 & reg_ss=6 & reg_s {reg_s=reg_s-2; export *:2 reg_s;}
+#OPS: "-("reg_s") OK4b"		is byte=0 & met_s=4 & reg_s {reg_s=reg_s-2; export *:2 reg_s;}
+OPS: "-("reg_s") OK4b"		is byte=0 & met_s=4 & reg_ss!=7 & reg_s {reg_s=reg_s-2; export *:2 reg_s;}
+OPS: "-(PC) OK4pc"	is byte=0 & met_s=4 & reg_ss=7 & reg_s	{tmp:2=inst_next-2; PC=tmp; export *:2 tmp;}
 
-
-OPS: "-("reg_s") OK4b"		is byte=0 & met_s=4 & reg_s {reg_s=reg_s-2; export *:2 reg_s;}
 
 # MODE5: (autodecrement deferred)
 # Rn = Rn - 2
 # EA_ptr = Rn
 # EA = MEM[EA_ptr]
 # operand = MEM[EA]
-OPS: "@-("reg_s")_OK5a"		is met_s=5 & reg_s {reg_s=reg_s-2; tmp:2 = *:2 reg_s; export *:2 tmp;}
+#OPS: "@-("reg_s")_OK5a"		is met_s=5 & reg_s {reg_s=reg_s-2; tmp:2 = *:2 reg_s; export *:2 tmp;}
+
+OPS: "@-(PC)_OK5pc"		is met_s=5 & reg_ss=7 & reg_s	{tmp:2=inst_next-2; PC=tmp; tmp2:2=*:2 tmp; export *:2 tmp2;}
+OPS: "@-("reg_s")_OK5a"	is met_s=5 & reg_ss!=7 & reg_s	{reg_s=reg_s-2; tmp:2 = *:2 reg_s; export *:2 tmp;}
+
+
 
 # MODE6: (index)
 # EA = Rn + offset
@@ -405,7 +411,6 @@ OPD: "#"imm32H" NK2F"	is met_d=2 & met_s=7 &reg_s!=7 & reg_d=7 & reg_d	;imm32H {
 OPD: "@("reg_d")+ OK3a"		is met_d=3& reg_dd!=7 & (met_s=0 | met_s=1 | met_s=4 | met_s=5 |met_s=6 | met_s=7) & reg_d 		{tmp:2=*:2 reg_d; reg_d=reg_d+2; export *:2 tmp;}
 OPD: "@("reg_d")+ OK3b"		is met_d=3& reg_dd!=7 & (met_s=2 | met_s=3) & reg_s!=7 & reg_d 					{tmp:2=*:2 reg_d; reg_d=reg_d+2; export *:2 tmp;}
 OPD: "@("reg_d")+ OK3c"		is met_d=3& reg_dd!=7 & (met_s=2 | met_s=3) & reg_s=7 & reg_d 					{tmp:2=*:2 reg_d; reg_d=reg_d+2; export *:2 tmp;}
-#OPD: "@("reg_d")+ OK3d"	is met_d=3& reg_dd!=7 & (met_s=6 | met_s=7) & reg_d 							{tmp:2=*:2 reg_d; reg_d=reg_d+2; export *:2 tmp;}
 
 OPD: "@#"imm16" OK3e"		is met_d=3&  reg_dd=7 & (met_s=0 | met_s=1 | met_s=4 | met_s=5) & reg_d	;imm16	{tmp:2 = imm16;		export *:2 tmp;}
 OPD: "@#"imm16"_OK3f"		is met_d=3&  reg_dd=7 & (met_s=2 | met_s=3) &   reg_s!=7 & reg_d		;imm16	{tmp:2 = imm16;		export *:2 tmp;}
@@ -414,8 +419,8 @@ OPD: "@#"imm32H" OK3h"		is met_d=3&  reg_dd=7 & (met_s=6 | met_s=7) & reg_d=7			
 OPD: "@#"imm32H" OK3i"		is met_d=3&  reg_dd=7 & kodas_s!=1 &(met_s=6 | met_s=7)				;imm32H	{tmp:2 = imm32H;	export *:2 tmp;}
 
 
-OPDD: "@("reg_d")+ OK3a"	is met_d=3 & reg_dd!=7 & reg_d 			{tmp:2=*:2 reg_d; reg_d=reg_d+2; export *:2 tmp;}
-OPDD: "@#"imm16" OK3e"		is met_d=3 & reg_dd=7 & reg_d	;imm16	{tmp:2 =imm16; export *:2 tmp;}
+OPDD: "@("reg_d")+ OK3a"	is met_d=3 & reg_dd!=7 & reg_d 			{tmp:2=*:2 reg_d; reg_d=reg_d+2;	export *:2 tmp;}
+OPDD: "@#"imm16" OK3e"		is met_d=3 & reg_dd=7 & reg_d	;imm16	{tmp:2 =imm16; 						export *:2 tmp;}
 
 
 # MODE4: (autodecrement)
@@ -425,6 +430,9 @@ OPDD: "@#"imm16" OK3e"		is met_d=3 & reg_dd=7 & reg_d	;imm16	{tmp:2 =imm16; expo
 OPD: "-("reg_d") OK4a"	is byte=1 & met_d=4 & reg_dd<6 & reg_d 	{reg_d=reg_d-1; export *:2 reg_d;}
 OPD: "-("reg_d") OK4c"	is byte=1 & met_d=4 & reg_dd=6 & reg_d 	{reg_d=reg_d-2; export *:2 reg_d;}
 OPD: "-("reg_d") OK4b"	is byte=0 & met_d=4 & reg_d 	{reg_d=reg_d-2; export *:2 reg_d;}
+
+OPD: "-(PC) OK4pc"	is byte=0 & met_d=4 & reg_dd=7 & reg_d	{tmp:2=inst_next-2; PC=tmp; export *:2 tmp;}
+
 
 OPDD: "-("reg_d") OK4aa"	is byte=1 & met_d=4 & reg_dd<6 & reg_d 	{reg_d=reg_d-1; export *:2 reg_d;}
 OPDD: "-("reg_d") OK4cc"	is byte=1 & met_d=4 & reg_dd=6 & reg_d 	{reg_d=reg_d-2; export *:2 reg_d;}
@@ -436,8 +444,15 @@ OPDD: "-("reg_d") OK4bb"	is byte=0 & met_d=4 & reg_d 	{reg_d=reg_d-2; export *:2
 # EA_ptr = Rn
 # EA = MEM[EA_ptr]
 # operand = MEM[EA]
-OPD: "@-("reg_d") OK5a"		is met_d=5 & reg_d 	{reg_d=reg_d-2; tmp:2 = *:2 reg_d; export *:2 tmp;}
-OPDD: "@-("reg_d") OK5a"	is met_d=5 & reg_d 	{reg_d=reg_d-2; tmp:2 = *:2 reg_d; export *:2 tmp;}
+#OPD: "@-("reg_d") OK5a"		is met_d=5 & reg_d 	{reg_d=reg_d-2; tmp:2 = *:2 reg_d; export *:2 tmp;}
+#OPDD: "@-("reg_d") OK5a"	is met_d=5 & reg_d 	{reg_d=reg_d-2; tmp:2 = *:2 reg_d; export *:2 tmp;}
+
+OPD: "@-(PC) OK5dpc"		is met_d=5 & reg_dd=7 & reg_d	{tmp:2=inst_next-2; PC=tmp; tmp2:2=*:2 tmp; export *:2 tmp2;}
+OPD: "@-("reg_d") OK5a"		is met_d=5 & reg_dd!=7 & reg_d	{reg_d=reg_d-2; tmp:2 = *:2 reg_d; export *:2 tmp;}
+
+OPDD: "@-(PC) OK5ddpc"		is met_d=5 & reg_dd=7 & reg_d	{tmp:2=inst_next-2; PC=tmp; tmp2:2=*:2 tmp; export *:2 tmp2;}
+OPDD: "@-("reg_d") OK5a"	is met_d=5 & reg_dd!=7 & reg_d	{reg_d=reg_d-2; tmp:2 = *:2 reg_d; export *:2 tmp;}
+
 
 # MODE6: (index)
 # EA = Rn + offset
@@ -449,8 +464,9 @@ OPD: REL32H" OK6c"			is met_d=6 & met_s=6 & reg_d=7				;REL32H	{tmp:2 = REL32H;	
 OPD: REL32H" OK6d"			is met_d=6 & met_s=7 & reg_d=7				;REL32H	{tmp:2 = REL32H;		export *:2 tmp;}
 OPD: REL32H" OK6g"			is met_d=6 & met_s=3 & reg_d=7				;REL32H	{tmp:2 = REL32H;		export *:2 tmp;}
 
-OPD: imm32H"("reg_d") OK6e"	is met_d=6 & met_s=6 & reg_d				;imm32H	{tmp:2 = imm32H+reg_d;	export *:2 tmp;}
-OPD: imm32H"("reg_d")?OK6f"	is met_d=6 & met_s=7 & reg_d				;imm32H	{tmp:2 = imm32H+reg_d;	export *:2 tmp;}
+OPD: imm32H"("reg_d") OK6e"	is met_d=6 & (met_s=6 | met_s=7) & reg_d		;imm32H	{tmp:2 = imm32H+reg_d;	export *:2 tmp;}
+#OPD: imm32H"("reg_d")?OK6f"	is met_d=6 & met_s=7 & reg_d				;imm32H	{tmp:2 = imm32H+reg_d;	export *:2 tmp;}
+
 OPD: imm32H(reg_d)"_OK6h"	is met_d=6 & (met_s=3 | met_s=2) & reg_s=7 & reg_dd!=7 & reg_d	;imm32H	{tmp:2 = imm32H+reg_d;		export *:2 tmp;}
 
 OPDD: imm16"("reg_d") OK6aa"	is met_d=6 & reg_d						;imm16	{tmp:2 = imm16 + reg_d;	export *:2 tmp;}
@@ -695,6 +711,8 @@ oldbit15:2=OPDD&0x8000; OPDD=(OPDD<<1)|zext(C); C=(oldbit15!=0); FLZ(OPDD); FLN(
 
 ############################ JMP/CALL/JSR ################################################################
 # Jumpai (PC registras, R7)
+# 0 - mode error, int to vector 00004 ? 00010 octal?
+# 1 - jmp to register.
 #          543210
 # 2 - #X   010 111 = 17
 # 3 - @#X  011 111 = 1f
@@ -702,18 +720,18 @@ oldbit15:2=OPDD&0x8000; OPDD=(OPDD<<1)|zext(C); C=(oldbit15!=0); FLZ(OPDD); FLN(
 # 7 - @X   111 111 = 3f
 
 OPJ: ">"reg_d" okJ0"		is met_d=0 & reg_d						{export reg_d;}										# mode 0: Rn tiesiogiai? JMP MODE=0 is ERROR!
-OPJ: "@"reg_d" okJ1"        is met_d=1 & reg_d					{export reg_d;}										# mode 1 (Rn): EA=Rn, zero deref
-OPJ: reg_d" okJ1pc"			is met_d=1 & reg_dd=7 & reg_d			{tmp:2=inst_next; export tmp;}
+OPJ: "@"reg_d" okJ1"        is met_d=1 & reg_d						{export reg_d;}										# mode 1 (Rn): EA=Rn, zero deref
+OPJ: "PC okJ1pc"			is met_d=1 & reg_d=7			{tmp:2=inst_next; export tmp;}
 OPJ: "("reg_d")+ okJ2"   	is met_d=2 & reg_dd!=7 & reg_d			{tmp:2=reg_d; reg_d=reg_d+2; export tmp;}			# mode 2 (Rn)+: EA=Rn (pre-increment value), zero deref
-OPJ: "#"imm16" okJ2i"    	is met_d=2 & reg_dd=7 & reg_d ;imm16	{tmp:2=imm16; reg_d=reg_d+2; export tmp;}			# mode 2, reg=PC: "JMP #imm" -> EA=imm16 literally
+OPJ: "#"imm16" okJ2i"    	is met_d=2 & reg_d=7 & reg_d ;imm16		{tmp:2=imm16; export tmp;}			# mode 2, reg=PC: "JMP #imm" -> EA=imm16 literally
 OPJ: "@("reg_d")+ okJ3"  	is met_d=3 & reg_d						{tmp:2=*:2 reg_d; reg_d=reg_d+2; export tmp;}		# mode 3 @(Rn)+: EA=MEM[Rn], one deref (intrinsic)
-OPJ: "@#"imm16" okJ3pc" 	is met_d=3 & reg_d=7; imm16 			{tmp:2=imm16; export tmp;}
+OPJ: "@#"imm16" okJ3pc" 	is met_d=3 & reg_d=7; imm16 			{tmp:2=imm16; export *:2 tmp;}
 OPJ: "-("reg_d") okJ4"   	is met_d=4 & reg_d						{reg_d=reg_d-2; export reg_d;}						# mode 4 -(Rn): EA=Rn (post-decrement), zero deref
 OPJ: "@-("reg_d") okJ5"  	is met_d=5 & reg_d						{reg_d=reg_d-2; tmp:2=*:2 reg_d; export tmp;}		# mode 5 @-(Rn): EA=MEM[Rn], one deref (intrinsic)
 
 # mode 6 for PC (R7) =[PC+4+X]
 OPJ: imm16"("reg_d") okJ6"	is met_d=6 & reg_dd!=7 & reg_d ;imm16	{tmp:2=imm16+reg_d; export tmp;}					# mode 6 X(Rn): EA=Rn+X, zero deref
-OPJ: REL16" okJ6r"       	is met_d=6 & reg_d=7 ;REL16				{tmp:2=REL16; export tmp;}							# mode 6, reg=PC: "JMP label" -> EA=resolved address directly
+OPJ: REL16			       	is met_d=6 & reg_d=7 ;REL16				{R9=REL16; export R9;}							# mode 6, reg=PC: "JMP label" -> EA=resolved address directly
 
 # mode 7 for PC (R7) =[[PC+4+X]]
 OPJ: "@"imm16"("reg_d") okJ7" is met_d=7 & reg_dd!=7 & reg_d ;imm16	{tmp:2=imm16+reg_d; tmp2:2=*:2 tmp; export tmp2;}	# mode 7 @X(Rn): EA=MEM[Rn+X], one deref (intrinsic)
