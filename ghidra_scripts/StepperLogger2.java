@@ -57,6 +57,8 @@ public class StepperLogger2 extends GhidraScript {
             protected void processWrite(AddressSpace space, long offset, int size, byte[] values) {
                 if (space.getAddress(offset).equals(xbufAddrObj)) {
                     screen.append((char) (values[0] & 0xFF));
+					
+					//screen.append(String.format("%02X ", values[0] & 0xFF));
                 }
 				if (space.getName().equals("ram") && offset >= 0x1700 && offset <= 0x17ce) {
 

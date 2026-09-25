@@ -109,16 +109,28 @@ public class VT52Terminal3Thread extends GhidraScript {
             java.util.Arrays.fill(grid[ROWS - 1], ' ');
         }
 
-        private void putRawChar(char c) {
-            grid[curRow][curCol] = c;
-            curCol++;
-            if (curCol >= COLS) {
-                curCol = 0;
-                curRow++;
-                if (curRow >= ROWS) { scrollUp(); curRow = ROWS - 1; }
-            }
+//        private void putRawChar(char c) {
+//            grid[curRow][curCol] = c;
+//            curCol++;
+//            if (curCol >= COLS) {
+//                curCol = 0;
+//                curRow++;
+//                if (curRow >= ROWS) { scrollUp(); curRow = ROWS - 1; }
+//            }
+//        }
+private void putRawChar(char c) {
+    grid[curRow][curCol] = c;
+    curCol++;
+    if (curCol >= COLS) {
+        curCol = 0;
+        if (curRow < ROWS - 1) {
+            curRow++;
         }
-
+        // else: stay on the last row, no scroll - auto-wrap from writing a
+        // single character should never itself trigger a scroll. Real
+        // linefeeds (lfeed/revlf) still scroll normally, unaffected by this.
+    }
+}
         private void putEscapeAtomic(String s) {
             if (curCol + s.length() > COLS) {
                 curCol = 0;
