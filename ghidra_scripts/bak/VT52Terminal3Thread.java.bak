@@ -109,22 +109,28 @@ public class VT52Terminal3Thread extends GhidraScript {
             java.util.Arrays.fill(grid[ROWS - 1], ' ');
         }
 
-        private void putRawChar(char c) {
-            grid[curRow][curCol] = c;
-            curCol++;
-            if (curCol >= COLS) {
-
-                curCol = 0;
-                curRow++;
-				
-				if (curRow == ROWS | curCol ==COLS) {}
-				else
-				{
-                if (curRow >= ROWS) { scrollUp(); curRow = ROWS - 1; }
-				}
-            }
+//        private void putRawChar(char c) {
+//            grid[curRow][curCol] = c;
+//            curCol++;
+//            if (curCol >= COLS) {
+//                curCol = 0;
+//                curRow++;
+//                if (curRow >= ROWS) { scrollUp(); curRow = ROWS - 1; }
+//            }
+//        }
+private void putRawChar(char c) {
+    grid[curRow][curCol] = c;
+    curCol++;
+    if (curCol >= COLS) {
+        curCol = 0;
+        if (curRow < ROWS - 1) {
+            curRow++;
         }
-
+        // else: stay on the last row, no scroll - auto-wrap from writing a
+        // single character should never itself trigger a scroll. Real
+        // linefeeds (lfeed/revlf) still scroll normally, unaffected by this.
+    }
+}
         private void putEscapeAtomic(String s) {
             if (curCol + s.length() > COLS) {
                 curCol = 0;
@@ -241,22 +247,13 @@ public class VT52Terminal3Thread extends GhidraScript {
             if (r0 == 0x07) { return; }
             if (r0 == 0x7F) { putRawChar(NUL_MARKER); return; }
 
-            // ESC must always be recognized, in either mode - once 15IE mode
-            // activates (via the game's own ESC E, sent once near the start),
-            // every subsequent ESC byte still needs to start a fresh escape
-            // sequence (ESC Y row col for cursor positioning, used constantly
-            // throughout). Without this check running unconditionally, ESC
-            // bytes fall through ch15ie's "default: return false" and get
-            // printed as literal characters instead - breaking every cursor
-            // move for the rest of the program's run.
-            if (r0 == 0x1B) { escState = 1; return; }
-
             if (mode15IE) {
                 if (ch15ie(r0)) return;
             } else {
                 if (r0 == 0x08) { cleft(); return; }
                 if (r0 == 0x09) { htab(); return; }
                 if (r0 == 0x0B || r0 == 0x0C) { lfeed(); return; }
+                if (r0 == 0x1B) { escState = 1; return; }
             }
 
             putCharProcessed(r0);
@@ -582,14 +579,15 @@ public class VT52Terminal3Thread extends GhidraScript {
 						byte[] c = emuHelper.readMemory(fpswAddr, 2);
                         int val = (c[0] & 0xFF) | ((c[1] & 0xFF) << 8);
 						
-						String result = String.format("%04x", val);
-						String key = askString("FP SW Input", "Hex Value (blank = skip this time):", result);
-						if (key != null && !key.isEmpty()) {
-							if(key.length()>1){
-							val=(int) (key.charAt(0) & 0xFF) | (key.charAt(1) & 0xFF <<8);}
-							else {val=(int) key.charAt(0);}
-							emuHelper.writeMemoryValue(fpswAddr, 2, val);
-							}		
+	String result = String.format("%04x", val);
+	String key = askString("FP SW Input", "Hex Value (blank = skip this time):", result);
+    if (key != null && !key.isEmpty()) {
+		if(key.length()>1){
+		val=(int) (key.charAt(0) & 0xFF) | (key.charAt(1) & 0xFF <<8);}
+		else {val=(int) key.charAt(0);}
+		
+		emuHelper.writeMemoryValue(fpswAddr, 2, val);
+		}
 					} catch (Exception e) { /* best effort */ }
             }}
 
