@@ -33,8 +33,6 @@ import java.awt.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.io.FileWriter;
-import java.io.PrintWriter;
 
 public class VT52Terminal3Thread extends GhidraScript {
 
@@ -387,7 +385,6 @@ public class VT52Terminal3Thread extends GhidraScript {
         JButton stopDumpButton = new JButton("Stop && Dump State");
         JButton pauseButton = new JButton("Pause");
         JButton dumpRamButton = new JButton("Dump RAM to File");
-        JButton stepLogButton = new JButton("Start Step Logging");
         // (liveRegsLabel removed - updating it every single step flooded Swing's
         // event queue and throttled the emulation; the Pause button's one-shot
         // console dump already covers this need without the per-step overhead.)
@@ -405,37 +402,6 @@ public class VT52Terminal3Thread extends GhidraScript {
 
         final boolean[] requestStop = { false };
         stopDumpButton.addActionListener(e -> requestStop[0] = true);
-
-        // Click while the game is running normally, right when you see the
-        // moment you want to inspect (e.g. the title screen about to render)
-        // - no need to log all 200,000+ steps from the very start. File is
-        // opened lazily, only on the first actual click, so nothing gets
-        // created if this is never used. MAX_LOGGED_STEPS is a safety cap in
-        // case Stop is forgotten - without it, this could otherwise run
-        // forever and produce an enormous file.
-        final boolean[] stepLoggingActive = { false };
-        final PrintWriter[] stepLogWriter = { null };
-        final int[] stepLogCount = { 0 };
-        final int MAX_LOGGED_STEPS = 5000;
-        stepLogButton.addActionListener(e -> {
-            stepLoggingActive[0] = !stepLoggingActive[0];
-            if (stepLoggingActive[0]) {
-                try {
-                    stepLogWriter[0] = new PrintWriter(new FileWriter("C:/GHIDRA/step_log.txt"));
-                    stepLogCount[0] = 0;
-                    SwingUtilities.invokeLater(() -> stepLogButton.setText("Stop Step Logging"));
-                } catch (Exception logEx) {
-                    println("Could not open step_log.txt: " + logEx);
-                    stepLoggingActive[0] = false;
-                }
-            } else {
-                if (stepLogWriter[0] != null) {
-                    stepLogWriter[0].close();
-                    stepLogWriter[0] = null;
-                }
-                SwingUtilities.invokeLater(() -> stepLogButton.setText("Start Step Logging"));
-            }
-        });
 
         final boolean[] paused = { false };
 
@@ -547,7 +513,6 @@ public class VT52Terminal3Thread extends GhidraScript {
         topButtons.add(forceXcsrButton);
         topButtons.add(dumpRamButton);
         topButtons.add(stopDumpButton);
-        topButtons.add(stepLogButton);
         bottom.add(topButtons, BorderLayout.NORTH);
         JPanel lowerPanel = new JPanel(new java.awt.GridLayout(2, 1));
         lowerPanel.add(inputRow);
@@ -705,33 +670,6 @@ public class VT52Terminal3Thread extends GhidraScript {
                 Instruction instr = currentProgram.getListing().getInstructionAt(toAddr(pc));
                 String instrText = (instr != null) ? instr.toString() : "??";
 
-                if (!paused[0] && stepLoggingActive[0] && stepLogWriter[0] != null) {
-                    if (stepLogCount[0] >= MAX_LOGGED_STEPS) {
-                        // Safety cap reached - stop automatically rather than
-                        // risk an unbounded file if Stop was forgotten.
-                        stepLogWriter[0].println("--- MAX_LOGGED_STEPS reached, logging auto-stopped ---");
-                        stepLogWriter[0].close();
-                        stepLogWriter[0] = null;
-                        stepLoggingActive[0] = false;
-                        SwingUtilities.invokeLater(() -> stepLogButton.setText("Start Step Logging"));
-                    } else {
-                        stepLogWriter[0].println(String.format(
-                            "[%d] PC=%04X %-28s R0=%04X R1=%04X R2=%04X R3=%04X R4=%04X R5=%04X SP=%04X PS=%04X",
-                            stepLogCount[0], pc, instrText,
-                            emuHelper.readRegister("R0").longValue() & 0xFFFF,
-                            emuHelper.readRegister("R1").longValue() & 0xFFFF,
-                            emuHelper.readRegister("R2").longValue() & 0xFFFF,
-                            emuHelper.readRegister("R3").longValue() & 0xFFFF,
-                            emuHelper.readRegister("R4").longValue() & 0xFFFF,
-                            emuHelper.readRegister("R5").longValue() & 0xFFFF,
-                            emuHelper.readRegister("SP").longValue() & 0xFFFF,
-                            emuHelper.readRegister("PS").longValue() & 0xFFFF
-                        ));
-                        stepLogWriter[0].flush();
-                        stepLogCount[0]++;
-                    }
-                }
-
                 if (instrText.trim().startsWith("HALT")) {
                     String haltMsg = "Reached HALT at PC=0x" + Long.toHexString(pc);
                     SwingUtilities.invokeLater(() -> statusLabel.setText(haltMsg));
@@ -791,10 +729,6 @@ public class VT52Terminal3Thread extends GhidraScript {
             // normal stop, HALT, window closed, Stop&Dump button, or a
             // genuine crash/exception. Same dump format the Pause button uses.
             dumpState.accept("Stopped");
-
-            if (stepLogWriter[0] != null) {
-                stepLogWriter[0].close();
-            }
 
             screenLogic.stop();
             emuHelper.dispose();
