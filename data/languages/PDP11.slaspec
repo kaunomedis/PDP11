@@ -148,7 +148,7 @@ define token data_double_word (32)
 	#imm32=(0,31)
 	imm32H=(16,31)
 	rell32h=(16,31) signed
-	imm32L=(0,15)
+	#imm32L=(0,15)
 	rell32l=(0,15) signed
 ;
 
@@ -293,8 +293,8 @@ OPS: "#"imm16".OK2c"		is met_s=2 & reg_ss=7 & reg_s;imm16			{PC=PC+2; tmp:2=reg_
 # operand = MEM[EA]
 # Rn = Rn + 2
 
-OPS: "@("reg_s")+ OK3"		is met_s=3& reg_ss!=7 & reg_s			{PC=PC+2; tmp:2 = *:2 reg_s; tmp2=*:2 tmp; reg_s=reg_s+2; export tmp2;}
-OPS: "@#"imm16" OK3e"		is met_s=3 & reg_ss=7 	& reg_s;imm16	{PC=PC+2; tmp:2 = *:2 reg_s; tmp2=*:2 tmp; reg_s=reg_s+2; export tmp2;}
+OPS: "@("reg_s")+ OK3"		is met_s=3 & reg_ss!=7 & reg_s				{PC=PC+2; tmp:2 = *:2 reg_s; tmp2=*:2 tmp; reg_s=reg_s+2; export tmp2;}
+OPS: "@#"imm16" OK3e"		is met_s=3 & reg_ss=7 & reg_s	;imm16		{PC=PC+2; tmp:2 = *:2 reg_s; tmp2=*:2 tmp; reg_s=reg_s+2; export tmp2;}
 
 # MODE4: (autodecrement)
 # Rn = Rn - (is_byte ? 1 : 2)
@@ -318,9 +318,9 @@ OPS: "@-("reg_s") OK5"	is met_s=5 & reg_s	{PC=PC+2; reg_s=(reg_s-2)& 0xffff; tmp
 # MODE6: (index)
 # EA = Rn + offset
 # operand = MEM[EA]
-OPS: imm16"("reg_s") OK6"	is met_s=6 & reg_s														;imm16	{PC=PC+2; tmp:2 = imm16 +reg_s; export *:2 tmp;}
+OPS: imm16"("reg_s") OK6"	is met_s=6 & reg_s		;imm16			{PC=PC+2; tmp:2 = imm16 + reg_s; export *:2 tmp;}
 
-#OPS: REL16"_OK6b"	is met_s=6 & reg_s=7 & reg_s	;REL16 & imm16	{PC=PC+4; tmp:2 = imm16 + reg_s; export *:2 tmp;}
+#OPS: REL16"_OK6b"	is met_s=6 & reg_s=7 & reg_s	;REL16 & imm16	{PC=PC+2; tmp:2 = imm16 + reg_s; export *:2 tmp;}
 OPS: REL16"_OK6b"	is met_s=6 & reg_s=7			;REL16			{PC=PC+2; export  *:2 REL16;}
 
 OPS: REL32L" OK6c"			is met_s=6 & met_d=6						& reg_ss=7					;REL32L	{PC=PC+2; tmp:2 = REL32L; export *:2 tmp;}
@@ -365,12 +365,12 @@ OPDD: "("reg_d")+ OK2b"		is byte=0 &met_d=2 & reg_dd!=7 &reg_d	{PC=PC+2;tmp:2=re
 OPDD: "#"imm16" OK2c" is met_d=2 & reg_dd=7 & reg_d ;imm16 			{PC=PC+2;tmp:2=reg_d; reg_d=reg_d+2; export *:2 tmp; }
 
 # kaip su nekorektiskom PC (R7=reg_d=7) operacijom? ONLY FOR CMP/BIT etc. No move here.
+OPD: "#"imm16" NK2E" 	is met_d=2 & met_s=0 & reg_s=7 & reg_d=7;imm16		{tmp:2 = imm16; export tmp;}
 OPD: "#"imm16" NK2A"	is met_d=2 & reg_s!=7 &  reg_d=7 & reg_d	;imm16	{tmp:2 = imm16; export tmp;}
 OPD: "#"imm32H" NK2B"	is met_d=2 & met_s=2 & reg_s=7 &  reg_d=7	;imm32H {tmp:2 = imm32H; export tmp;}
-OPD: "#"imm32H" NK2C"	is met_d=2 & met_s=6 &reg_s!=7 &  reg_d=7	;imm32H {tmp:2 = imm32H; export tmp;}
+OPD: "#"imm32H" NK2C"	is met_d=2 & met_s=6 & reg_s!=7 &  reg_d=7	;imm32H {tmp:2 = imm32H; export tmp;}
 OPD: "#"imm32H" NK2D" 	is met_d=2 & reg_s=7 & reg_d=7;imm32H				{tmp:2 = imm32H; export tmp;}
-OPD: "#"imm16" NK2E" 	is met_d=2 & met_s=0 & reg_s=7 & reg_d=7;imm16		{tmp:2 = imm16; export tmp;}
-OPD: "#"imm32H" NK2F"	is met_d=2 & met_s=7 &reg_s!=7 & reg_d=7 & reg_d	;imm32H {tmp:2 = imm32H; export tmp;}
+OPD: "#"imm32H" NK2F"	is met_d=2 & met_s=7 & reg_s!=7 & reg_d=7 & reg_d	;imm32H {tmp:2 = imm32H; export tmp;}
 
 
 # MODE3: (autoincrement deferred)
