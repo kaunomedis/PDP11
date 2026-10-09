@@ -67,7 +67,7 @@ C = PS[0,1]
 ######### CPU FLAG MACROS ###################
 macro CHKNZ(a){N=(a & 0x8000)!=0;Z=(a==0);}
 macro V_CxorN(){V=C ^^ N;}
-macro ADD_FLAGS(ss,dd){ts=(ss & 0x8000)!=0;td=(dd & 0x8000)!=0;tr=(((ss+dd) & 0x8000)!=0);Z=((ss+dd)==2:0);	V=((!(ts ^^ td)) && (tr ^^ td));C=((ts && td)||(ts ^^ td) && (!tr));}
+macro ADD_FLAGS(ss,dd){ts=(ss & 0x8000)!=0;td=(dd & 0x8000)!=0;tr=(((ss+dd) & 0x8000)!=0);Z=((ss+dd)==0:2);	V=((!(ts ^^ td)) && (tr ^^ td));C=((ts && td)||(ts ^^ td) && (!tr));}
 #macro SUB_FLAGS(ss,dd){ts=(ss & 0x8000)!=0;td=(dd & 0x8000)!=0;tr=(((ss-dd) & 0x8000)!=0);Z=((ss-dd)==2:0);	V=((ts ^^ td) && (!(tr ^^ td)));C=((ts && (!td))||((!(ts ^^ td)) && tr));N=tr;}
 macro SUB_FLAGS(ss,dd){
     ts=(ss & 0x8000)!=0; td=(dd & 0x8000)!=0;
@@ -281,6 +281,10 @@ OPS: "("reg_s")+ S2a"		is byte=1 & met_s=2 & reg_ss<6	& reg_s		{PC=PC+2; tmp:2=r
 OPS: "("reg_s")+ S2sp"	is byte=1 & met_s=2 & reg_ss=6	& reg_s			{PC=PC+2; tmp:2=reg_s; reg_s=reg_s+2; export *:2 tmp; }
 OPS: "("reg_s")+ S2b"		is byte=0 & met_s=2 & reg_ss<7 & reg_s		{PC=PC+2; tmp:2=reg_s; reg_s=reg_s+2; export *:2 tmp; }
 
+OPS: "("reg_s")+ S2SxB"		is kodas_s=0xE & met_s=2 & reg_ss<7 & reg_s		{PC=PC+2; tmp:2=reg_s; reg_s=reg_s+2; export *:2 tmp; }
+
+
+
 OPS: "#"imm16" S2c"		is met_s=2 & reg_ss=7 & reg_s;imm16				{PC=PC+2; tmp:2=reg_s; reg_s=reg_s+2; export *:2 tmp; }
 
 
@@ -298,7 +302,10 @@ OPS: "@#"imm16" S3e"		is met_s=3 & reg_ss=7 & reg_s	;imm16		{PC=PC+2; tmp:2 = *:
 # EA = Rn
 # operand = MEM[EA]
 OPS: "-("reg_s") S4a"		is byte=1 & met_s=4 & reg_ss<6 & reg_s	{PC=PC+2; reg_s=(reg_s-1) & 0xffff; export *:2 reg_s;}
-OPS: "-("reg_s") S4c"		is byte=1 & met_s=4 & reg_ss>=6 & reg_s	{PC=PC+2; reg_s=(reg_s-2) & 0xffff; export *:2 reg_s;}
+OPS: "-("reg_s") S4b"		is byte=1 & met_s=4 & reg_ss>=6 & reg_s	{PC=PC+2; reg_s=(reg_s-2) & 0xffff; export *:2 reg_s;}
+
+OPS: "-("reg_s") S4SxB"		is kodas_s=0xE & met_s=4 & reg_ss>=6 & reg_s	{PC=PC+2; reg_s=(reg_s-2) & 0xffff; export *:2 reg_s;}
+
 
 OPS: "-("reg_s") S4"		is byte=0 & met_s=4 & reg_s				{PC=PC+2; reg_s=(reg_s-2) & 0xffff; export *:2 reg_s;}
 
@@ -348,6 +355,10 @@ OPD: "("reg_d")+ D2b"		is byte=1 &met_d=2 & reg_dd=6 &reg_d	{tmp:2=reg_d; reg_d=
 OPD: "("reg_d")+ D2c"		is byte=0 &met_d=2 & reg_dd!=7 &reg_d	{tmp:2=reg_d; reg_d=reg_d+2; export *:2 tmp; }
 OPD: "#"imm16" D2d" is met_d=2 & reg_dd=7 & reg_d ;imm16 			{tmp:2=reg_d; reg_d=reg_d+2; export *:2 tmp; }
 
+#SUB
+OPD: "("reg_d")+ D2SxB"		is kodas_s=0xE &met_d=2 & reg_dd=6 &reg_d	{tmp:2=reg_d; reg_d=reg_d+2; export *:2 tmp; }
+
+
 
 OPDD: "("reg_d")+ DD2a"		is byte=1 &met_d=2 & reg_dd<6 &reg_d	{PC=PC+2;tmp:2=reg_d; reg_d=reg_d+1; export *:2 tmp; }
 OPDD: "("reg_d")+ DD2c"		is byte=1 &met_d=2 & reg_dd>=6 &reg_d	{PC=PC+2;tmp:2=reg_d; reg_d=reg_d+2; export *:2 tmp; }
@@ -392,6 +403,10 @@ OPD: "-("reg_d") D4a"	is byte=1 & met_d=4 & reg_dd<6 & reg_d 		{reg_d=(reg_d-1)&
 OPD: "-("reg_d") D4c"	is byte=1 & met_d=4 & reg_dd>=6 & reg_d 	{reg_d=(reg_d-2)& 0xffff; export *:2 reg_d;}
 OPD: "-("reg_d") D4b"	is byte=0 & met_d=4 & reg_d 				{reg_d=(reg_d-2)& 0xffff; export *:2 reg_d;}
 
+#SUB
+OPD: "-("reg_d") D4SxB"	is kodas_s=0xE & met_d=4 & reg_dd<6 &reg_d 				{reg_d=(reg_d-2)& 0xffff; export *:2 reg_d;}
+
+
 OPDD: "-("reg_d") DD4a"	is byte=1 & met_d=4 & reg_dd<6 & reg_d 		{PC=PC+2;reg_d=(reg_d-1)& 0xffff; export *:2 reg_d;}
 OPDD: "-("reg_d") DD4c"	is byte=1 & met_d=4 & reg_dd>=6 & reg_d 	{PC=PC+2;reg_d=(reg_d-2)& 0xffff; export *:2 reg_d;}
 OPDD: "-("reg_d") DD4b"	is byte=0 & met_d=4 & reg_d 				{PC=PC+2;reg_d=(reg_d-2)& 0xffff; export *:2 reg_d;}
@@ -416,8 +431,8 @@ OPD: REL16" D6b"			is met_d=6 & reg_d=7							;REL16	{tmp:2 = REL16;			export *:
 OPD: REL32H" D6i" 		is met_d=6 & met_s=2 & reg_d=7 & reg_s=7			;REL32H	{tmp:2 = REL32H;		export *:2 tmp;}
 OPD: REL32H" D6c"			is met_d=6 & met_s=6 & reg_d=7					;REL32H	{tmp:2 = REL32H;		export *:2 tmp;}
 OPD: REL32H" D6d"			is met_d=6 & met_s=7 & reg_d=7					;REL32H	{tmp:2 = REL32H;		export *:2 tmp;}
-OPD: REL32H" D6g"			is met_d=6 & met_s=3 & reg_d=7					;REL32H	{tmp:2 = REL32H;		export *:2 tmp;}
-
+#OPD: REL32H" D6g"			is met_d=6 & met_s=3 & reg_d=7					;REL32H	{tmp:2 = REL32H;		export *:2 tmp;}
+OPD: REL32H" D6gg" 			is met_d=6 & met_s=3 & reg_s=7 & reg_d=7 ;REL32H {tmp:2 = REL32H;		export *:2 tmp;}
 
 #OPD: REL32H" D6i" is met_d=6 & met_s=2 & reg_d=7 & reg_s=7 &reg_d ;REL32H & imm32H {PC=PC+2; tmp:2 = imm32H+reg_d; export *:2 tmp;}
 #OPD: REL32H" D6c" is met_d=6 & met_s=6 & reg_d=7  &reg_d          ;REL32H & imm32H {PC=PC+2; tmp:2 = imm32H+reg_d; export *:2 tmp;}
