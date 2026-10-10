@@ -48,7 +48,7 @@ MIT License.
 
 Processor language module for DEC PDP11 CPU.
 
-As for 2026.07.20:
+As for 2026.10.10:
 
 ## Debugger passed:
 - "AC-E664G-MC_CXCPAG0-Processor-test_Sep78"
@@ -66,6 +66,7 @@ As for 2026.07.20:
 - D0LA-PB (JMP)
 - D0MA-PB (JSR/CALL/RETURN/RTI)
 - D0OA-PB (NEW NUMBER - DZQKA. T15 Instruction Exerciser)?
+- DEC-11-AJPB-PB (PDP-11 BASIC V007A)
 
 ## Debuger Failed:
 - D0NA-PB (NEW NUMBER - DAKAA. TRAP/EMT. PDP-11/20, 11/05, 11/10) - possible wrong tape for this CPU.
