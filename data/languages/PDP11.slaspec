@@ -68,7 +68,6 @@ C = PS[0,1]
 macro CHKNZ(a){N=(a & 0x8000)!=0;Z=(a==0);}
 macro V_CxorN(){V=C ^^ N;}
 macro ADD_FLAGS(ss,dd){ts=(ss & 0x8000)!=0;td=(dd & 0x8000)!=0;tr=(((ss+dd) & 0x8000)!=0);Z=((ss+dd)==0:2);	V=((!(ts ^^ td)) && (tr ^^ td));C=((ts && td)||(ts ^^ td) && (!tr));}
-#macro SUB_FLAGS(ss,dd){ts=(ss & 0x8000)!=0;td=(dd & 0x8000)!=0;tr=(((ss-dd) & 0x8000)!=0);Z=((ss-dd)==2:0);	V=((ts ^^ td) && (!(tr ^^ td)));C=((ts && (!td))||((!(ts ^^ td)) && tr));N=tr;}
 macro SUB_FLAGS(ss,dd){
     ts=(ss & 0x8000)!=0; td=(dd & 0x8000)!=0;
     tr=(((dd-ss) & 0x8000)!=0);
