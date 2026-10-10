@@ -12,6 +12,8 @@ The module is still under development, but it already runs several original DEC 
 - Step through execution using Ghidra’s built-in p-code emulator
 - Inspect registers, flags, and control flow interactively
 - Run DEC diagnostics to validate CPU behavior
+- Do stepper-logger java program to dump CPU registers, monitor RAM and ODT
+- Run java VT52 terminal connected to ODT, halt at any moment, dump RAM and CPU
 
 ## What’s Still Missing
 
