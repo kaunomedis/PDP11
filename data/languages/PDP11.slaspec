@@ -264,6 +264,7 @@ RELN:	reloc	is nnn	[reloc = (inst_next-nnn*2)	& 0xffff;]		{tmp:2 = reloc; export
 # MODE0: Operand is in the register
 # operand = Rn
 OPS: reg_s" S0"			is met_s=0 & reg_s	{PC=PC+2; export reg_s;}
+#OPS: reg_s" S0"			is met_s=0 & reg_s	{PC=PC+2; tmp:2=reg_s; export tmp;}
 
 # MODE1:(register deferred)
 # Register contains the address of the operand
@@ -458,8 +459,8 @@ OPD: "@"imm32H"("reg_d") D7d"	is met_d=7 & (met_s=6 | met_s=7) & reg_dd!=7 &reg_
 
 #OPD: "@"REL16" D7f" 		is met_d=7 & reg_dd=7 & (met_s=0 | met_s=1 | met_s=4 | met_s=5) & reg_d	;REL16 & imm16	{tmp:2 = imm16+reg_d; tmp2=*:2 tmp; export *:2 tmp2;}
 OPD: "@"REL16" D7f" 		is met_d=7 & reg_dd=7 & (met_s=0 | met_s=1 | met_s=4 | met_s=5) & reg_d	;REL16 & imm16	{PC=PC+2; tmp:2 = imm16+reg_d; tmp2=*:2 tmp; export *:2 tmp2;}
-
-OPD: "@"REL16" D7g"		is met_d=7 & reg_dd=7 & (met_s=2 | met_s=3) & reg_s!=7	& reg_d				;REL16 & imm16	{tmp:2 = imm16+reg_d; tmp2=*:2 tmp; export *:2 tmp2;}
+OPD: "@"REL16" D7g"		is met_d=7 & reg_dd=7 & (met_s=2 | met_s=3) & reg_s!=7 & reg_d	;REL16 & imm16	{PC=PC+2; tmp:2 = imm16+reg_d; tmp2=*:2 tmp; export *:2 tmp2;}
+#OPD: "@"REL16" D7g"		is met_d=7 & reg_dd=7 & (met_s=2 | met_s=3) & reg_s!=7	& reg_d				;REL16 & imm16	{tmp:2 = imm16+reg_d; tmp2=*:2 tmp; export *:2 tmp2;}
 
 OPD: "@"REL32H" D7c"		is met_d=7 & reg_d=7 & (met_s=2 | met_s=3) & reg_s=7	& reg_d	;REL32H & imm32H	{PC=PC+2;tmp:2 = imm32H+reg_d; tmp2=*:2 tmp; export *:2 tmp2;}
 OPD: "@"REL32H" D7e"		is met_d=7 & reg_d=7 & (met_s=6 | met_s=7)				& reg_d	;REL32H & imm32H	{PC=PC+2;tmp:2 = imm32H+reg_d; tmp2=*:2 tmp; export *:2 tmp2;}
