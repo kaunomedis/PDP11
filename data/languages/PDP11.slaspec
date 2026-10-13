@@ -264,7 +264,6 @@ RELN:	reloc	is nnn	[reloc = (inst_next-nnn*2)	& 0xffff;]		{tmp:2 = reloc; export
 # MODE0: Operand is in the register
 # operand = Rn
 OPS: reg_s" S0"			is met_s=0 & reg_s	{PC=PC+2; export reg_s;}
-#OPS: reg_s" S0"			is met_s=0 & reg_s	{PC=PC+2; tmp:2=reg_s; export tmp;}
 
 # MODE1:(register deferred)
 # Register contains the address of the operand
