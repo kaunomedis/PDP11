@@ -68,19 +68,34 @@ C = PS[0,1]
 macro CHKNZ(a){N=(a & 0x8000)!=0;Z=(a==0);}
 macro V_CxorN(){V=N ^^ C;}
 macro ADD_FLAGS(ss,dd){
-	ts=(ss & 0x8000)!=0; td=(dd & 0x8000)!=0;
-	tr=(((ss+dd) & 0x8000)!=0);
-	Z=((ss+dd)==0:2);
+	ts=(ss & 0x8000)!=0;
+	td=(dd & 0x8000)!=0;
+	tr=((ss+dd) & 0x8000)!=0;
+	
+	Z=((ss+dd)==0);
 	V=((!(ts ^^ td)) && (tr ^^ td));
 	C=((ts && td)||(ts ^^ td) && (!tr));
+	N=tr;
 }
 macro SUB_FLAGS(ss,dd){
-    ts=(ss & 0x8000)!=0; td=(dd & 0x8000)!=0;
-    tr=(((dd-ss) & 0x8000)!=0);
+    ts=(ss & 0x8000)!=0;
+	td=(dd & 0x8000)!=0;
+    tr=((dd-ss) & 0x8000)!=0;
+	
     Z=((dd-ss)==0);
-    V=((ts^^td) && (ts==tr));
-    C=((ts && (!td))||((ts==td) && tr));
+    V=((ts ^^ td) && (ts  ==tr));
+    C=((ts && (!td))||((ts == td) && tr));
     N=tr;
+}
+macro CMP_FLAGS(ss,dd){
+	ts=(ss & 0x8000)!=0;
+	td=(dd & 0x8000)!=0;
+	tr=((ss-dd) & 0x8000)!=0;
+	
+	Z=(ss==dd);
+	V=((ts ^^ td) && (!(tr ^^ td)));
+	C=(((!ts) && td)||((!(ts ^^ td)) && tr));
+	N=tr;
 }
 
 ##### from simh
@@ -96,7 +111,8 @@ macro SUB_FLAGS(ss,dd){
 ##		  V = N ^ C; #ROR,ROL
 ##        C = (src < src2);
 
-macro CMP_FLAGS(ss,dd){ts=(ss & 0x8000)!=0;td=(dd & 0x8000)!=0;tr=(((ss-dd) & 0x8000)!=0);Z=(ss==dd);		V=((ts ^^ td) && (!(tr ^^ td)));C=(((!ts) && td)||((!(ts ^^ td)) && tr));N=tr;}
+
+
 macro FLZ(register){Z=(register==0);}
 
 macro FLN(register)	{N=(register & 0x8000)!=0;}
