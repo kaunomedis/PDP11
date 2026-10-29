@@ -13,7 +13,8 @@ The module is still under development, but it already runs several original DEC 
 - Inspect registers, flags, and control flow interactively
 - Run DEC diagnostics to validate CPU behavior
 - Do stepper-logger java program to dump CPU registers, monitor RAM and ODT
-- Run java VT52 terminal connected to ODT, halt at any moment, dump RAM and CPU
+- Run java VT52 terminal connected to ODT, halt at any moment, dump RAM and CPU (partial working)
+- Run java serial in/out to real hardware or bridge to terminal program.
 
 ## What’s Still Missing
 
@@ -22,13 +23,15 @@ The module is still under development, but it already runs several original DEC 
 - More accurate emulation of edge cases
 - Peripheral and system-level modeling
 - Additional documentation and examples
+- Interrupts
 
 ## Installation
 
 1. Clone this repository into your Ghidra installation under Ghidra/Processors
 2. Build the extension using the provided Gradle configuration (see makefile)
 3. Start Ghidra and enable the PDP-11 language
-4. Load a PDP-11 binary or DEC diagnostic tape image and begin exploring
+4. Load a PDP-11 binary and begin exploring
+5. For real serial I/O load "jSerialComm.jar" to Ghidra "patch" folder
 
 ## DEC Diagnostics
 
@@ -69,14 +72,15 @@ As for 2026.10.10:
 - D0MA-PB (JSR/CALL/RETURN/RTI)
 - D0OA-PB (NEW NUMBER - DZQKA. T15 Instruction Exerciser)?
 - DEC-11-AJPB-PB (PDP-11 BASIC V007A)
+- XONIX game
 
 ## Debuger Failed:
 - D0NA-PB (NEW NUMBER - DAKAA. TRAP/EMT. PDP-11/20, 11/05, 11/10) - possible wrong tape for this CPU.
 
 
 
-
-*Note: extra symbols near disassembled mnemonics are for debug purposes.*
+XONIX GAME:
+<img src="20261029.png">
 
 &copy;2026 by Vabolis. https://www.vabolis.lt
 

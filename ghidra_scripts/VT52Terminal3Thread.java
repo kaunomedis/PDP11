@@ -207,6 +207,7 @@ public class VT52Terminal3Thread extends GhidraScript {
                 case 032: cleft(); return true;
                 case 034: cup(); return true;
                 case 035: cdown(); return true;
+                case 037: clscreen(); return true; // 1F: clear screen (+home), never printed
                 default: return false;
             }
         }
