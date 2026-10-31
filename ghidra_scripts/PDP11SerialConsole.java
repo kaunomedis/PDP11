@@ -17,8 +17,18 @@
 //      Bytes are never lost (no overrun emulation) - they wait in rxQueue.
 //      This also paces input from virtual ports, which ignore baud rate.
 //  Only bit 7 of RCSR/XCSR is controlled by Java. All other bits (e.g.
-//  bit 6 = interrupt enable) are left as the program wrote them - ready
-//  for future interrupt emulation.
+//  bit 6 = interrupt enable) are left as the program wrote them.
+//
+//INTERRUPTS (step 1: receiver only, vector 060, no priority check):
+//  Request flag rxIrq is a one-shot flip-flop, like on real DL11:
+//    SET   when a byte is delivered (DONE 0->1) while RCSR.IE = 1
+//    SET   when program sets RCSR.IE 0->1 while DONE is already 1
+//    CLEAR when program clears RCSR.IE, reads RBUF, or interrupt is taken
+//  Taken between two instructions (= before next step):
+//    SP-=2, M[SP]=PS ; SP-=2, M[SP]=PC ; PC=M[060] ; PS=M[062]
+//  Same as EMT in the slaspec, but forced from outside. Vector is not
+//  checked - uninitialised vector jumps wherever it points (like real HW).
+//  Transmitter (064) stays polled for now.
 //
 //@author Levas
 //@category PDP11 Hardware
@@ -48,6 +58,8 @@ public class PDP11SerialConsole extends GhidraScript {
     static final int XCSR = 0xFF74;
     static final int XBUF = 0xFF76;
     static final int BIT7 = 0x80;
+    static final int BIT6 = 0x40;       // IE - interrupt enable
+    static final int RX_VECTOR = 060;   // octal 060 = 0x30
 
     // --- shared state between the memory filter and the main loop ---
     // Only the script (emulation) thread touches these, filter runs on it too.
@@ -56,6 +68,10 @@ public class PDP11SerialConsole extends GhidraScript {
     private boolean csrDirty = true;    // re-write bit 7 of both CSRs after next step
     private long txReadyAt = 0;         // System.nanoTime() when TX becomes ready
     private long rxNextAllowed = 0;     // System.nanoTime() when next RX byte may come
+
+    private boolean rxIE = false;       // RCSR bit 6, as last written by the program
+    private boolean rxIrq = false;      // receiver interrupt request (one-shot)
+    private long intCount = 0;          // interrupts taken (status line)
 
     private volatile boolean running = true;
 
@@ -120,6 +136,32 @@ public class PDP11SerialConsole extends GhidraScript {
         int val = (c[0] & 0xFF) | ((c[1] & 0xFF) << 8);
         int nv = on ? (val | BIT7) : (val & ~BIT7);
         if (nv != val) emu.writeMemoryValue(a, 2, nv);
+    }
+
+    private int readWord(EmulatorHelper emu, int addr) throws Exception {
+        byte[] c = emu.readMemory(toAddr(addr & 0xFFFF), 2);
+        return (c[0] & 0xFF) | ((c[1] & 0xFF) << 8);
+    }
+
+    // Hardware interrupt sequence - same steps as EMT/IOT in the slaspec:
+    //   push PS, push PC (PC already points to the next, not yet executed
+    //   instruction), then load new PC and PS from the vector.
+    private void takeInterrupt(EmulatorHelper emu, int vector) throws Exception {
+        int ps = (int) (emu.readRegister("PS").longValue() & 0xFFFF);
+        int pc = (int) (emu.readRegister("PC").longValue() & 0xFFFF);
+        int sp = (int) (emu.readRegister("SP").longValue() & 0xFFFF);
+
+        sp = (sp - 2) & 0xFFFF;
+        emu.writeMemoryValue(toAddr(sp), 2, ps);
+        sp = (sp - 2) & 0xFFFF;
+        emu.writeMemoryValue(toAddr(sp), 2, pc);
+        emu.writeRegister("SP", sp);
+
+        int newPc = readWord(emu, vector);
+        int newPs = readWord(emu, vector + 2);
+        emu.writeRegister("PS", newPs);
+        emu.writeRegister("PC", newPc);   // also moves emulator execute address
+        intCount++;
     }
 
     // ============================================================
@@ -240,9 +282,9 @@ public class PDP11SerialConsole extends GhidraScript {
 
         final long[] lastPc = { 0 };
         javax.swing.Timer statusTimer = new javax.swing.Timer(250, e -> status.setText(String.format(
-            "PC=%04X  TX=%d (queued %d)  RX=%d (waiting %d)  XCSR.RDY=%d  RCSR.DONE=%d%s",
+            "PC=%04X  TX=%d (queued %d)  RX=%d (waiting %d)  XCSR.RDY=%d  RCSR.DONE=%d IE=%d  INT=%d%s",
             lastPc[0] & 0xFFFF, txCount.get(), txQueue.size(), rxCount.get(), rxQueue.size(),
-            txReady ? 1 : 0, rxDone ? 1 : 0, paused[0] ? "  PAUSED" : "")));
+            txReady ? 1 : 0, rxDone ? 1 : 0, rxIE ? 1 : 0, intCount, paused[0] ? "  PAUSED" : "")));
         statusTimer.start();
 
         // ---------- I/O threads ----------
@@ -260,6 +302,7 @@ public class PDP11SerialConsole extends GhidraScript {
                 Address a = space.getAddress(offset);
                 if (a.equals(rbufAddr)) {
                     rxDone = false;            // reading RBUF clears RCSR.DONE
+                    rxIrq = false;             // ...and the pending request
                     csrDirty = true;
                 }
             }
@@ -272,10 +315,15 @@ public class PDP11SerialConsole extends GhidraScript {
                     txReady = false;
                     txReadyAt = System.nanoTime() + charNanos;
                     csrDirty = true;
-                } else if (a.equals(xcsrAddr) || a.equals(rcsrAddr)) {
-                    // program wrote a CSR (e.g. interrupt enable) - bit 7 is
-                    // read-only on real hardware, so restore it after the step
-                    csrDirty = true;
+                } else if (a.equals(rcsrAddr)) {
+                    // values[0] = low byte for both MOV and MOVB to 177560
+                    boolean newIE = (values[0] & BIT6) != 0;
+                    if (!newIE) rxIrq = false;                 // IE cleared -> drop request
+                    else if (!rxIE && rxDone) rxIrq = true;    // IE 0->1 with byte waiting
+                    rxIE = newIE;
+                    csrDirty = true;   // bit 7 is read-only, restore it
+                } else if (a.equals(xcsrAddr)) {
+                    csrDirty = true;   // bit 7 is read-only, restore it
                 }
             }
         });
@@ -310,6 +358,7 @@ public class PDP11SerialConsole extends GhidraScript {
                     if (b != null) {
                         emu.writeMemoryValue(rbufAddr, 2, b & 0xFF);
                         rxDone = true;
+                        if (rxIE) rxIrq = true;   // DONE 0->1 with IE set -> request
                         rxNextAllowed = now + charNanos;
                         csrDirty = true;
                     }
@@ -319,6 +368,13 @@ public class PDP11SerialConsole extends GhidraScript {
                     csrDirty = false;
                     setBit7(emu, xcsrAddr, txReady);
                     setBit7(emu, rcsrAddr, rxDone);
+                }
+
+                // Interrupt: between instructions, no priority check yet.
+                if (rxIrq) {
+                    rxIrq = false;                // one-shot: accepted by CPU
+                    takeInterrupt(emu, RX_VECTOR);
+                    lastPc[0] = emu.readRegister("PC").longValue();
                 }
 
                 emu.step(monitor);
